@@ -1,0 +1,15 @@
+{
+  "id": "dyinglight",
+  "name": "Dying Light",
+  "steam": [
+    239140
+  ],
+  "detect": [
+    "DyingLightGame.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "DW",
+  "sites": {
+    "nexus": "dyinglight"
+  }
+}

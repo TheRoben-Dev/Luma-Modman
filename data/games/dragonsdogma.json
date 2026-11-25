@@ -1,0 +1,15 @@
+{
+  "id": "dragonsdogma",
+  "name": "Dragon's Dogma: Dark Arisen",
+  "steam": [
+    367500
+  ],
+  "detect": [
+    "DDDA.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "nativePC",
+  "sites": {
+    "nexus": "dragonsdogma"
+  }
+}

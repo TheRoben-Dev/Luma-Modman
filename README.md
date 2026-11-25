@@ -7,12 +7,16 @@ It runs in Game Mode and Desktop Mode, and works just as well with touch and a m
 
 ## What it does
 
-- **Library**: finds supported games in every Steam library (including the SD card) and in
-  Heroic, Lutris and Flatpak installs, and shows them as cartridges with their art.
-- **Browse**: Thunderstore, mod.io, CurseForge and Nexus Mods in one controller-friendly browser,
-  with guided setup for sites that need an account or API key.
-- **Installed**: per-game profiles, one-tap enable/disable, load order on the d-pad, conflict and
-  missing-dependency warnings, update checks and full rollback.
+Luma is a mod manager, not a launcher: you pick the game you're modding in the header (View /
+Select), and every tab works on that game. Games still start from Steam or their launcher.
+
+- **Games**: finds supported games in every Steam library (including the SD card) and in Heroic,
+  Lutris and Flatpak installs, with their Proton prefix, launch options and cover art.
+- **Mods**: the game's setup (loader, where mods go, Proton or native) and its mods: per-game
+  profiles, one-tap enable/disable, load order on the d-pad, conflict and missing-dependency
+  warnings, update checks and full rollback.
+- **Browse**: Thunderstore, mod.io, CurseForge and Nexus Mods, showing only the sites that carry
+  the game, with guided setup for sites that need an account or API key.
 - **Downloads**: progress, retry, and "Mod Manager Download" links from Nexus Mods.
 - **Clean games**: mods live in Luma's own folder and are linked into the game only while it runs,
   so game files stay untouched and everything can be undone.
@@ -24,6 +28,7 @@ It runs in Game Mode and Desktop Mode, and works just as well with touch and a m
 | Confirm | A | Enter |
 | Back | B | Esc |
 | Switch tabs | LB / RB | Q / E, Tab / Shift+Tab |
+| Switch game | View / Select | G |
 | Context actions | X / Y | F / R |
 
 There is no visible cursor; touch and mouse clicks work everywhere. Text fields use the Steam
@@ -57,7 +62,18 @@ src/
   Luma.App/    Godot project: screens, focus, input, themes, sounds, animation
 tests/         xUnit tests, run in CI without Godot or a display
 data/games/    per-game support profiles (JSON): add a game by adding a file
+data/loaders.json  mod loaders and script extenders Luma can install
 ```
 
-The UI framework (themes, focus highlight, cartridges, sounds, touch scrolling) follows Scanline's
-design by the same author.
+## Supported games
+
+`data/games/` holds one profile per game (136 today, 9 of them marked not moddable). The list was
+picked from public popularity data on the mod sites; see [docs/popularity-sources.md](docs/popularity-sources.md).
+A profile says how to find the game (Steam app ids, Epic/GOG ids, files in its folder), where mods
+go, which loader it needs, which sites carry it and what's worth knowing. Players can add or fix a
+game without an update by putting a profile in `~/.config/luma/games/`.
+
+`luma games` lists what Luma finds on this machine; `luma games --all` lists every profile.
+
+The visual style (themes, colours, sounds, animation, focus) follows Scanline's design by the same
+author; the layout is Luma's own.

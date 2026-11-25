@@ -1,0 +1,12 @@
+{
+  "id": "destiny2",
+  "name": "Destiny 2",
+  "steam": [
+    1085660
+  ],
+  "detect": [
+    "destiny2.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "BattlEye anti-cheat blocks Linux and Proton, and any modification is bannable."
+}

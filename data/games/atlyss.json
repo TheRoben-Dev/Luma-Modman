@@ -1,0 +1,16 @@
+{
+  "id": "atlyss",
+  "name": "ATLYSS",
+  "steam": [
+    2768430
+  ],
+  "detect": [
+    "ATLYSS.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "thunderstore": "atlyss"
+  }
+}

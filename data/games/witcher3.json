@@ -1,0 +1,21 @@
+{
+  "id": "witcher3",
+  "name": "The Witcher 3: Wild Hunt",
+  "steam": [
+    292030,
+    499450
+  ],
+  "detect": [
+    "bin/x64/witcher3.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "sites": {
+    "nexus": "witcher3",
+    "modio": "The Witcher 3: Wild Hunt"
+  },
+  "quirks": [
+    "Mods that change the same scripts need Script Merger, which runs on Windows tools.",
+    "The next-gen update uses bin/x64_dx12 for the DirectX 12 build."
+  ]
+}

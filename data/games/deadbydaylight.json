@@ -1,0 +1,12 @@
+{
+  "id": "deadbydaylight",
+  "name": "Dead by Daylight",
+  "steam": [
+    381210
+  ],
+  "detect": [
+    "DeadByDaylight/Binaries/Win64/DeadByDaylight-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Online-only with Easy Anti-Cheat; modified files are bannable."
+}

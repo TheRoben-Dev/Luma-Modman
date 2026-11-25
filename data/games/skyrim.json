@@ -1,0 +1,20 @@
+{
+  "id": "skyrim",
+  "name": "The Elder Scrolls V: Skyrim (2011)",
+  "steam": [
+    72850
+  ],
+  "detect": [
+    "TESV.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Data",
+  "loader": "skse",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "skyrim"
+  },
+  "quirks": [
+    "The original 2011 release; most new mods target Special Edition."
+  ]
+}

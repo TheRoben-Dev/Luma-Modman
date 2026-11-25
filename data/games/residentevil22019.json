@@ -1,0 +1,19 @@
+{
+  "id": "residentevil22019",
+  "name": "Resident Evil 2 (2019)",
+  "steam": [
+    883710
+  ],
+  "detect": [
+    "re2.exe"
+  ],
+  "runtime": "proton",
+  "loader": "reframework",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "residentevil22019"
+  },
+  "quirks": [
+    "Mods made for the DirectX 11 version need the game's dx11_non-rt beta branch."
+  ]
+}

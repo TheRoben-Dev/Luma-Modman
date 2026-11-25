@@ -1,0 +1,18 @@
+{
+  "id": "halothemasterchiefcollection",
+  "name": "Halo: The Master Chief Collection",
+  "steam": [
+    976730
+  ],
+  "detect": [
+    "mcclauncher.exe"
+  ],
+  "runtime": "proton",
+  "sites": {
+    "nexus": "halothemasterchiefcollection"
+  },
+  "quirks": [
+    "Mods only work offline: the game must start without Easy Anti-Cheat, and online play with mods can get you banned.",
+    "Choose \"Play without anti-cheat\" when the game starts."
+  ]
+}

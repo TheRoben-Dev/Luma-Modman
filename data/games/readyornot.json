@@ -1,0 +1,19 @@
+{
+  "id": "readyornot",
+  "name": "Ready or Not",
+  "steam": [
+    1144200
+  ],
+  "detect": [
+    "ReadyOrNot/Binaries/Win64/ReadyOrNot-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "ReadyOrNot/Content/Paks/~mods",
+  "sites": {
+    "nexus": "readyornot",
+    "modio": "Ready or Not"
+  },
+  "quirks": [
+    "Everyone in a multiplayer lobby needs the same mods."
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "bmxstreets",
+  "name": "BMX Streets",
+  "steam": [
+    871720
+  ],
+  "detect": [
+    "BMX Streets.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "sites": {
+    "modio": "BMX Streets"
+  },
+  "quirks": [
+    "Maps and gear come from mod.io."
+  ]
+}

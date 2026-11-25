@@ -1,0 +1,20 @@
+{
+  "id": "enterthegungeon",
+  "name": "Enter the Gungeon",
+  "steam": [
+    311690
+  ],
+  "detect": [
+    "EtG.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "enterthegungeon",
+    "thunderstore": "enter-the-gungeon"
+  },
+  "quirks": [
+    "Set Steam to use Proton for this game; the native build doesn't load BepInEx mods."
+  ]
+}

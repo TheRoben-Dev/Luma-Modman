@@ -1,0 +1,17 @@
+{
+  "id": "peak",
+  "name": "PEAK",
+  "steam": [
+    3527290
+  ],
+  "detect": [
+    "PEAK.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "peak",
+    "thunderstore": "peak"
+  }
+}

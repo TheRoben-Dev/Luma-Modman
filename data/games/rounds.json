@@ -1,0 +1,19 @@
+{
+  "id": "rounds",
+  "name": "ROUNDS",
+  "steam": [
+    1557740
+  ],
+  "detect": [
+    "Rounds.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "thunderstore": "rounds"
+  },
+  "quirks": [
+    "Both players need the same card mods."
+  ]
+}

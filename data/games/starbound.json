@@ -1,0 +1,18 @@
+{
+  "id": "starbound",
+  "name": "Starbound",
+  "steam": [
+    211820
+  ],
+  "detect": [
+    "linux/starbound"
+  ],
+  "runtime": "native",
+  "modsPath": "mods",
+  "sites": {
+    "nexus": "starbound"
+  },
+  "quirks": [
+    "Uses Starbound's native Linux build."
+  ]
+}

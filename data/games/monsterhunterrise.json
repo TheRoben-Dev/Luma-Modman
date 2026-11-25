@@ -1,0 +1,16 @@
+{
+  "id": "monsterhunterrise",
+  "name": "Monster Hunter Rise",
+  "steam": [
+    1446780
+  ],
+  "detect": [
+    "MonsterHunterRise.exe"
+  ],
+  "runtime": "proton",
+  "loader": "reframework",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "monsterhunterrise"
+  }
+}

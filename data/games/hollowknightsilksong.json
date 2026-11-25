@@ -1,0 +1,20 @@
+{
+  "id": "hollowknightsilksong",
+  "name": "Hollow Knight: Silksong",
+  "steam": [
+    1030300
+  ],
+  "detect": [
+    "Hollow Knight Silksong.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "hollowknightsilksong",
+    "thunderstore": "hollow-knight-silksong"
+  },
+  "quirks": [
+    "Silksong has a native Linux build too; Luma mods the Windows build because most mods target it."
+  ]
+}

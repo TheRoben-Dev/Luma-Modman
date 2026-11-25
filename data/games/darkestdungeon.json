@@ -1,0 +1,16 @@
+{
+  "id": "darkestdungeon",
+  "name": "Darkest Dungeon",
+  "steam": [
+    262060
+  ],
+  "detect": [
+    "_windowsnosteam/darkest.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "mods",
+  "sites": {
+    "nexus": "darkestdungeon",
+    "curseforge": "darkest-dungeon"
+  }
+}

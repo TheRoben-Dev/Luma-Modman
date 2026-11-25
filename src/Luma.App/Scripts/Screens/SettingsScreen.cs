@@ -10,6 +10,7 @@ public partial class SettingsScreen : TwoPaneScreen
 {
     private static readonly (string Name, string Summary)[] CategoryList =
     [
+        ("Games", "Finding installed games, and the supported list."),
         ("Appearance", "Theme, accent colour, CRT effect and animations."),
         ("Sound & feel", "Menu sounds and controller rumble."),
         ("Updates", "Version, changelog and updates."),
@@ -24,6 +25,9 @@ public partial class SettingsScreen : TwoPaneScreen
     {
         switch (name)
         {
+            case "Games":
+                BuildGames(col, Add);
+                break;
             case "Appearance":
                 BuildAppearance(col, Add);
                 break;
@@ -42,6 +46,23 @@ public partial class SettingsScreen : TwoPaneScreen
     private string? _pendingTheme;
     private string? _pendingBase;
     private Dictionary<string, string>? _pendingAccents;
+
+    private void BuildGames(VBoxContainer col, Action<Control> Add)
+    {
+        var lib = Host.Games;
+        var when = lib.ScannedAt is { } t ? t.ToLocalTime().ToString("g") : "never";
+        col.AddChild(UiTheme.Label($"{lib.Games.Count} supported game{(lib.Games.Count == 1 ? "" : "s")} installed. Last scan: {when}.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        Add(new ActionButton("Scan again", App.ScanGames, "Look for installed games again: Steam (every library, SD cards too), Heroic and Lutris, native and Flatpak."));
+        Add(new ActionButton($"Supported games ({lib.Catalog.Games.Count})", () => App.Push(new SupportedGamesPage()), "Every game Luma can mod, and the ones it can't."));
+        col.AddChild(UiTheme.Label("Add or fix a game without waiting for an update: put a profile (.json, same format as Luma's own) in "
+                                   + System.IO.Path.Combine(Host.Paths.Config, "games") + ". Yours win over the built-in ones.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        foreach (var p in lib.Catalog.Problems)
+        {
+            col.AddChild(UiTheme.Label("Skipped profile: " + p, UiTheme.SmallSize, UiTheme.Warn, wrap: true));
+        }
+    }
 
     private void BuildFeedback(VBoxContainer col, Action<Control> Add)
     {

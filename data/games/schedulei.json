@@ -1,0 +1,20 @@
+{
+  "id": "schedulei",
+  "name": "Schedule I",
+  "steam": [
+    3164500
+  ],
+  "detect": [
+    "Schedule I.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "loader": "melonloader",
+  "sites": {
+    "nexus": "schedule1",
+    "thunderstore": "schedule-i"
+  },
+  "quirks": [
+    "The main branch is IL2CPP; mods must match the branch you play."
+  ]
+}

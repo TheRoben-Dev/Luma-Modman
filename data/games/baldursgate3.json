@@ -1,0 +1,22 @@
+{
+  "id": "baldursgate3",
+  "name": "Baldur's Gate 3",
+  "steam": [
+    1086940
+  ],
+  "detect": [
+    "bin/bg3.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "{localappdata}/Larian Studios/Baldur's Gate 3/Mods",
+  "loader": "bg3se",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "baldursgate3",
+    "modio": "Baldur's Gate 3"
+  },
+  "quirks": [
+    "Mods load from the profile folder inside the Proton prefix; Luma writes the load order to modsettings.lsx.",
+    "Mods from the in-game mod.io browser are managed by the game."
+  ]
+}

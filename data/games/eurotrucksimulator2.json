@@ -1,0 +1,18 @@
+{
+  "id": "eurotrucksimulator2",
+  "name": "Euro Truck Simulator 2",
+  "steam": [
+    227300
+  ],
+  "detect": [
+    "bin/linux_x64/eurotrucks2"
+  ],
+  "runtime": "native",
+  "modsPath": "{xdgdata}/Euro Truck Simulator 2/mod",
+  "sites": {
+    "nexus": "eurotrucksimulator2"
+  },
+  "quirks": [
+    "Mods are enabled in the game's Mod Manager on the profile screen."
+  ]
+}

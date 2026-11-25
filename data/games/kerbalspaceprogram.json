@@ -1,0 +1,19 @@
+{
+  "id": "kerbalspaceprogram",
+  "name": "Kerbal Space Program",
+  "steam": [
+    220200
+  ],
+  "detect": [
+    "KSP.x86_64"
+  ],
+  "runtime": "native",
+  "modsPath": "GameData",
+  "sites": {
+    "nexus": "kerbalspaceprogram",
+    "curseforge": "kerbal"
+  },
+  "quirks": [
+    "Uses the native Linux build. CKAN users can keep using it; Luma doesn't touch CKAN's mods."
+  ]
+}

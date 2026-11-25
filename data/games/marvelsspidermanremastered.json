@@ -1,0 +1,18 @@
+{
+  "id": "marvelsspidermanremastered",
+  "name": "Marvel's Spider-Man Remastered",
+  "steam": [
+    1817070
+  ],
+  "detect": [
+    "Spider-Man.exe"
+  ],
+  "runtime": "proton",
+  "sites": {
+    "nexus": "marvelsspidermanremastered",
+    "curseforge": "spider-man-remastered"
+  },
+  "quirks": [
+    "Many mods are Overstrike .smpcmod packages made for its Windows installer."
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "id": "transportfever3",
+  "name": "Transport Fever 3",
+  "steam": [
+    2938680
+  ],
+  "detect": [
+    "TransportFever3.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "mods",
+  "sites": {
+    "modio": "Transport Fever 3"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "cultofthelamb",
+  "name": "Cult of the Lamb",
+  "steam": [
+    1313140
+  ],
+  "detect": [
+    "Cult Of The Lamb.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "cultofthelamb",
+    "thunderstore": "cult-of-the-lamb"
+  }
+}

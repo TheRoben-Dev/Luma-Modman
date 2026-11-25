@@ -1,0 +1,19 @@
+{
+  "id": "gta4",
+  "name": "Grand Theft Auto IV: The Complete Edition",
+  "steam": [
+    12210
+  ],
+  "detect": [
+    "GTAIV.exe"
+  ],
+  "runtime": "proton",
+  "loader": "asi-loader",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "gta4"
+  },
+  "quirks": [
+    "FusionFix is recommended for almost every setup."
+  ]
+}

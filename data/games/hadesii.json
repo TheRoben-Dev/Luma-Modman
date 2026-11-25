@@ -1,0 +1,17 @@
+{
+  "id": "hadesii",
+  "name": "Hades II",
+  "steam": [
+    1145350
+  ],
+  "detect": [
+    "Ship/Hades2.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Ship/ReturnOfModding/plugins",
+  "loader": "hell2modding",
+  "sites": {
+    "nexus": "hades2",
+    "thunderstore": "hades-ii"
+  }
+}

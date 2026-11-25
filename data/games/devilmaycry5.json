@@ -1,0 +1,16 @@
+{
+  "id": "devilmaycry5",
+  "name": "Devil May Cry 5",
+  "steam": [
+    601150
+  ],
+  "detect": [
+    "DevilMayCry5.exe"
+  ],
+  "runtime": "proton",
+  "loader": "reframework",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "devilmaycry5"
+  }
+}

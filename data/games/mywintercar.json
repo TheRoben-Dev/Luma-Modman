@@ -1,0 +1,16 @@
+{
+  "id": "mywintercar",
+  "name": "My Winter Car",
+  "steam": [
+    4164420
+  ],
+  "detect": [
+    "mywintercar.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "loader": "msc-loader",
+  "sites": {
+    "nexus": "mywintercar"
+  }
+}

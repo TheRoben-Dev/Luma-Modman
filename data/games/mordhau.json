@@ -1,0 +1,18 @@
+{
+  "id": "mordhau",
+  "name": "MORDHAU",
+  "steam": [
+    629760
+  ],
+  "detect": [
+    "Mordhau/Binaries/Win64/Mordhau-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mordhau/Content/.modio",
+  "sites": {
+    "modio": "MORDHAU"
+  },
+  "quirks": [
+    "Mods are used on community servers and in local play."
+  ]
+}

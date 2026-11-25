@@ -1,0 +1,18 @@
+{
+  "id": "yakuza0",
+  "name": "Yakuza 0",
+  "steam": [
+    638970
+  ],
+  "detect": [
+    "media/Yakuza0.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "mods",
+  "sites": {
+    "nexus": "yakuza0"
+  },
+  "quirks": [
+    "Mods load through Ryu Mod Manager's parless loader, set up as a dependency."
+  ]
+}

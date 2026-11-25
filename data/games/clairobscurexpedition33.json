@@ -1,0 +1,18 @@
+{
+  "id": "clairobscurexpedition33",
+  "name": "Clair Obscur: Expedition 33",
+  "steam": [
+    1903340
+  ],
+  "detect": [
+    "Sandfall/Binaries/Win64/SandFall-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Sandfall/Content/Paks/~mods",
+  "loader": "ue4ss",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "clairobscurexpedition33",
+    "curseforge": "clair-obscur-expedition-33"
+  }
+}

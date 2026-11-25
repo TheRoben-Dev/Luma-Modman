@@ -1,0 +1,18 @@
+{
+  "id": "dragonage",
+  "name": "Dragon Age: Origins - Ultimate Edition",
+  "steam": [
+    47810
+  ],
+  "detect": [
+    "bin_ship/DAOrigins.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "{documents}/BioWare/Dragon Age/packages/core/override",
+  "sites": {
+    "nexus": "dragonage"
+  },
+  "quirks": [
+    "DAZIP mods need DAOModder; plain override mods work directly."
+  ]
+}

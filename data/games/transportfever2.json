@@ -1,0 +1,19 @@
+{
+  "id": "transportfever2",
+  "name": "Transport Fever 2",
+  "steam": [
+    1066780
+  ],
+  "detect": [
+    "bin/TransportFever2"
+  ],
+  "runtime": "native",
+  "modsPath": "mods",
+  "sites": {
+    "nexus": "transportfever2",
+    "modio": "Transport Fever 2"
+  },
+  "quirks": [
+    "Mods are switched on per save in the game's Advanced settings."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "monsterhunterwilds",
+  "name": "Monster Hunter Wilds",
+  "steam": [
+    2246340
+  ],
+  "detect": [
+    "MonsterHunterWilds.exe"
+  ],
+  "runtime": "proton",
+  "loader": "reframework",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "monsterhunterwilds"
+  },
+  "quirks": [
+    "Use mods in single-player or with friends; Capcom can act on cheating in online lobbies."
+  ]
+}

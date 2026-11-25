@@ -1,0 +1,16 @@
+{
+  "id": "dragonsdogma2",
+  "name": "Dragon's Dogma 2",
+  "steam": [
+    2054970
+  ],
+  "detect": [
+    "DD2.exe"
+  ],
+  "runtime": "proton",
+  "loader": "reframework",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "dragonsdogma2"
+  }
+}

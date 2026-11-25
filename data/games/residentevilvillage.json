@@ -1,0 +1,17 @@
+{
+  "id": "residentevilvillage",
+  "name": "Resident Evil Village",
+  "steam": [
+    1196590
+  ],
+  "detect": [
+    "re8.exe"
+  ],
+  "runtime": "proton",
+  "loader": "reframework",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "residentevilvillage",
+    "curseforge": "resident-evil-village"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "kingdomcomedeliverance2",
+  "name": "Kingdom Come: Deliverance II",
+  "steam": [
+    1771300
+  ],
+  "detect": [
+    "Bin/Win64MasterMasterSteamPGO/KingdomCome.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "sites": {
+    "nexus": "kingdomcomedeliverance2",
+    "curseforge": "kingdom-come-deliverance-ii"
+  },
+  "quirks": [
+    "Mod order is written to Mods/mod_order.txt."
+  ]
+}

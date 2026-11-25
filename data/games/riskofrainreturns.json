@@ -1,0 +1,18 @@
+{
+  "id": "riskofrainreturns",
+  "name": "Risk of Rain Returns",
+  "steam": [
+    1337520
+  ],
+  "detect": [
+    "Risk of Rain Returns.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "ReturnOfModding/plugins",
+  "sites": {
+    "thunderstore": "risk-of-rain-returns"
+  },
+  "quirks": [
+    "Mods load through ReturnOfModding, installed as a dependency."
+  ]
+}

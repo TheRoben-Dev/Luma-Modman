@@ -1,0 +1,15 @@
+{
+  "id": "daysgone",
+  "name": "Days Gone",
+  "steam": [
+    1259420
+  ],
+  "detect": [
+    "BendGame/Binaries/Win64/DaysGone.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BendGame/Content/Paks/~mods",
+  "sites": {
+    "nexus": "daysgone"
+  }
+}

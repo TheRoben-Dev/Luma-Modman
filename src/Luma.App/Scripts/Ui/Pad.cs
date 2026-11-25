@@ -27,6 +27,8 @@ public static class Pad
     public const string Secondary = "secondary";
     /// <summary>West face button (X on Xbox): second context action.</summary>
     public const string Tertiary = "tertiary";
+    /// <summary>View / Select button: switch the game every tab works on.</summary>
+    public const string Switch = "switch_game";
 
     private static readonly string[] Directions = ["ui_up", "ui_down", "ui_left", "ui_right"];
     private const float RepeatDelay = 0.38f;
@@ -89,6 +91,7 @@ public static class Pad
         AddKeyAction(TabNext, Key.E, Key.Pagedown);
         AddKeyAction(Secondary, Key.R);
         AddKeyAction(Tertiary, Key.F);
+        AddKeyAction(Switch, Key.G);
         // Steam's Desktop Mode layout and handheld "lizard mode" send keys and mouse clicks
         // instead of gamepad buttons; accept the common ones.
         AddKeyAction(Back, Key.Backspace);
@@ -196,6 +199,7 @@ public static class Pad
             JoyButton.X => nintendo ? Secondary : Tertiary,
             JoyButton.LeftShoulder => TabPrev,
             JoyButton.RightShoulder => TabNext,
+            JoyButton.Back => Switch,
             JoyButton.DpadUp => "ui_up",
             JoyButton.DpadDown => "ui_down",
             JoyButton.DpadLeft => "ui_left",
@@ -324,6 +328,10 @@ public static class Pad
         (PadFamily.Keyboard, TabNext) => "E",
         (PadFamily.Keyboard, Secondary) => "R",
         (PadFamily.Keyboard, Tertiary) => "F",
+        (PadFamily.Keyboard, Switch) => "G",
+        (PadFamily.PlayStation, Switch) => "Share",
+        (PadFamily.Nintendo, Switch) => "−",
+        (_, Switch) => "View",
         (PadFamily.PlayStation, Accept) => "✕",
         (PadFamily.PlayStation, Back) => "○",
         (PadFamily.PlayStation, Secondary) => "△",

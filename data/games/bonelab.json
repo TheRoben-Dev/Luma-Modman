@@ -1,0 +1,22 @@
+{
+  "id": "bonelab",
+  "name": "BONELAB",
+  "steam": [
+    1592190
+  ],
+  "detect": [
+    "BONELAB_Steam_Windows64.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "loader": "melonloader",
+  "loaderOptional": true,
+  "sites": {
+    "thunderstore": "bonelab",
+    "modio": "BONELAB"
+  },
+  "quirks": [
+    "A VR game: it needs a PC VR headset.",
+    "Avatars and maps from mod.io are managed by the game."
+  ]
+}

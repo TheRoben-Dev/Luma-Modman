@@ -1,0 +1,15 @@
+{
+  "id": "stateofdecay2",
+  "name": "State of Decay 2",
+  "steam": [
+    495420
+  ],
+  "detect": [
+    "StateOfDecay2/Binaries/Win64/StateOfDecay2-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "StateOfDecay2/Content/Paks/~mods",
+  "sites": {
+    "nexus": "stateofdecay2"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "session",
+  "name": "Session: Skate Sim",
+  "steam": [
+    861650
+  ],
+  "detect": [
+    "SessionGame/Binaries/Win64/SessionGame-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "SessionGame/Content/Paks/~mods",
+  "sites": {
+    "nexus": "sessionskatesim",
+    "modio": "Session: Skate Sim"
+  }
+}

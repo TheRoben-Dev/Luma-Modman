@@ -1,0 +1,17 @@
+{
+  "id": "masseffectlegendaryedition",
+  "name": "Mass Effect Legendary Edition",
+  "steam": [
+    1328670
+  ],
+  "detect": [
+    "Game/Launcher/MassEffectLauncher.exe"
+  ],
+  "runtime": "proton",
+  "sites": {
+    "nexus": "masseffectlegendaryedition"
+  },
+  "quirks": [
+    "Most mods install with ME3Tweaks Mod Manager, a Windows tool; Luma handles texture-free DLC mods only."
+  ]
+}

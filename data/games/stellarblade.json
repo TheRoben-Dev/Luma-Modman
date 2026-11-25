@@ -1,0 +1,17 @@
+{
+  "id": "stellarblade",
+  "name": "Stellar Blade",
+  "steam": [
+    3489700
+  ],
+  "detect": [
+    "SB/Binaries/Win64/SB-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "SB/Content/Paks/~mods",
+  "loader": "ue4ss",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "stellarblade"
+  }
+}

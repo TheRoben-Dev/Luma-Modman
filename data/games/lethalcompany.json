@@ -1,0 +1,20 @@
+{
+  "id": "lethalcompany",
+  "name": "Lethal Company",
+  "steam": [
+    1966720
+  ],
+  "detect": [
+    "Lethal Company.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "lethalcompany",
+    "thunderstore": "lethal-company"
+  },
+  "quirks": [
+    "Everyone in a lobby needs the same gameplay mods; Luma can share a mod list code later."
+  ]
+}

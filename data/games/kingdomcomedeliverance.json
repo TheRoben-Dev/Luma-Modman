@@ -1,0 +1,18 @@
+{
+  "id": "kingdomcomedeliverance",
+  "name": "Kingdom Come: Deliverance",
+  "steam": [
+    379430
+  ],
+  "detect": [
+    "Bin/Win64/KingdomCome.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "sites": {
+    "nexus": "kingdomcomedeliverance"
+  },
+  "quirks": [
+    "Mods need -devmode in launch options when they change the game's scripts; Luma adds it when needed."
+  ]
+}

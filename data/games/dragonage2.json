@@ -1,0 +1,15 @@
+{
+  "id": "dragonage2",
+  "name": "Dragon Age 2",
+  "steam": [
+    1238040
+  ],
+  "detect": [
+    "bin_ship/DragonAge2.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "{documents}/BioWare/Dragon Age 2/packages/core/override",
+  "sites": {
+    "nexus": "dragonage2"
+  }
+}

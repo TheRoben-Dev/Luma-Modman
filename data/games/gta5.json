@@ -1,0 +1,21 @@
+{
+  "id": "gta5",
+  "name": "Grand Theft Auto V Legacy",
+  "steam": [
+    271590
+  ],
+  "detect": [
+    "GTA5.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "mods",
+  "loader": "scripthookv",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "gta5"
+  },
+  "quirks": [
+    "Story Mode only. GTA Online with mods gets accounts banned; Script Hook V refuses to run online.",
+    "The mods folder needs OpenIV's ASI loader, installed as a dependency."
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "dysonsphereprogram",
+  "name": "Dyson Sphere Program",
+  "steam": [
+    1366540
+  ],
+  "detect": [
+    "DSPGAME.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "dysonsphereprogram",
+    "thunderstore": "dyson-sphere-program",
+    "curseforge": "dyson-sphere-program"
+  }
+}

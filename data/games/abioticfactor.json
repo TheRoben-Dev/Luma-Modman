@@ -1,0 +1,18 @@
+{
+  "id": "abioticfactor",
+  "name": "Abiotic Factor",
+  "steam": [
+    427410
+  ],
+  "detect": [
+    "AbioticFactor/Binaries/Win64/AbioticFactor-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "AbioticFactor/Content/Paks/~mods",
+  "loader": "ue4ss",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "abioticfactor",
+    "modio": "Abiotic Factor"
+  }
+}

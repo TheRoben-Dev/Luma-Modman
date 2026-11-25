@@ -1,0 +1,15 @@
+{
+  "id": "sifu",
+  "name": "Sifu",
+  "steam": [
+    2138710
+  ],
+  "detect": [
+    "Sifu/Binaries/Win64/Sifu-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Sifu/Content/Paks/~mods",
+  "sites": {
+    "nexus": "sifu"
+  }
+}

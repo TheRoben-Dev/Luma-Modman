@@ -1,0 +1,20 @@
+{
+  "id": "newvegas",
+  "name": "Fallout: New Vegas",
+  "steam": [
+    22380
+  ],
+  "detect": [
+    "FalloutNV.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Data",
+  "loader": "xnvse",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "newvegas"
+  },
+  "quirks": [
+    "The 4GB patch is built into xNVSE; no separate patcher needed."
+  ]
+}

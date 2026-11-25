@@ -1,0 +1,19 @@
+{
+  "id": "darksouls3",
+  "name": "Dark Souls III",
+  "steam": [
+    374320
+  ],
+  "detect": [
+    "Game/DarkSoulsIII.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Game/mods",
+  "loader": "modengine2",
+  "sites": {
+    "nexus": "darksouls3"
+  },
+  "quirks": [
+    "Play modded sessions offline; online play with mods risks a soft ban."
+  ]
+}

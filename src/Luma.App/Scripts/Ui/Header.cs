@@ -23,12 +23,29 @@ public partial class Header : HBoxContainer
     /// <summary>Mouse/trackpad click on a tab (desktop use).</summary>
     public event Action<int>? TabClicked;
 
+    /// <summary>Click or tap on the game chip: open the game switcher.</summary>
+    public event Action? GameClicked;
+
+    private readonly HBoxContainer _game = new() { MouseFilter = MouseFilterEnum.Stop, MouseDefaultCursorShape = CursorShape.PointingHand };
+    private readonly ButtonGlyph _switch = new();
+
     public Header(IEnumerable<string> tabs)
     {
         AddThemeConstantOverride("separation", 22);
         var name = UiTheme.Label(UiTheme.Spec.Wordmark, 22, UiTheme.Nightgrid ? UiTheme.Text : UiTheme.AccentText);
-        name.CustomMinimumSize = new Vector2(170, 0);
+        name.CustomMinimumSize = new Vector2(120, 0);
         AddChild(name);
+        // The game every tab works on, with the button that switches it.
+        _game.AddThemeConstantOverride("separation", 10);
+        _game.CustomMinimumSize = new Vector2(300, 0);
+        _game.GuiInput += e =>
+        {
+            if (e is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true })
+            {
+                GameClicked?.Invoke();
+            }
+        };
+        AddChild(_game);
         AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         _tabRow.AddThemeConstantOverride("separation", 30);
         _tabRow.AddChild(_prev);
@@ -61,7 +78,7 @@ public partial class Header : HBoxContainer
         AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         var version = UiTheme.Label("v" + Luma.Host.Updates.AppUpdater.DisplayVersion(Luma.Host.Updates.AppUpdater.CurrentAppVersion()),
             UiTheme.SmallSize, UiTheme.Dim);
-        version.CustomMinimumSize = new Vector2(170, 0);
+        version.CustomMinimumSize = new Vector2(60, 0);
         version.HorizontalAlignment = HorizontalAlignment.Right;
         version.VerticalAlignment = VerticalAlignment.Center;
         AddChild(version);
@@ -77,6 +94,38 @@ public partial class Header : HBoxContainer
                 Place(false);
             }
         }).CallDeferred();
+    }
+
+    /// <summary>Shows the game the tabs work on (null: none found yet).</summary>
+    public void SetGame(string? title, string? cover)
+    {
+        foreach (var c in _game.GetChildren())
+        {
+            if (c != _switch)
+            {
+                _game.RemoveChild(c);
+                c.QueueFree();
+            }
+        }
+        if (_switch.GetParent() == null)
+        {
+            _game.AddChild(_switch);
+        }
+        if (title != null)
+        {
+            var art = new CoverArt(title, cover, new Vector2(26, 39), 4) { SizeFlagsVertical = SizeFlags.ShrinkCenter };
+            _game.AddChild(art);
+            _game.MoveChild(art, 0);
+        }
+        var label = UiTheme.Label(title ?? "No game picked", UiTheme.FontSize - 1, title == null ? UiTheme.Dim : UiTheme.Text);
+        label.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        label.VerticalAlignment = VerticalAlignment.Center;
+        label.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        label.CustomMinimumSize = new Vector2(80, 0);
+        label.MouseFilter = MouseFilterEnum.Ignore;
+        _game.AddChild(label);
+        _game.MoveChild(label, title == null ? 0 : 1);
+        _switch.SetGlyph(Pad.Glyph(Pad.Switch));
     }
 
     /// <summary>Shows or hides the badge dot on a tab.</summary>
@@ -129,6 +178,7 @@ public partial class Header : HBoxContainer
         }
         _prev.SetGlyph(Pad.Glyph(Pad.TabPrev));
         _next.SetGlyph(Pad.Glyph(Pad.TabNext));
+        _switch.SetGlyph(Pad.Glyph(Pad.Switch));
     }
 
     /// <summary>Moves the underline under the current tab. Animated: the leading edge goes first.</summary>

@@ -1,0 +1,22 @@
+{
+  "id": "starfield",
+  "name": "Starfield",
+  "steam": [
+    1716740
+  ],
+  "detect": [
+    "Starfield.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Data",
+  "loader": "sfse",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "starfield",
+    "curseforge": "starfield"
+  },
+  "quirks": [
+    "Loose-file mods need the archive invalidation settings Luma writes to StarfieldCustom.ini.",
+    "Creations from the in-game menu are managed by the game, not Luma."
+  ]
+}

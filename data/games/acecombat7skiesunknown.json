@@ -1,0 +1,15 @@
+{
+  "id": "acecombat7skiesunknown",
+  "name": "Ace Combat 7: Skies Unknown",
+  "steam": [
+    502500
+  ],
+  "detect": [
+    "Game/Binaries/Win64/Ace7Game.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Game/Content/Paks/~mods",
+  "sites": {
+    "nexus": "acecombat7skiesunknown"
+  }
+}

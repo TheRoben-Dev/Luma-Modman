@@ -5,7 +5,7 @@ using Godot;
 namespace Luma.App.Screens;
 
 /// <summary>
-/// A full-screen page. Root tabs (Library, Eden, Settings) and pushed pages (game page, file
+/// A full-screen page. Root tabs (Mods, Browse, Settings...) and pushed pages (game switcher, file
 /// picker, confirm) are all screens; Main keeps them on a stack and B pops.
 /// Screens build their UI in code in Build(), after they are in the tree, so focus neighbours
 /// can be wired with real node paths.

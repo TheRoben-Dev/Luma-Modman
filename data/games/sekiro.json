@@ -1,0 +1,20 @@
+{
+  "id": "sekiro",
+  "name": "Sekiro: Shadows Die Twice",
+  "steam": [
+    814380
+  ],
+  "detect": [
+    "sekiro.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "mods",
+  "loader": "modengine2",
+  "sites": {
+    "nexus": "sekiro",
+    "curseforge": "sekiro-shadows-die-twice"
+  },
+  "quirks": [
+    "Single-player only, so mods are safe to use."
+  ]
+}

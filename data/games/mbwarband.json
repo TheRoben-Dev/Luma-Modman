@@ -1,0 +1,18 @@
+{
+  "id": "mbwarband",
+  "name": "Mount & Blade: Warband",
+  "steam": [
+    48700
+  ],
+  "detect": [
+    "mb_warband.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Modules",
+  "sites": {
+    "nexus": "mbwarband"
+  },
+  "quirks": [
+    "Each module is picked in the game's launcher."
+  ]
+}

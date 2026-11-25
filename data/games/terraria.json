@@ -1,0 +1,18 @@
+{
+  "id": "terraria",
+  "name": "Terraria",
+  "steam": [
+    105600
+  ],
+  "detect": [
+    "Terraria.exe"
+  ],
+  "runtime": "native",
+  "modsPath": "{xdgdata}/Terraria/ResourcePacks",
+  "sites": {
+    "curseforge": "terraria"
+  },
+  "quirks": [
+    "Code mods run in tModLoader, a separate free Steam app; this profile manages resource packs."
+  ]
+}

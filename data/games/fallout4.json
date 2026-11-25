@@ -1,0 +1,22 @@
+{
+  "id": "fallout4",
+  "name": "Fallout 4",
+  "steam": [
+    377160
+  ],
+  "detect": [
+    "Fallout4.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Data",
+  "loader": "f4se",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "fallout4",
+    "curseforge": "fallout-4"
+  },
+  "quirks": [
+    "The 2024 next-gen update broke older F4SE plugins; check each mod's supported game version.",
+    "Loose files need bInvalidateOlderFiles=1, which Luma sets in Fallout4Custom.ini."
+  ]
+}

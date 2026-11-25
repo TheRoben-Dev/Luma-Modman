@@ -1,0 +1,12 @@
+{
+  "id": "warframe",
+  "name": "Warframe",
+  "steam": [
+    230410
+  ],
+  "detect": [
+    "Warframe.x64.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Online-only; Digital Extremes' terms forbid modifying the client."
+}

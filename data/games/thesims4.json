@@ -1,0 +1,20 @@
+{
+  "id": "thesims4",
+  "name": "The Sims 4",
+  "steam": [
+    1222670
+  ],
+  "detect": [
+    "Game/Bin/TS4_x64.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "{documents}/Electronic Arts/The Sims 4/Mods",
+  "sites": {
+    "nexus": "thesims4",
+    "curseforge": "sims4"
+  },
+  "quirks": [
+    "Turn on custom content and script mods in the game's options once.",
+    "Mods folders can only be one level deep for script mods; Luma keeps them flat."
+  ]
+}

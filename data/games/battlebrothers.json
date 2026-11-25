@@ -1,0 +1,18 @@
+{
+  "id": "battlebrothers",
+  "name": "Battle Brothers",
+  "steam": [
+    365360
+  ],
+  "detect": [
+    "win32/BattleBrothers.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "data",
+  "sites": {
+    "nexus": "battlebrothers"
+  },
+  "quirks": [
+    "Mods are .zip files placed as they are; Modern Hooks is a common dependency."
+  ]
+}

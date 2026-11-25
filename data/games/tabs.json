@@ -1,0 +1,16 @@
+{
+  "id": "tabs",
+  "name": "Totally Accurate Battle Simulator",
+  "steam": [
+    508440
+  ],
+  "detect": [
+    "TotallyAccurateBattleSimulator.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "thunderstore": "totally-accurate-battle-simulator"
+  }
+}

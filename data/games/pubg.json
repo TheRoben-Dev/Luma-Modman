@@ -1,0 +1,12 @@
+{
+  "id": "pubg",
+  "name": "PUBG: BATTLEGROUNDS",
+  "steam": [
+    578080
+  ],
+  "detect": [
+    "TslGame/Binaries/Win64/TslGame.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "BattlEye anti-cheat and online-only play; modifications are bannable."
+}

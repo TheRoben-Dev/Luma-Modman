@@ -1,0 +1,15 @@
+{
+  "id": "finalfantasy14",
+  "name": "Final Fantasy XIV Online",
+  "steam": [
+    39210
+  ],
+  "detect": [
+    "game/ffxiv_dx11.exe"
+  ],
+  "runtime": "proton",
+  "sites": {
+    "nexus": "finalfantasy14"
+  },
+  "notModdable": "Square Enix's terms forbid third-party tools and modified files in this online game."
+}

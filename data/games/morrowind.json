@@ -1,0 +1,20 @@
+{
+  "id": "morrowind",
+  "name": "The Elder Scrolls III: Morrowind",
+  "steam": [
+    22320
+  ],
+  "detect": [
+    "Morrowind.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Data Files",
+  "loader": "mwse",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "morrowind"
+  },
+  "quirks": [
+    "OpenMW (native Linux) runs most mods better; Luma manages the original engine's Data Files."
+  ]
+}

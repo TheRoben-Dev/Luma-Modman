@@ -1,0 +1,19 @@
+{
+  "id": "fallout76",
+  "name": "Fallout 76",
+  "steam": [
+    1151340
+  ],
+  "detect": [
+    "Fallout76.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Data",
+  "sites": {
+    "nexus": "fallout76"
+  },
+  "quirks": [
+    "Online-only: only client-side mods (interface, textures, sound) are allowed.",
+    "Archives are listed in Fallout76Custom.ini, which Luma keeps up to date."
+  ]
+}

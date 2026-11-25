@@ -1,0 +1,18 @@
+{
+  "id": "darksouls2",
+  "name": "Dark Souls II: Scholar of the First Sin",
+  "steam": [
+    335300
+  ],
+  "detect": [
+    "Game/DarkSoulsII.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Game",
+  "sites": {
+    "nexus": "darksouls2"
+  },
+  "quirks": [
+    "Play modded sessions offline."
+  ]
+}

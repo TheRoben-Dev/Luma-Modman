@@ -1,0 +1,19 @@
+{
+  "id": "streetfighter6",
+  "name": "Street Fighter 6",
+  "steam": [
+    1364780
+  ],
+  "detect": [
+    "StreetFighter6.exe"
+  ],
+  "runtime": "proton",
+  "loader": "reframework",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "streetfighter6"
+  },
+  "quirks": [
+    "Cosmetic mods are tolerated; anything that changes gameplay online can be banned. Luma suggests playing modded offline."
+  ]
+}

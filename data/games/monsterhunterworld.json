@@ -1,0 +1,18 @@
+{
+  "id": "monsterhunterworld",
+  "name": "Monster Hunter: World",
+  "steam": [
+    582010
+  ],
+  "detect": [
+    "MonsterHunterWorld.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "nativePC",
+  "sites": {
+    "nexus": "monsterhunterworld"
+  },
+  "quirks": [
+    "Plugin mods need Stracker's Loader (installed as a dependency)."
+  ]
+}

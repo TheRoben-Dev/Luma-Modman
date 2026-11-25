@@ -1,0 +1,19 @@
+{
+  "id": "titanfall2",
+  "name": "Titanfall 2 (Northstar)",
+  "steam": [
+    1237970
+  ],
+  "detect": [
+    "Titanfall2.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "R2Northstar/mods",
+  "loader": "northstar",
+  "sites": {
+    "thunderstore": "northstar"
+  },
+  "quirks": [
+    "Modded play runs on Northstar's community servers through NorthstarLauncher.exe, never official matchmaking."
+  ]
+}

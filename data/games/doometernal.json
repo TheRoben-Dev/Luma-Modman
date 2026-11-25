@@ -1,0 +1,18 @@
+{
+  "id": "doometernal",
+  "name": "DOOM Eternal",
+  "steam": [
+    782330
+  ],
+  "detect": [
+    "DOOMEternalx64vk.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "sites": {
+    "nexus": "doometernal"
+  },
+  "quirks": [
+    "Mods load through EternalModInjector and only work offline."
+  ]
+}
