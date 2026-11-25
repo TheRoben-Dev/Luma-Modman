@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{01BD8018-612E-4156-9BBF-6AF7F09E3A1F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Luma.Core", "src\Luma.Core\Luma.Core.csproj", "{F398EACB-3E53-44B0-B055-DD13D0FE4A9A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Luma.Host", "src\Luma.Host\Luma.Host.csproj", "{1CFE28DD-C6AA-4DE6-998C-3DD6EF7E0E76}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Luma.Cli", "src\Luma.Cli\Luma.Cli.csproj", "{D46D4E0D-8E12-496E-9E98-BB3AA37C6229}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{08F5354B-0E1F-4018-87B8-59E8342393C8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Luma.Core.Tests", "tests\Luma.Core.Tests\Luma.Core.Tests.csproj", "{4BB6EEA9-2425-479C-938C-F249DD5320B6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Luma.App", "src\Luma.App\Luma.App.csproj", "{6A4A0798-75D3-4845-AD70-15492E275E84}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F398EACB-3E53-44B0-B055-DD13D0FE4A9A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F398EACB-3E53-44B0-B055-DD13D0FE4A9A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F398EACB-3E53-44B0-B055-DD13D0FE4A9A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F398EACB-3E53-44B0-B055-DD13D0FE4A9A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1CFE28DD-C6AA-4DE6-998C-3DD6EF7E0E76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1CFE28DD-C6AA-4DE6-998C-3DD6EF7E0E76}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1CFE28DD-C6AA-4DE6-998C-3DD6EF7E0E76}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1CFE28DD-C6AA-4DE6-998C-3DD6EF7E0E76}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D46D4E0D-8E12-496E-9E98-BB3AA37C6229}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D46D4E0D-8E12-496E-9E98-BB3AA37C6229}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D46D4E0D-8E12-496E-9E98-BB3AA37C6229}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D46D4E0D-8E12-496E-9E98-BB3AA37C6229}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4BB6EEA9-2425-479C-938C-F249DD5320B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4BB6EEA9-2425-479C-938C-F249DD5320B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4BB6EEA9-2425-479C-938C-F249DD5320B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4BB6EEA9-2425-479C-938C-F249DD5320B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A4A0798-75D3-4845-AD70-15492E275E84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A4A0798-75D3-4845-AD70-15492E275E84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A4A0798-75D3-4845-AD70-15492E275E84}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A4A0798-75D3-4845-AD70-15492E275E84}.Release|Any CPU.Build.0 = Debug|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F398EACB-3E53-44B0-B055-DD13D0FE4A9A} = {01BD8018-612E-4156-9BBF-6AF7F09E3A1F}
+		{1CFE28DD-C6AA-4DE6-998C-3DD6EF7E0E76} = {01BD8018-612E-4156-9BBF-6AF7F09E3A1F}
+		{D46D4E0D-8E12-496E-9E98-BB3AA37C6229} = {01BD8018-612E-4156-9BBF-6AF7F09E3A1F}
+		{4BB6EEA9-2425-479C-938C-F249DD5320B6} = {08F5354B-0E1F-4018-87B8-59E8342393C8}
+		{6A4A0798-75D3-4845-AD70-15492E275E84} = {01BD8018-612E-4156-9BBF-6AF7F09E3A1F}
+	EndGlobalSection
+EndGlobal
