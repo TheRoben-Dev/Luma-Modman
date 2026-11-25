@@ -1,0 +1,43 @@
+; Engine configuration file.
+; Hand-maintained: keep it minimal. All UI is built in code (Scripts/), see docs/tech-stack.md.
+
+config_version=5
+
+[application]
+
+config/name="Luma"
+config/description="Controller-first mod manager for SteamOS and Bazzite"
+run/main_scene="res://Main.tscn"
+config/features=PackedStringArray("4.7", "C#")
+run/low_processor_mode=true
+boot_splash/bg_color=Color(0.051, 0.059, 0.078, 1)
+boot_splash/show_image=false
+config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=800
+window/size/mode=3
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/energy_saving/keep_screen_on=false
+
+[dotnet]
+
+project/assembly_name="Luma.App"
+
+[gui]
+
+common/drop_mouse_on_gui_input_disabled=true
+timers/tooltip_delay_sec=1.2
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=false
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.051, 0.059, 0.078, 1)
