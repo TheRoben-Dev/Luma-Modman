@@ -1,0 +1,16 @@
+{
+  "id": "mysummercar",
+  "name": "My Summer Car",
+  "steam": [
+    516750
+  ],
+  "detect": [
+    "mysummercar.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "loader": "msc-loader",
+  "sites": {
+    "nexus": "mysummercar"
+  }
+}

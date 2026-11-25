@@ -1,0 +1,19 @@
+{
+  "id": "stalker2heartofchornobyl",
+  "name": "S.T.A.L.K.E.R. 2: Heart of Chornobyl",
+  "steam": [
+    1643320
+  ],
+  "detect": [
+    "Stalker2/Binaries/Win64/Stalker2-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Stalker2/Content/Paks/~mods",
+  "loader": "ue4ss",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "stalker2heartofchornobyl",
+    "modio": "S.T.A.L.K.E.R. 2: Heart of Chornobyl",
+    "curseforge": "stalker-2-heart-of-chornobyl"
+  }
+}

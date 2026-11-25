@@ -1,0 +1,21 @@
+{
+  "id": "stardewvalley",
+  "name": "Stardew Valley",
+  "steam": [
+    413150
+  ],
+  "detect": [
+    "Stardew Valley.dll"
+  ],
+  "runtime": "native",
+  "modsPath": "Mods",
+  "loader": "smapi",
+  "sites": {
+    "nexus": "stardewvalley",
+    "curseforge": "stardewvalley"
+  },
+  "quirks": [
+    "Uses the native Linux build; Luma starts it through SMAPI.",
+    "Content Patcher packs need Content Patcher, installed as a dependency."
+  ]
+}

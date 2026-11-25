@@ -1,0 +1,18 @@
+{
+  "id": "tekken8",
+  "name": "Tekken 8",
+  "steam": [
+    1778820
+  ],
+  "detect": [
+    "Polaris/Binaries/Win64/Polaris-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Polaris/Content/Paks/~mods",
+  "sites": {
+    "nexus": "tekken8"
+  },
+  "quirks": [
+    "Cosmetic mods only show for you; gameplay mods online can be banned."
+  ]
+}

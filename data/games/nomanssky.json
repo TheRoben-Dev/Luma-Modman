@@ -1,0 +1,19 @@
+{
+  "id": "nomanssky",
+  "name": "No Man's Sky",
+  "steam": [
+    275850
+  ],
+  "detect": [
+    "Binaries/NMS.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "GAMEDATA/MODS",
+  "sites": {
+    "nexus": "nomanssky"
+  },
+  "quirks": [
+    "Mods often break after big game updates; Luma shows when a mod is older than the installed game.",
+    "Online sessions with mods are allowed, but other players don't see them."
+  ]
+}

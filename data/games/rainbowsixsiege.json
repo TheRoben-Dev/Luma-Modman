@@ -1,0 +1,12 @@
+{
+  "id": "rainbowsixsiege",
+  "name": "Tom Clancy's Rainbow Six Siege",
+  "steam": [
+    359550
+  ],
+  "detect": [
+    "RainbowSix.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "BattlEye anti-cheat blocks Linux and Proton, and modifications are bannable."
+}

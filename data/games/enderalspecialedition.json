@@ -1,0 +1,21 @@
+{
+  "id": "enderalspecialedition",
+  "name": "Enderal: Forgotten Stories (Special Edition)",
+  "steam": [
+    976620
+  ],
+  "detect": [
+    "SkyrimSE.exe",
+    "Data/Enderal - Forgotten Stories.esm"
+  ],
+  "runtime": "proton",
+  "modsPath": "Data",
+  "loader": "skse64",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "enderalspecialedition"
+  },
+  "quirks": [
+    "A total conversion that runs on Skyrim Special Edition's engine."
+  ]
+}

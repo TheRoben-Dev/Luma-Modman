@@ -1,0 +1,20 @@
+{
+  "id": "rimworld",
+  "name": "RimWorld",
+  "steam": [
+    294100
+  ],
+  "detect": [
+    "RimWorldLinux"
+  ],
+  "runtime": "native",
+  "modsPath": "Mods",
+  "sites": {
+    "nexus": "rimworld",
+    "curseforge": "rimworld"
+  },
+  "quirks": [
+    "Uses the native Linux build; Harmony is installed as a dependency where mods ask for it.",
+    "Load order is written to ModsConfig.xml."
+  ]
+}

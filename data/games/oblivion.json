@@ -1,0 +1,21 @@
+{
+  "id": "oblivion",
+  "name": "The Elder Scrolls IV: Oblivion",
+  "steam": [
+    22330,
+    900883
+  ],
+  "detect": [
+    "Oblivion.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Data",
+  "loader": "xobse",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "oblivion"
+  },
+  "quirks": [
+    "Archive invalidation is needed for replaced textures; Luma turns it on."
+  ]
+}

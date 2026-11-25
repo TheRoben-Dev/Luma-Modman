@@ -1,0 +1,18 @@
+{
+  "id": "kenshi",
+  "name": "Kenshi",
+  "steam": [
+    233860
+  ],
+  "detect": [
+    "kenshi_x64.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "mods",
+  "sites": {
+    "nexus": "kenshi"
+  },
+  "quirks": [
+    "Mod order is set in the game's launcher."
+  ]
+}

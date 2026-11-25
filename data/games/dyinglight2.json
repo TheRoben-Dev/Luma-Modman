@@ -1,0 +1,18 @@
+{
+  "id": "dyinglight2",
+  "name": "Dying Light 2 Stay Human",
+  "steam": [
+    534380
+  ],
+  "detect": [
+    "ph/work/bin/x64/DyingLightGame_x64_rwdi.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "ph/source",
+  "sites": {
+    "nexus": "dyinglight2"
+  },
+  "quirks": [
+    "Mods are .pak files named data2.pak and up; Luma numbers them for you."
+  ]
+}

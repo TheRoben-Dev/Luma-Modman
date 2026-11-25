@@ -34,6 +34,41 @@ public static class PathUtil
         }
     }
 
+    /// <summary>
+    /// Resolves <paramref name="relative"/> under <paramref name="root"/> ignoring case per segment
+    /// (Windows games on a Linux file system: "Data" vs "data", "SkyrimSE.exe" vs "skyrimse.exe").
+    /// Returns the real path, or null if any segment is missing.
+    /// </summary>
+    public static string? FindCaseInsensitive(string root, string relative)
+    {
+        var cur = root;
+        foreach (var part in relative.Split('/', '\\', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var exact = Path.Combine(cur, part);
+            if (File.Exists(exact) || Directory.Exists(exact))
+            {
+                cur = exact;
+                continue;
+            }
+            try
+            {
+                var match = Directory.Exists(cur)
+                    ? Directory.EnumerateFileSystemEntries(cur).FirstOrDefault(e => string.Equals(Path.GetFileName(e), part, StringComparison.OrdinalIgnoreCase))
+                    : null;
+                if (match == null)
+                {
+                    return null;
+                }
+                cur = match;
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+        return cur;
+    }
+
     [DllImport("libc", CharSet = CharSet.Ansi)]
     private static extern IntPtr realpath([MarshalAs(UnmanagedType.LPUTF8Str)] string path, IntPtr resolved);
 

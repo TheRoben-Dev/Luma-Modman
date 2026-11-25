@@ -1,0 +1,18 @@
+{
+  "id": "deeprockgalactic",
+  "name": "Deep Rock Galactic",
+  "steam": [
+    548430
+  ],
+  "detect": [
+    "FSD/Binaries/Win64/FSD-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "FSD/Mods",
+  "sites": {
+    "modio": "Deep Rock Galactic"
+  },
+  "quirks": [
+    "Official mods come from mod.io; sandbox mods turn off progress for that session."
+  ]
+}

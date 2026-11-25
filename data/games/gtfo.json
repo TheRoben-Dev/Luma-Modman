@@ -1,0 +1,20 @@
+{
+  "id": "gtfo",
+  "name": "GTFO",
+  "steam": [
+    493520
+  ],
+  "detect": [
+    "GTFO.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex-il2cpp",
+  "sites": {
+    "nexus": "gtfo",
+    "thunderstore": "gtfo"
+  },
+  "quirks": [
+    "Modded rundowns are played with modded friends only."
+  ]
+}

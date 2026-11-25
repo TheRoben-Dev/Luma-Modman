@@ -22,38 +22,63 @@ public partial class SmokeTest : Node
         Directory.CreateDirectory(outDir);
         // The animated background costs a lot under software rendering (CI); it would skew the
         // hold-to-repeat timing. It is switched on for the theme screenshots further down.
-        Step("library", () => SetAnimatedBackground(false), expect: "Browse mods");
+        // The first scan runs in the background; the run script sets up a fake Steam library.
+        Step("mods-after-scan", () => SetAnimatedBackground(false), wait: 2.5, expect: "Browse mods", tab: "Mods");
         // Real joypad and keyboard events (not actions), through Pad's translation layer.
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Settings");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Switch game");
         Step("joy-dpad-up", () => { Joy(JoyButton.DpadUp, true); Joy(JoyButton.DpadUp, false); }, expect: "Browse mods");
-        // Bumpers switch tabs; on Browse the site tiles are a row of cartridges.
-        Step("joy-rb-browse", () => Tap(JoyButton.RightShoulder), expect: "Thunderstore");
-        Step("joy-dpad-right", () => Joy(JoyButton.DpadRight, true), wait: 0.25, expect: "mod.io");
-        Step("joy-dpad-release", () => Joy(JoyButton.DpadRight, false), expect: "mod.io");
-        Step("joy-stick-right", () => Stick(1f), wait: 0.25, expect: "CurseForge");
-        Step("joy-stick-center", () => Stick(0f), expect: "CurseForge");
-        // Holding a direction auto-repeats after a short delay (and stops at the end of the row).
-        Step("joy-dpad-hold-left", () => Joy(JoyButton.DpadLeft, true), wait: 0.9, expect: "Thunderstore");
-        Step("joy-dpad-hold-release", () => Joy(JoyButton.DpadLeft, false), expect: "Thunderstore");
-        Step("joy-a-site", () => Tap(JoyButton.A), expect: "Thunderstore");
-        // A finger tap on another tile (as gamescope delivers it: move there, press, release) selects and presses it.
-        Step("touch-tap-site", () => TouchTap(FindFocusable(GetTree().Root, "Nexus Mods")), wait: 1.2, expect: "Nexus Mods");
-        Step("joy-rb-installed", () => Tap(JoyButton.RightShoulder), expect: "Browse mods", tab: "Installed");
+        // View / Select opens the game switcher, focused on the game being worked on.
+        Step("joy-view-switcher", () => Tap(JoyButton.Back), expect: "Lethal Company");
+        Step("switcher-down", () => Joy(JoyButton.DpadDown, true), wait: 0.25, expect: "Marvel Rivals");
+        Step("switcher-release", () => Joy(JoyButton.DpadDown, false), expect: "Marvel Rivals");
+        Step("switcher-stick", () => Stick(0f, 1f), wait: 0.25, expect: "Stardew Valley");
+        Step("switcher-stick-center", () => Stick(0f, 0f), expect: "Stardew Valley");
+        // Holding a direction auto-repeats after a short delay and stops at the end of the list.
+        Step("switcher-hold-down", () => Joy(JoyButton.DpadDown, true), wait: 1.2, expect: "Supported games");
+        Step("switcher-hold-release", () => Joy(JoyButton.DpadDown, false), expect: "Supported games");
+        Step("supported-games", () => Tap(JoyButton.A), expect: "Lethal Company");
+        Step("supported-scroll", () =>
+        {
+            for (var i = 0; i < 6; i++)
+            {
+                Press("ui_down");
+            }
+        });
+        Step("supported-back", () => Tap(JoyButton.B), expect: "Supported games");
+        Step("pick-skyrim", () =>
+        {
+            FindFocusable(GetTree().Root, "The Elder Scrolls V")?.GrabFocus();
+            Tap(JoyButton.A);
+        }, wait: 1.2, expect: "Browse mods", tab: "Mods");
+        // A game with anti-cheat shows why it can't be modded instead of mod actions.
+        Step("pick-not-moddable", () =>
+        {
+            Key(Godot.Key.G);
+            FindFocusable(GetTree().Root, "Marvel Rivals")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.2, expect: "Switch game", tab: "Mods");
+        // A finger tap on a row in the switcher picks that game.
+        Step("switch-button", () => Press(Pad.Accept), expect: "Marvel Rivals");
+        Step("touch-pick", () => TouchTap(FindFocusable(GetTree().Root, "The Elder Scrolls V")), wait: 1.4, expect: "Browse mods", tab: "Mods");
+        // Bumpers switch tabs; Browse lists the sites that carry the game.
+        Step("joy-rb-browse", () => Tap(JoyButton.RightShoulder), expect: "Nexus Mods", tab: "Browse");
+        Step("joy-a-site", () => Tap(JoyButton.A), expect: "Nexus Mods");
         Step("joy-rb-downloads", () => Tap(JoyButton.RightShoulder), expect: "Browse mods", tab: "Downloads");
-        Step("joy-rb-settings", () => Tap(JoyButton.RightShoulder), expect: "Appearance");
-        Step("key-tab-wraps", () => Key(Godot.Key.Tab), expect: "Browse mods");
-        Step("key-shift-tab", () => Key(Godot.Key.Tab, shift: true), expect: "Appearance");
+        Step("joy-rb-settings", () => Tap(JoyButton.RightShoulder), expect: "Games", tab: "Settings");
+        Step("key-tab-wraps", () => Key(Godot.Key.Tab), expect: "Browse mods", tab: "Mods");
+        Step("key-shift-tab", () => Key(Godot.Key.Tab, shift: true), expect: "Games", tab: "Settings");
         Step("joy-lb-downloads", () => Tap(JoyButton.LeftShoulder), expect: "Browse mods", tab: "Downloads");
-        Step("joy-lb-installed", () => Tap(JoyButton.LeftShoulder), expect: "Browse mods", tab: "Installed");
         // A on an empty tab's button jumps to that tab.
-        Step("installed-browse", () => Press(Pad.Accept), expect: "Thunderstore");
+        Step("downloads-browse", () => Press(Pad.Accept), expect: "Nexus Mods", tab: "Browse");
         Step("settings", () =>
         {
             Tap(JoyButton.RightShoulder);
             Tap(JoyButton.RightShoulder);
-            Tap(JoyButton.RightShoulder);
-        }, expect: "Appearance");
-        // Two panes: moving down the categories swaps the right pane in place.
+        }, expect: "Games", tab: "Settings");
+        Step("games-pane", () => Press(Pad.Accept), expect: "Scan again");
+        Step("games-rescan", () => Press(Pad.Accept), wait: 1.5, expect: "Scan again");
+        Step("games-back", () => Press(Pad.Back), expect: "Games");
+        Step("settings-appearance", () => Press("ui_down"), expect: "Appearance");
         Step("settings-sound", () => Press("ui_down"), expect: "Sound & feel");
         Step("sound-pane", () => Press(Pad.Accept), expect: "Short sounds when you move");
         // Inside a pane, left stays in the pane; only B goes back to the categories.
@@ -116,19 +141,22 @@ public partial class SmokeTest : Node
         foreach (var t in UiTheme.Themes)
         {
             var id = t.Id;
-            Step($"theme-{id}-browse", () =>
+            Step($"theme-{id}-mods", () =>
             {
                 SetTheme(id);
-                Tap(JoyButton.RightShoulder);  // Settings -> Library (wraps)
+                Tap(JoyButton.RightShoulder);  // Settings -> Mods (wraps)
+            }, wait: 1.2, expect: "Browse mods", tab: "Mods");
+            Step($"theme-{id}-switcher", () => Tap(JoyButton.Back), wait: 1.0, expect: "The Elder Scrolls V");
+            Step($"theme-{id}-browse", () =>
+            {
+                Tap(JoyButton.B);
                 Tap(JoyButton.RightShoulder);  // -> Browse
-            }, wait: 1.2, expect: "Thunderstore");
-            Step($"theme-{id}-tile", () => Press("ui_right"), wait: 0.8, expect: "mod.io");
-            Step($"theme-{id}-tap", () => TouchTap(FindFocusable(GetTree().Root, "CurseForge")), wait: 0.8, expect: "CurseForge");
+            }, wait: 1.0, expect: "Nexus Mods", tab: "Browse");
             Step($"theme-{id}-settings", () =>
             {
-                Tap(JoyButton.LeftShoulder);  // -> Library
+                Tap(JoyButton.LeftShoulder);  // -> Mods
                 Tap(JoyButton.LeftShoulder);  // -> Settings (wraps)
-            }, wait: 1.0, expect: "Appearance");
+            }, wait: 1.0, tab: "Settings");
         }
         Step("theme-restore", () => SetTheme("dark"), wait: 1.0);
         Step("changelog", () =>
@@ -198,15 +226,20 @@ public partial class SmokeTest : Node
     {
         Joy(b, true);
         Joy(b, false);
+        Input.FlushBufferedEvents();
     }
 
-    private static void Stick(float x) =>
+    private static void Stick(float x, float y)
+    {
         Input.ParseInputEvent(new InputEventJoypadMotion { Device = 0, Axis = JoyAxis.LeftX, AxisValue = x });
+        Input.ParseInputEvent(new InputEventJoypadMotion { Device = 0, Axis = JoyAxis.LeftY, AxisValue = y });
+    }
 
     private static void Key(Key k, bool shift = false)
     {
         Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, ShiftPressed = shift, Pressed = true });
         Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, ShiftPressed = shift, Pressed = false });
+        Input.FlushBufferedEvents();
     }
 
     private static void Press(string action)

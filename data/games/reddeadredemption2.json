@@ -1,0 +1,21 @@
+{
+  "id": "reddeadredemption2",
+  "name": "Red Dead Redemption 2",
+  "steam": [
+    1174180
+  ],
+  "detect": [
+    "RDR2.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "lml",
+  "loader": "scripthookrdr2",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "reddeadredemption2"
+  },
+  "quirks": [
+    "Story Mode only. Red Dead Online with mods can get your account banned.",
+    "Needs the Rockstar Games Launcher, which runs under Proton."
+  ]
+}

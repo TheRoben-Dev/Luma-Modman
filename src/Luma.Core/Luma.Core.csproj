@@ -5,5 +5,8 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Luma.Core.Tests" />
+    <!-- Game support profiles and the loader list, built in (users can add their own in ~/.config/luma/games). -->
+    <EmbeddedResource Include="..\..\data\games\*.json" LogicalName="games/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\data\loaders.json" LogicalName="loaders.json" />
   </ItemGroup>
 </Project>

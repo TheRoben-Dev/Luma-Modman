@@ -1,0 +1,19 @@
+{
+  "id": "mechwarrior5mercenaries",
+  "name": "MechWarrior 5: Mercenaries",
+  "steam": [
+    784080
+  ],
+  "detect": [
+    "MW5Mercs/Binaries/Win64/MechWarrior-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "MW5Mercs/Mods",
+  "sites": {
+    "nexus": "mechwarrior5mercenaries",
+    "modio": "MechWarrior 5: Mercenaries"
+  },
+  "quirks": [
+    "Load order is set by each mod's mod.json priority; Luma writes modlist.json."
+  ]
+}

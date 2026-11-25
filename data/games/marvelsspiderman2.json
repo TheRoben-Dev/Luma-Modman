@@ -1,0 +1,14 @@
+{
+  "id": "marvelsspiderman2",
+  "name": "Marvel's Spider-Man 2",
+  "steam": [
+    2651280
+  ],
+  "detect": [
+    "Spider-Man2.exe"
+  ],
+  "runtime": "proton",
+  "sites": {
+    "nexus": "marvelsspiderman2"
+  }
+}

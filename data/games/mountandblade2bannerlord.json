@@ -1,0 +1,20 @@
+{
+  "id": "mountandblade2bannerlord",
+  "name": "Mount & Blade II: Bannerlord",
+  "steam": [
+    261550
+  ],
+  "detect": [
+    "bin/Win64_Shipping_Client/Bannerlord.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Modules",
+  "sites": {
+    "nexus": "mountandblade2bannerlord",
+    "curseforge": "mount-blade-ii-bannerlord"
+  },
+  "quirks": [
+    "Most mods need Harmony, ButterLib, UIExtenderEx and MCM, installed as dependencies.",
+    "Luma sets the module order the launcher uses."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "warhammer40kdarktide",
+  "name": "Warhammer 40,000: Darktide",
+  "steam": [
+    1361210
+  ],
+  "detect": [
+    "binaries/Darktide.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "mods",
+  "loader": "dml",
+  "sites": {
+    "nexus": "warhammer40kdarktide"
+  },
+  "quirks": [
+    "Modded players are matched on the official modded realm; cheating mods are not allowed."
+  ]
+}

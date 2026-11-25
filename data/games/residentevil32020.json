@@ -1,0 +1,19 @@
+{
+  "id": "residentevil32020",
+  "name": "Resident Evil 3 (2020)",
+  "steam": [
+    952060
+  ],
+  "detect": [
+    "re3.exe"
+  ],
+  "runtime": "proton",
+  "loader": "reframework",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "residentevil32020"
+  },
+  "quirks": [
+    "Mods made for the DirectX 11 version need the game's dx11_non-rt beta branch."
+  ]
+}

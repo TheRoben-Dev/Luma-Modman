@@ -1,0 +1,19 @@
+{
+  "id": "h3vr",
+  "name": "Hot Dogs, Horseshoes & Hand Grenades",
+  "steam": [
+    450540
+  ],
+  "detect": [
+    "h3vr.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "thunderstore": "h3vr"
+  },
+  "quirks": [
+    "A VR game: it needs a PC VR headset."
+  ]
+}

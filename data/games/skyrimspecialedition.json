@@ -1,0 +1,22 @@
+{
+  "id": "skyrimspecialedition",
+  "name": "The Elder Scrolls V: Skyrim Special Edition",
+  "steam": [
+    489830
+  ],
+  "detect": [
+    "SkyrimSE.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Data",
+  "loader": "skse64",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "skyrimspecialedition"
+  },
+  "quirks": [
+    "Script-extender mods need SKSE64; Luma starts the game through skse64_loader.exe when it's installed.",
+    "Plugin load order is written to plugins.txt in the Proton prefix.",
+    "Anniversary Edition content is part of the same game."
+  ]
+}

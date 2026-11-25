@@ -1,0 +1,15 @@
+{
+  "id": "ghostreconbreakpoint",
+  "name": "Ghost Recon Breakpoint",
+  "steam": [
+    2231380
+  ],
+  "detect": [
+    "GRB.exe"
+  ],
+  "runtime": "proton",
+  "sites": {
+    "nexus": "ghostreconbreakpoint"
+  },
+  "notModdable": "Always-online with BattlEye anti-cheat; modified files risk a ban."
+}

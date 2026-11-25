@@ -1,0 +1,20 @@
+{
+  "id": "7daystodie",
+  "name": "7 Days to Die",
+  "steam": [
+    251570
+  ],
+  "detect": [
+    "7DaysToDie.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "sites": {
+    "nexus": "7daystodie",
+    "curseforge": "7-days-to-die"
+  },
+  "quirks": [
+    "Mods with code (DLLs) need the game started without Easy Anti-Cheat; Luma launches 7DaysToDie.exe directly for those.",
+    "Servers and players need matching mods."
+  ]
+}

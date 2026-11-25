@@ -1,0 +1,16 @@
+{
+  "id": "webfishing",
+  "name": "WEBFISHING",
+  "steam": [
+    3146520
+  ],
+  "detect": [
+    "webfishing.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "GDWeave/mods",
+  "loader": "gdweave",
+  "sites": {
+    "thunderstore": "webfishing"
+  }
+}

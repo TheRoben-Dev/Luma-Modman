@@ -1,0 +1,24 @@
+{
+  "id": "balatro",
+  "name": "Balatro",
+  "steam": [
+    2379780
+  ],
+  "detect": [
+    "Balatro.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "{appdata}/Balatro/Mods",
+  "loader": "lovely",
+  "sites": {
+    "nexus": "balatro",
+    "thunderstore": "balatro",
+    "curseforge": "balatro"
+  },
+  "dllOverrides": [
+    "version=n,b"
+  ],
+  "quirks": [
+    "Most mods need Steamodded, installed as a dependency."
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "id": "apexlegends",
+  "name": "Apex Legends",
+  "steam": [
+    1172470
+  ],
+  "detect": [
+    "r5apex.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Easy Anti-Cheat blocks Linux and Proton for this game, and modifications are bannable."
+}

@@ -1,0 +1,18 @@
+{
+  "id": "skaterxl",
+  "name": "Skater XL",
+  "steam": [
+    962730
+  ],
+  "detect": [
+    "SkaterXL.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "loader": "umm",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "skaterxl",
+    "modio": "Skater XL"
+  }
+}

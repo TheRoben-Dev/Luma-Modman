@@ -1,0 +1,21 @@
+{
+  "id": "oblivionremastered",
+  "name": "The Elder Scrolls IV: Oblivion Remastered",
+  "steam": [
+    2623190
+  ],
+  "detect": [
+    "OblivionRemastered/Binaries/Win64/OblivionRemastered-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "OblivionRemastered/Content/Dev/ObvData/Data",
+  "loader": "obse64",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "oblivionremastered"
+  },
+  "quirks": [
+    "Plugins (.esp) go to ObvData/Data; .pak mods go to Content/Paks/~mods.",
+    "UE4SS-based mods need UE4SS as well."
+  ]
+}

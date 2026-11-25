@@ -1,0 +1,16 @@
+{
+  "id": "contentwarning",
+  "name": "Content Warning",
+  "steam": [
+    2881650
+  ],
+  "detect": [
+    "Content Warning.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "thunderstore": "content-warning"
+  }
+}

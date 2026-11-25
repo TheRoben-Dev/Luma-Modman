@@ -1,0 +1,19 @@
+{
+  "id": "darksoulsremastered",
+  "name": "Dark Souls: Remastered",
+  "steam": [
+    570940
+  ],
+  "detect": [
+    "DarkSoulsRemastered.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "mods",
+  "loader": "modengine2",
+  "sites": {
+    "nexus": "darksoulsremastered"
+  },
+  "quirks": [
+    "Play modded sessions offline."
+  ]
+}

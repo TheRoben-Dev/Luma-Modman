@@ -1,0 +1,16 @@
+{
+  "id": "pathfinderwrathoftherighteous",
+  "name": "Pathfinder: Wrath of the Righteous",
+  "steam": [
+    1184370
+  ],
+  "detect": [
+    "Wrath.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "loader": "umm",
+  "sites": {
+    "nexus": "pathfinderwrathoftherighteous"
+  }
+}

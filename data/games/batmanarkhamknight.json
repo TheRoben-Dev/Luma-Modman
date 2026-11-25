@@ -1,0 +1,18 @@
+{
+  "id": "batmanarkhamknight",
+  "name": "Batman: Arkham Knight",
+  "steam": [
+    208650
+  ],
+  "detect": [
+    "Binaries/Win64/BatmanAK.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BMGame/CookedPCConsole",
+  "sites": {
+    "nexus": "batmanarkhamknight"
+  },
+  "quirks": [
+    "Most mods replace .upk files; Luma links them in only while the game runs."
+  ]
+}

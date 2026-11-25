@@ -37,6 +37,9 @@ public sealed record AppSettings
 
     /// <summary>Last app version whose "What's new" was shown; null on a fresh install.</summary>
     public string? LastSeenVersion { get; init; }
+
+    /// <summary>The game every tab works on ("steam:489830"); null = the first moddable one found.</summary>
+    public string? ActiveGame { get; init; }
 }
 
 /// <summary>
@@ -55,6 +58,7 @@ public sealed class AppHost
     public AppPaths Paths { get; }
     public AppSettings Settings { get; private set; }
     public AppUpdater Updater { get; }
+    public GameLibrary Games { get; }
 
     public AppHost(AppPaths? paths = null, HttpClient? http = null)
     {
@@ -63,7 +67,14 @@ public sealed class AppHost
         Directory.CreateDirectory(Paths.Data);
         Settings = LoadJson<AppSettings>(Paths.SettingsFile) ?? new AppSettings();
         Updater = new AppUpdater(http);
+        Games = new GameLibrary(Paths);
     }
+
+    /// <summary>The game the player is working on: the one they picked, else the first moddable one found.</summary>
+    public Luma.Core.Detection.DetectedGame? ActiveGame =>
+        Games.Find(Settings.ActiveGame) ?? Games.Games.FirstOrDefault(g => g.Profile.Moddable) ?? Games.Games.FirstOrDefault();
+
+    public void SetActiveGame(string key) => SaveSettings(Settings with { ActiveGame = key });
 
     public void SaveSettings(AppSettings settings)
     {

@@ -1,0 +1,19 @@
+{
+  "id": "bladeandsorcery",
+  "name": "Blade & Sorcery",
+  "steam": [
+    629730
+  ],
+  "detect": [
+    "BladeAndSorcery.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BladeAndSorcery_Data/StreamingAssets/Mods",
+  "sites": {
+    "nexus": "bladeandsorcery",
+    "modio": "Blade & Sorcery"
+  },
+  "quirks": [
+    "A VR game: it needs a PC VR headset, not the Deck's screen."
+  ]
+}

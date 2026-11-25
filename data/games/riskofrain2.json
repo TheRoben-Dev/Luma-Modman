@@ -1,0 +1,20 @@
+{
+  "id": "riskofrain2",
+  "name": "Risk of Rain 2",
+  "steam": [
+    632360
+  ],
+  "detect": [
+    "Risk of Rain 2.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "riskofrain2",
+    "thunderstore": "riskofrain2"
+  },
+  "quirks": [
+    "Everyone in a lobby needs the same gameplay mods."
+  ]
+}

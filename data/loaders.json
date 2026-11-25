@@ -1,0 +1,227 @@
+[
+  {
+    "id": "bepinex",
+    "name": "BepInEx 5",
+    "source": "github:BepInEx/BepInEx",
+    "dllOverrides": [
+      "winhttp=n,b"
+    ],
+    "about": "Plugin framework for Unity games (Mono)."
+  },
+  {
+    "id": "bepinex-il2cpp",
+    "name": "BepInEx 6 (IL2CPP)",
+    "source": "https://builds.bepinex.dev/projects/bepinex_be",
+    "dllOverrides": [
+      "winhttp=n,b"
+    ],
+    "about": "Plugin framework for Unity games built with IL2CPP."
+  },
+  {
+    "id": "melonloader",
+    "name": "MelonLoader",
+    "source": "github:LavaGang/MelonLoader",
+    "dllOverrides": [
+      "version=n,b"
+    ],
+    "about": "Mod loader for Unity games (Mono and IL2CPP)."
+  },
+  {
+    "id": "umm",
+    "name": "Unity Mod Manager",
+    "source": "nexus:site/21",
+    "dllOverrides": [
+      "winhttp=n,b"
+    ],
+    "about": "In-game mod manager for several Unity games."
+  },
+  {
+    "id": "skse64",
+    "name": "Skyrim Script Extender 64",
+    "source": "https://skse.silverlock.org",
+    "about": "Extends Skyrim Special Edition's scripting; most big mods need it."
+  },
+  {
+    "id": "skse",
+    "name": "Skyrim Script Extender",
+    "source": "https://skse.silverlock.org",
+    "about": "Extends Skyrim (2011)'s scripting."
+  },
+  {
+    "id": "f4se",
+    "name": "Fallout 4 Script Extender",
+    "source": "https://f4se.silverlock.org",
+    "about": "Extends Fallout 4's scripting."
+  },
+  {
+    "id": "sfse",
+    "name": "Starfield Script Extender",
+    "source": "github:ianpatt/sfse",
+    "about": "Extends Starfield's scripting."
+  },
+  {
+    "id": "xnvse",
+    "name": "xNVSE",
+    "source": "github:xNVSE/NVSE",
+    "about": "New Vegas Script Extender, community edition."
+  },
+  {
+    "id": "fose",
+    "name": "Fallout Script Extender",
+    "source": "https://fose.silverlock.org",
+    "about": "Extends Fallout 3's scripting."
+  },
+  {
+    "id": "xobse",
+    "name": "xOBSE",
+    "source": "github:llde/xOBSE",
+    "about": "Oblivion Script Extender, community edition."
+  },
+  {
+    "id": "obse64",
+    "name": "OBSE64",
+    "source": "nexus:oblivionremastered/282",
+    "about": "Script extender for Oblivion Remastered."
+  },
+  {
+    "id": "mwse",
+    "name": "Morrowind Script Extender",
+    "source": "github:MWSE/MWSE",
+    "about": "Lua scripting for Morrowind."
+  },
+  {
+    "id": "cet",
+    "name": "Cyber Engine Tweaks",
+    "source": "github:maximegmd/CyberEngineTweaks",
+    "dllOverrides": [
+      "version=n,b"
+    ],
+    "about": "Scripting and console for Cyberpunk 2077."
+  },
+  {
+    "id": "red4ext",
+    "name": "RED4ext",
+    "source": "github:WopsS/RED4ext",
+    "dllOverrides": [
+      "winmm=n,b"
+    ],
+    "about": "Native plugin loader for Cyberpunk 2077."
+  },
+  {
+    "id": "bg3se",
+    "name": "BG3 Script Extender",
+    "source": "github:Norbyte/bg3se",
+    "dllOverrides": [
+      "DWrite=n,b"
+    ],
+    "about": "Script extender for Baldur's Gate 3."
+  },
+  {
+    "id": "reframework",
+    "name": "REFramework",
+    "source": "github:praydog/REFramework",
+    "dllOverrides": [
+      "dinput8=n,b"
+    ],
+    "about": "Mod framework for RE Engine games (Capcom)."
+  },
+  {
+    "id": "smapi",
+    "name": "SMAPI",
+    "source": "github:Pathoschild/SMAPI",
+    "about": "Stardew Valley's mod loader."
+  },
+  {
+    "id": "ue4ss",
+    "name": "UE4SS",
+    "source": "github:UE4SS-RE/RE-UE4SS",
+    "dllOverrides": [
+      "dwmapi=n,b"
+    ],
+    "about": "Lua and C++ mod loader for Unreal Engine 4/5 games."
+  },
+  {
+    "id": "modengine2",
+    "name": "Mod Engine 2",
+    "source": "github:soulsmods/ModEngine2",
+    "about": "Loads mods for FromSoftware games without touching game files."
+  },
+  {
+    "id": "msc-loader",
+    "name": "MSC Mod Loader",
+    "source": "github:piotrulos/MSCModLoader",
+    "about": "Mod loader for My Summer Car and My Winter Car."
+  },
+  {
+    "id": "scripthookv",
+    "name": "Script Hook V",
+    "source": "http://www.dev-c.com/gtav/scripthookv/",
+    "dllOverrides": [
+      "dinput8=n,b"
+    ],
+    "about": "Script loader for GTA V Story Mode."
+  },
+  {
+    "id": "scripthookrdr2",
+    "name": "Script Hook RDR2 + Lenny's Mod Loader",
+    "source": "http://www.dev-c.com/rdr2/scripthookrdr2/",
+    "dllOverrides": [
+      "dinput8=n,b"
+    ],
+    "about": "Script and file loader for Red Dead Redemption 2 Story Mode."
+  },
+  {
+    "id": "asi-loader",
+    "name": "Ultimate ASI Loader",
+    "source": "github:ThirteenAG/Ultimate-ASI-Loader",
+    "dllOverrides": [
+      "dinput8=n,b"
+    ],
+    "about": "Loads .asi plugins (fixes, widescreen, scripts)."
+  },
+  {
+    "id": "northstar",
+    "name": "Northstar",
+    "source": "github:R2Northstar/Northstar",
+    "about": "Community client and mod loader for Titanfall 2."
+  },
+  {
+    "id": "lovely",
+    "name": "Lovely",
+    "source": "github:ethangreen-dev/lovely-injector",
+    "dllOverrides": [
+      "version=n,b"
+    ],
+    "about": "Lua injector for Balatro (Steamodded runs on it)."
+  },
+  {
+    "id": "gdweave",
+    "name": "GDWeave",
+    "source": "github:NotNite/GDWeave",
+    "dllOverrides": [
+      "winmm=n,b"
+    ],
+    "about": "Mod loader for WEBFISHING."
+  },
+  {
+    "id": "hell2modding",
+    "name": "Hell2Modding",
+    "source": "github:SGG-Modding/Hell2Modding",
+    "dllOverrides": [
+      "d3d12=n,b"
+    ],
+    "about": "Lua mod loader for Hades II."
+  },
+  {
+    "id": "dml",
+    "name": "Darktide Mod Loader",
+    "source": "nexus:warhammer40kdarktide/19",
+    "about": "Mod loader for Warhammer 40,000: Darktide."
+  },
+  {
+    "id": "tmodloader",
+    "name": "tModLoader",
+    "source": "https://store.steampowered.com/app/1281930",
+    "about": "Terraria's official mod platform, a free separate Steam app."
+  }
+]

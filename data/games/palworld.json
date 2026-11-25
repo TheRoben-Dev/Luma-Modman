@@ -1,0 +1,22 @@
+{
+  "id": "palworld",
+  "name": "Palworld",
+  "steam": [
+    1623730
+  ],
+  "detect": [
+    "Pal/Binaries/Win64/Palworld-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Pal/Content/Paks/~mods",
+  "loader": "ue4ss",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "palworld",
+    "curseforge": "palworld"
+  },
+  "quirks": [
+    "Lua mods need UE4SS; .pak mods go straight into ~mods.",
+    "Dedicated servers need the same mods as players."
+  ]
+}

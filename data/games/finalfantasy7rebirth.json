@@ -1,0 +1,16 @@
+{
+  "id": "finalfantasy7rebirth",
+  "name": "Final Fantasy VII Rebirth",
+  "steam": [
+    2909400
+  ],
+  "detect": [
+    "End/Binaries/Win64/ff7rebirth_.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "End/Content/Paks/~mods",
+  "sites": {
+    "nexus": "finalfantasy7rebirth",
+    "curseforge": "final-fantasy-vii-rebirth"
+  }
+}

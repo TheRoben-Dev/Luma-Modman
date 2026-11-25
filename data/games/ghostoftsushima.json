@@ -1,0 +1,17 @@
+{
+  "id": "ghostoftsushima",
+  "name": "Ghost of Tsushima Director's Cut",
+  "steam": [
+    2215430
+  ],
+  "detect": [
+    "GhostOfTsushima.exe"
+  ],
+  "runtime": "proton",
+  "sites": {
+    "nexus": "ghostoftsushima"
+  },
+  "quirks": [
+    "Legends (online co-op) with mods is at your own risk."
+  ]
+}

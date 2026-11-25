@@ -1,0 +1,21 @@
+{
+  "id": "hogwartslegacy",
+  "name": "Hogwarts Legacy",
+  "steam": [
+    990080
+  ],
+  "detect": [
+    "Phoenix/Binaries/Win64/HogwartsLegacy.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Phoenix/Content/Paks/~mods",
+  "loader": "ue4ss",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "hogwartslegacy",
+    "curseforge": "hogwarts-legacy"
+  },
+  "quirks": [
+    "Official creator-kit mods from CurseForge install through the game's own mod manager."
+  ]
+}

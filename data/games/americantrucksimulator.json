@@ -1,0 +1,19 @@
+{
+  "id": "americantrucksimulator",
+  "name": "American Truck Simulator",
+  "steam": [
+    270880
+  ],
+  "detect": [
+    "bin/linux_x64/amtrucks"
+  ],
+  "runtime": "native",
+  "modsPath": "{xdgdata}/American Truck Simulator/mod",
+  "sites": {
+    "nexus": "americantrucksimulator",
+    "curseforge": "american-truck-simulator"
+  },
+  "quirks": [
+    "Mods are enabled in the game's Mod Manager on the profile screen."
+  ]
+}

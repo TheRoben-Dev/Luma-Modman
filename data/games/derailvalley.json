@@ -1,0 +1,16 @@
+{
+  "id": "derailvalley",
+  "name": "Derail Valley",
+  "steam": [
+    588030
+  ],
+  "detect": [
+    "DerailValley.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "loader": "umm",
+  "sites": {
+    "nexus": "derailvalley"
+  }
+}

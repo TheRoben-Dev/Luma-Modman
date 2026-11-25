@@ -1,0 +1,18 @@
+{
+  "id": "insurgencysandstorm",
+  "name": "Insurgency: Sandstorm",
+  "steam": [
+    581320
+  ],
+  "detect": [
+    "Insurgency/Binaries/Win64/InsurgencyClient-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Insurgency/Mods",
+  "sites": {
+    "modio": "Insurgency: Sandstorm"
+  },
+  "quirks": [
+    "Official mods are used on community servers; ranked play stays unmodded."
+  ]
+}

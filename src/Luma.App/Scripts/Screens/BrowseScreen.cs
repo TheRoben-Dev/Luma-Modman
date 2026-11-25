@@ -3,48 +3,65 @@ using Godot;
 
 namespace Luma.App.Screens;
 
-/// <summary>The mod sites Luma can browse, as tiles. Each opens its own browser (search, categories, details).</summary>
+/// <summary>The mod sites that carry the chosen game. Each opens its own search (next update).</summary>
 public partial class BrowseScreen : Screen
 {
-    /// <summary>Site id, name, monogram and what it covers.</summary>
-    public static readonly (string Id, string Name, string Mono, string About)[] Sites =
+    /// <summary>Site name (as <see cref="Luma.Core.Games.SiteIds.Names"/> gives it), what it covers and what it needs.</summary>
+    public static readonly (string Name, string About, string Needs)[] Sites =
     [
-        ("thunderstore", "Thunderstore", "TS", "Community mods for Unity and other games, mostly with BepInEx. No account needed."),
-        ("modio", "mod.io", "MI", "Mods published through mod.io. Needs a free mod.io account for some games."),
-        ("curseforge", "CurseForge", "CF", "Mods for many PC games. Needs a CurseForge API key."),
-        ("nexus", "Nexus Mods", "NX", "The biggest mod site. Needs a Nexus account; Premium allows one-tap downloads."),
+        ("Thunderstore", "Community mods, mostly for Unity games with BepInEx.", "No account needed"),
+        ("mod.io", "Mods published through the game's own mod.io page.", "Free mod.io account"),
+        ("CurseForge", "Mods for many PC games.", "Free CurseForge API key"),
+        ("Nexus Mods", "The biggest mod site.", "Nexus account; Premium for one-tap downloads"),
     ];
 
     private Control? _first;
 
+    public override IEnumerable<(string Action, string Label)> Hints => [(Pad.Switch, "Switch game")];
+
     protected override void Build()
     {
-        var col = Column(14);
+        var col = Column(10);
         AddChild(col);
-        col.AddChild(UiTheme.Label("Mod sites", UiTheme.TitleSize));
-        col.AddChild(UiTheme.Label("Pick a site to search its mods. Luma follows each site's rules and credits its authors.",
-            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
-        var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 18);
-        var pad = new MarginContainer();
-        foreach (var side in new[] { "left", "right", "top", "bottom" })
+        var game = Host.ActiveGame;
+        col.AddChild(UiTheme.Label(game == null ? "Mod sites" : $"Mods for {game.Title}", UiTheme.TitleSize));
+        var items = new List<Control>();
+        if (game is { Profile.Moddable: false })
         {
-            pad.AddThemeConstantOverride($"margin_{side}", 8);
+            col.AddChild(UiTheme.Label($"{game.Title} can't be modded safely: {game.Profile.NotModdable}", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            items.Add(Add(col, new ActionButton("Switch game", App.OpenGamePicker, "Pick the game to work on.")));
         }
-        pad.AddChild(row);
-        col.AddChild(pad);
-        var tiles = new List<Control>();
-        foreach (var site in Sites)
+        else
         {
-            var s = site;
-            var tile = Tiles.Card(s.Name, s.Mono, null, $"{s.Name}  ·  {s.About}", () =>
-                App.Toast($"{s.Name} browsing arrives in the next update."));
-            row.AddChild(tile);
-            tiles.Add(tile);
+            col.AddChild(UiTheme.Label(game == null
+                    ? "Pick a game first: Luma shows the sites that carry it."
+                    : "Pick a site to search it. Luma follows each site's rules and credits the authors.",
+                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            var list = Column(8);
+            col.AddChild(Scroller(list));
+            var carried = game?.Profile.Sites.Names().ToHashSet();
+            foreach (var site in Sites.Where(s => carried == null || carried.Contains(s.Name)))
+            {
+                var s = site;
+                var row = new ListRow(s.Name, s.About, s.Needs, UiTheme.Dim, null,
+                    () => App.Toast($"{s.Name} search arrives in the next update."), $"{s.Name}  ·  {s.About}");
+                list.AddChild(row);
+                items.Add(row);
+            }
+            if (game == null)
+            {
+                items.Add(Add(list, new ActionButton("Switch game", App.OpenGamePicker, "Pick the game to work on.")));
+            }
         }
-        Focus.Row(tiles);
-        Anim.Stagger(tiles);
-        _first = tiles.FirstOrDefault();
+        Focus.Column(items);
+        Anim.Stagger(items);
+        _first = items.FirstOrDefault();
+    }
+
+    private static T Add<T>(Control parent, T c) where T : Control
+    {
+        parent.AddChild(c);
+        return c;
     }
 
     public override void FocusDefault() => _first?.GrabFocus();

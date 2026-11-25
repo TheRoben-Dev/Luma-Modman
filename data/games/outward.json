@@ -1,0 +1,18 @@
+{
+  "id": "outward",
+  "name": "Outward Definitive Edition",
+  "steam": [
+    1758860,
+    794260
+  ],
+  "detect": [
+    "Outward Definitive Edition.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "outward",
+    "thunderstore": "outward"
+  }
+}

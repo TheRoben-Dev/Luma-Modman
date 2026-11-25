@@ -1,0 +1,21 @@
+{
+  "id": "fallout3",
+  "name": "Fallout 3: Game of the Year Edition",
+  "steam": [
+    22370,
+    22300
+  ],
+  "detect": [
+    "Fallout3.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Data",
+  "loader": "fose",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "fallout3"
+  },
+  "quirks": [
+    "Games for Windows Live must be disabled; the GOTY edition on Steam is the one to mod."
+  ]
+}

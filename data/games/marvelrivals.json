@@ -1,0 +1,15 @@
+{
+  "id": "marvelrivals",
+  "name": "Marvel Rivals",
+  "steam": [
+    2767030
+  ],
+  "detect": [
+    "MarvelGame/Marvel/Binaries/Win64/Marvel-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "sites": {
+    "nexus": "marvelrivals"
+  },
+  "notModdable": "Online-only with anti-cheat; NetEase has banned accounts for modified game files."
+}

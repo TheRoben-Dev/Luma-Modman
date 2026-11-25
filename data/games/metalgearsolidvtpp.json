@@ -1,0 +1,17 @@
+{
+  "id": "metalgearsolidvtpp",
+  "name": "Metal Gear Solid V: The Phantom Pain",
+  "steam": [
+    287700
+  ],
+  "detect": [
+    "mgsvtpp.exe"
+  ],
+  "runtime": "proton",
+  "sites": {
+    "nexus": "metalgearsolidvtpp"
+  },
+  "quirks": [
+    "Most mods are .mgsv packages for SnakeBite, a Windows tool; offline play recommended."
+  ]
+}

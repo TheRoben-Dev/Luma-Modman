@@ -1,0 +1,20 @@
+{
+  "id": "eldenring",
+  "name": "Elden Ring",
+  "steam": [
+    1245620
+  ],
+  "detect": [
+    "Game/eldenring.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Game/mods",
+  "loader": "modengine2",
+  "sites": {
+    "nexus": "eldenring"
+  },
+  "quirks": [
+    "Mods only work offline: the game must start without Easy Anti-Cheat, and online play with mods can get you banned.",
+    "Luma starts modded sessions through Mod Engine 2, which leaves game files untouched."
+  ]
+}

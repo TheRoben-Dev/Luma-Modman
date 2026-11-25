@@ -1,0 +1,20 @@
+{
+  "id": "citiesskylines2",
+  "name": "Cities: Skylines II",
+  "steam": [
+    949230
+  ],
+  "detect": [
+    "Cities2.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "loaderOptional": true,
+  "sites": {
+    "thunderstore": "cities-skylines-ii"
+  },
+  "quirks": [
+    "Paradox Mods from the in-game browser are managed by the game; Luma handles Thunderstore code mods."
+  ]
+}

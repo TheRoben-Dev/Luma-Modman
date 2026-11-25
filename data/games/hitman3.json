@@ -1,0 +1,18 @@
+{
+  "id": "hitman3",
+  "name": "HITMAN World of Assassination",
+  "steam": [
+    1659040
+  ],
+  "detect": [
+    "Retail/HITMAN3.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Retail",
+  "sites": {
+    "nexus": "hitman3"
+  },
+  "quirks": [
+    "Online features stay on; mods affect only your client."
+  ]
+}

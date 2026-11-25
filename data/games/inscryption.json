@@ -1,0 +1,17 @@
+{
+  "id": "inscryption",
+  "name": "Inscryption",
+  "steam": [
+    1092790
+  ],
+  "detect": [
+    "Inscryption.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "inscryption",
+    "thunderstore": "inscryption"
+  }
+}

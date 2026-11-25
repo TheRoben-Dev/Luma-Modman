@@ -1,0 +1,22 @@
+{
+  "id": "valheim",
+  "name": "Valheim",
+  "steam": [
+    892970
+  ],
+  "detect": [
+    "valheim.x86_64"
+  ],
+  "runtime": "native",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "valheim",
+    "thunderstore": "valheim",
+    "curseforge": "valheim"
+  },
+  "quirks": [
+    "Uses the native Linux build; Luma starts it through BepInEx's run_bepinex.sh.",
+    "Servers and players need matching gameplay mods."
+  ]
+}

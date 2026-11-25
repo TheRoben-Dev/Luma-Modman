@@ -1,0 +1,14 @@
+{
+  "id": "assassinscreedivblackflag",
+  "name": "Assassin's Creed IV: Black Flag",
+  "steam": [
+    242050
+  ],
+  "detect": [
+    "AC4BFSP.exe"
+  ],
+  "runtime": "proton",
+  "sites": {
+    "nexus": "assassinscreedivblackflag"
+  }
+}

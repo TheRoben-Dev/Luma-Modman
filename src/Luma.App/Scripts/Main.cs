@@ -12,11 +12,12 @@ namespace Luma.App;
 /// </summary>
 public partial class Main : Control
 {
-    public static readonly string[] TabNames = ["Library", "Browse", "Installed", "Downloads", "Settings"];
+    /// <summary>Every tab works on the game picked in the header (switched with View / Select).</summary>
+    public static readonly string[] TabNames = ["Mods", "Browse", "Downloads", "Settings"];
 
     private static readonly Func<Screen>[] TabFactories =
     [
-        () => new LibraryScreen(), () => new BrowseScreen(), () => new InstalledScreen(), () => new DownloadsScreen(), () => new SettingsScreen(),
+        () => new ModsScreen(), () => new BrowseScreen(), () => new DownloadsScreen(), () => new SettingsScreen(),
     ];
 
     private readonly List<Screen> _stack = new();
@@ -38,7 +39,7 @@ public partial class Main : Control
     public AppHost? Host { get; private set; }
 
     /// <summary>
-    /// True while a game started from Luma runs: the app ignores controller input so game presses
+    /// True while a game with mods linked in runs: the app ignores controller input so game presses
     /// don't leak in, and the animated background stops.
     /// </summary>
     public bool GameRunning
@@ -195,6 +196,8 @@ public partial class Main : Control
         {
             SwitchTab(0);
         }
+        // The cached list shows at once; a fresh scan replaces it in the background.
+        ScanGames(quiet: true);
 
         var args = OS.GetCmdlineUserArgs();
         var smoke = Array.IndexOf(args, "--smoke");
@@ -225,6 +228,15 @@ public partial class Main : Control
                 SwitchTab(i);
             }
         };
+        h.GameClicked += () =>
+        {
+            if (_stack.Count == 1 && !GameRunning)
+            {
+                OpenGamePicker();
+            }
+        };
+        var g = Host?.ActiveGame;
+        h.SetGame(g?.Title, g?.Install.Cover);
         return h;
     }
 
@@ -494,7 +506,7 @@ public partial class Main : Control
     {
         Theme = null;
         Luma.App.Ui.Poly.Ps1.ReleaseShared();
-        Luma.App.Ui.Poly.CartStage.ReleaseShared();
+        CoverArt.ReleaseShared();
         UiTheme.ReleaseFonts();
         GC.Collect();
         GC.WaitForPendingFinalizers();
@@ -609,6 +621,10 @@ public partial class Main : Control
         {
             SwitchTab((_tab + 1) % TabNames.Length);
         }
+        else if (e.IsActionPressed(Pad.Switch) && _stack.Count == 1)
+        {
+            OpenGamePicker();
+        }
         else if (e.IsActionPressed(Pad.Secondary) || e.IsActionPressed(Pad.Tertiary))
         {
             top.OnAction(e.IsActionPressed(Pad.Secondary) ? Pad.Secondary : Pad.Tertiary);
@@ -627,7 +643,92 @@ public partial class Main : Control
     private static string Describe(Control? c) =>
         c == null ? "none" : $"{c.GetType().Name} '{(c is Button b ? b.Text : c.TooltipText).Split('\n')[0]}'";
 
-    /// <summary>The root tab shown now ("Library", "Browse"...).</summary>
+    // ---- games ----
+
+    /// <summary>True while a background scan for installed games runs.</summary>
+    public bool Scanning { get; private set; }
+
+    public void OpenGamePicker()
+    {
+        if (Host != null && Top is not GamePickerPage)
+        {
+            Push(new GamePickerPage());
+        }
+    }
+
+    /// <summary>Makes <paramref name="key"/> the game every tab works on, and goes back to its Mods tab.</summary>
+    public void SetActiveGame(string key)
+    {
+        if (Host == null)
+        {
+            return;
+        }
+        Host.SetActiveGame(key);
+        AppLog.Info($"active game -> {key}");
+        GameChanged();
+        while (_stack.Count > 1)
+        {
+            Pop();
+        }
+        SwitchTab(0);
+        Success($"Working on {Host.ActiveGame?.Title}");
+    }
+
+    /// <summary>Looks for installed games again (all launchers) in the background, then refreshes what's on screen.</summary>
+    public void ScanGames() => ScanGames(quiet: false);
+
+    private async void ScanGames(bool quiet)
+    {
+        if (Host == null || Scanning)
+        {
+            return;
+        }
+        Scanning = true;
+        var before = Host.Games.Games.Count;
+        try
+        {
+            await Task.Run(() => Host.Games.Scan());
+        }
+        catch (Exception e) when (IsUserFacing(e))
+        {
+            AppLog.Error("scan: " + e);
+            if (!quiet)
+            {
+                Error("Couldn't finish looking for games: " + e.Message);
+            }
+        }
+        finally
+        {
+            Scanning = false;
+        }
+        Host.Games.NotifyChanged();
+        GameChanged();
+        foreach (var s in _stack)
+        {
+            if (s is ModsScreen or BrowseScreen or GamePickerPage or SupportedGamesPage)
+            {
+                s.Rebuild();
+            }
+        }
+        var count = Host.Games.Games.Count;
+        if (!quiet)
+        {
+            Success(count == 0 ? "No supported games found" : $"Found {count} supported game{(count == 1 ? "" : "s")}");
+        }
+        else if (count != before)
+        {
+            AppLog.Info($"scan changed the list: {before} -> {count}");
+        }
+    }
+
+    /// <summary>Header shows the game the tabs work on.</summary>
+    private void GameChanged()
+    {
+        var g = Host?.ActiveGame;
+        _header.SetGame(g?.Title, g?.Install.Cover);
+    }
+
+    /// <summary>The root tab shown now ("Mods", "Browse"...).</summary>
     public string CurrentTab => TabNames[_tab];
 
     public void SwitchTab(string name)
@@ -779,7 +880,7 @@ public partial class Main : Control
             return;
         }
         var hints = new List<(string, string)>();
-        hints.AddRange(_stack[^1].Hints);
+        hints.AddRange(_stack[^1].Hints.Where(h => h.Action != Pad.Switch || _stack.Count == 1));
         hints.Add((Pad.Accept, "Select"));
         if (_stack.Count > 1)
         {

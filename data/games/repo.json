@@ -1,0 +1,20 @@
+{
+  "id": "repo",
+  "name": "R.E.P.O.",
+  "steam": [
+    3241660
+  ],
+  "detect": [
+    "REPO.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "repo",
+    "thunderstore": "repo"
+  },
+  "quirks": [
+    "Everyone in a lobby needs the same gameplay mods."
+  ]
+}

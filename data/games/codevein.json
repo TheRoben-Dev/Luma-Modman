@@ -1,0 +1,15 @@
+{
+  "id": "codevein",
+  "name": "Code Vein",
+  "steam": [
+    678960
+  ],
+  "detect": [
+    "CodeVein/Binaries/Win64/CodeVein-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "CodeVein/Content/Paks/~mods",
+  "sites": {
+    "nexus": "codevein"
+  }
+}

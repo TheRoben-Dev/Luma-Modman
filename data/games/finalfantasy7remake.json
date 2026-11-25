@@ -1,0 +1,15 @@
+{
+  "id": "finalfantasy7remake",
+  "name": "Final Fantasy VII Remake Intergrade",
+  "steam": [
+    1462040
+  ],
+  "detect": [
+    "End/Binaries/Win64/ff7remake_.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "End/Content/Paks/~mods",
+  "sites": {
+    "nexus": "finalfantasy7remake"
+  }
+}

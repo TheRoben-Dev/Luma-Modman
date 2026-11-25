@@ -13,6 +13,8 @@ internal static class Cli
 
           luma version                 show the installed version
           luma settings                print the settings file path and contents
+          luma games                   scan for installed games Luma supports
+          luma games --all             list every supported game (profiles)
 
         Luma never downloads games, DRM bypasses or pirated content.
         """;
@@ -35,6 +37,30 @@ internal static class Cli
                 case "settings":
                     Console.WriteLine(host.Paths.SettingsFile);
                     Console.WriteLine(File.Exists(host.Paths.SettingsFile) ? File.ReadAllText(host.Paths.SettingsFile) : "(defaults)");
+                    return 0;
+                case "games" when args.Length > 1 && args[1] == "--all":
+                    foreach (var g in host.Games.Catalog.Games)
+                    {
+                        var status = g.Moddable ? g.Loader ?? "no loader needed" : "not moddable";
+                        Console.WriteLine($"{g.Id,-34} {g.Name}  [{status}; {string.Join(", ", g.Sites.Names())}]");
+                    }
+                    Console.WriteLine($"{host.Games.Catalog.Games.Count} games");
+                    foreach (var p in host.Games.Catalog.Problems)
+                    {
+                        Console.Error.WriteLine("problem: " + p);
+                    }
+                    return 0;
+                case "games":
+                    foreach (var g in host.Games.Scan())
+                    {
+                        Console.WriteLine($"{g.Key,-24} {g.Title}");
+                        Console.WriteLine($"    folder  {g.GameDir}");
+                        Console.WriteLine($"    prefix  {g.Install.Prefix ?? (g.Profile.Runtime == "native" ? "(native Linux build)" : "(not created yet: start the game once)")}");
+                        if (!g.Profile.Moddable)
+                        {
+                            Console.WriteLine($"    not moddable: {g.Profile.NotModdable}");
+                        }
+                    }
                     return 0;
                 default:
                     Console.Error.WriteLine(Usage);

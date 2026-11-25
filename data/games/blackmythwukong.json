@@ -1,0 +1,16 @@
+{
+  "id": "blackmythwukong",
+  "name": "Black Myth: Wukong",
+  "steam": [
+    2358720
+  ],
+  "detect": [
+    "b1/Binaries/Win64/b1-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "b1/Content/Paks/~mods",
+  "sites": {
+    "nexus": "blackmythwukong",
+    "curseforge": "black-myth-wukong"
+  }
+}

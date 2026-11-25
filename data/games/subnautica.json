@@ -1,0 +1,20 @@
+{
+  "id": "subnautica",
+  "name": "Subnautica",
+  "steam": [
+    264710
+  ],
+  "detect": [
+    "Subnautica.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "subnautica"
+  },
+  "quirks": [
+    "Mods need BepInEx and Nautilus, installed as dependencies.",
+    "The 2025 Living Large update changed mod compatibility; check each mod's version."
+  ]
+}

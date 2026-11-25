@@ -1,0 +1,20 @@
+{
+  "id": "boneworks",
+  "name": "BONEWORKS",
+  "steam": [
+    823500
+  ],
+  "detect": [
+    "BONEWORKS/BONEWORKS.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "Mods",
+  "loader": "melonloader",
+  "sites": {
+    "nexus": "boneworks",
+    "thunderstore": "boneworks"
+  },
+  "quirks": [
+    "A VR game: it needs a PC VR headset."
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "ultrakill",
+  "name": "ULTRAKILL",
+  "steam": [
+    1229490
+  ],
+  "detect": [
+    "ULTRAKILL.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "ultrakill",
+    "thunderstore": "ultrakill"
+  }
+}

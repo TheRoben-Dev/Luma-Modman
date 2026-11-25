@@ -1,0 +1,17 @@
+{
+  "id": "bombrushcyberfunk",
+  "name": "Bomb Rush Cyberfunk",
+  "steam": [
+    1353230
+  ],
+  "detect": [
+    "Bomb Rush Cyberfunk.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "bombrushcyberfunk",
+    "thunderstore": "bomb-rush-cyberfunk"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "x4foundations",
+  "name": "X4: Foundations",
+  "steam": [
+    392160
+  ],
+  "detect": [
+    "X4.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "extensions",
+  "sites": {
+    "nexus": "x4foundations"
+  },
+  "quirks": [
+    "X4 has a native Linux build; Luma uses whichever one Steam installed."
+  ]
+}
