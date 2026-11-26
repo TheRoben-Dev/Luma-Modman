@@ -228,6 +228,21 @@ public partial class ModsScreen : Screen
     }
 
     /// <summary>Y turns the focused mod on or off.</summary>
+    public override bool OnShortcut(InputEventKey key)
+    {
+        if (!key.CtrlPressed || key.Keycode is not (Key.Up or Key.Down) || Host.ActiveGame is not { } game
+            || GetViewport().GuiGetFocusOwner() is not { } f || !f.HasMeta("mod"))
+        {
+            return false;
+        }
+        var id = (string)f.GetMeta("mod");
+        App.Guard(() => Host.Mods.Store(game).Move(id, key.Keycode == Key.Up ? -1 : +1));
+        _focusMod = id;
+        Rebuild();
+        _modRow?.GrabFocus();
+        return true;
+    }
+
     public override void OnAction(string action)
     {
         if (action != Pad.Secondary || Host.ActiveGame is not { } game || GetViewport().GuiGetFocusOwner() is not { } f || !f.HasMeta("mod"))

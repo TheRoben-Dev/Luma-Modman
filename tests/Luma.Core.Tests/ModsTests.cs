@@ -216,6 +216,10 @@ public sealed class ModsTests : IDisposable
         var through = Luma.Host.LaunchCommand.ThroughLauncher(cmd, game, "skse64_loader.exe");
         Assert.Equal(game + "/skse64_loader.exe", through[^1]);
         Assert.Equal(cmd[..^1], through[..^1]);
+        // Windows: Steam's command is the game's own program.
+        var win = Luma.Host.LaunchCommand.ThroughLauncher([@"C:\Games\Steam\steamapps\common\Skyrim Special Edition\SkyrimSE.exe"], @"C:\Games\Steam\steamapps\common\Skyrim Special Edition", "skse64_loader.exe");
+        Assert.EndsWith("skse64_loader.exe", win[0]);
+        Assert.StartsWith(@"C:\Games", win[0]);
         // Nothing in the game folder to replace: unchanged.
         string[] other = ["/usr/bin/env", "/opt/other/game.exe"];
         Assert.Same(other, Luma.Host.LaunchCommand.ThroughLauncher(other, game, "skse64_loader.exe"));

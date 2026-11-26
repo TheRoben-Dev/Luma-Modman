@@ -11,15 +11,16 @@ public static class LaunchCommand
     /// </summary>
     public static string[] ThroughLauncher(string[] command, string gameDir, string launcher)
     {
-        var dir = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gameDir)) + "/";
+        static string Norm(string p) => p.Replace('\\', '/');
+        var dir = Norm(gameDir).TrimEnd('/') + "/";
         for (var i = command.Length - 1; i >= 0; i--)
         {
-            var a = command[i].Replace('\\', '/');
-            if (a.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && Path.IsPathRooted(a)
-                && Path.GetFullPath(a).StartsWith(dir, StringComparison.OrdinalIgnoreCase))
+            var a = Norm(command[i]);
+            var rooted = a.StartsWith('/') || (a.Length > 2 && a[1] == ':' && a[2] == '/');
+            if (rooted && a.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) && a.StartsWith(dir, StringComparison.OrdinalIgnoreCase) && !a.Contains("/../"))
             {
                 var copy = command.ToArray();
-                copy[i] = Path.Combine(gameDir, launcher.Replace('\\', '/'));
+                copy[i] = Path.Combine(gameDir, launcher.Replace('/', Path.DirectorySeparatorChar));
                 return copy;
             }
         }

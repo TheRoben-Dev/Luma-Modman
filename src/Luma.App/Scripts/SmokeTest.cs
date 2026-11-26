@@ -233,6 +233,23 @@ public partial class SmokeTest : Node
             Press(Pad.Accept);
         }, expect: "Back");
         Step("add-file-back", () => Press(Pad.Back), expect: "Add a mod from a file");
+        // Desktop layout: a denser window, right-click for a row's options, Ctrl shortcuts.
+        Step("desktop-layout", () =>
+        {
+            Main.Instance.ApplyLayout("desktop");
+            FindFocusable(GetTree().Root, "MoreCompany:")?.GrabFocus();
+        }, wait: 1.2, expect: "MoreCompany:", tab: "Mods");
+        Step("desktop-right-click", () => RightClick(FindFocusable(GetTree().Root, "MoreCompany:")), expect: "Turn off");
+        Step("desktop-right-click-back", () => Press(Pad.Back), expect: "MoreCompany:");
+        Step("desktop-ctrl-down", () => Key(Godot.Key.Down, ctrl: true), expect: "MoreCompany:");
+        Step("desktop-ctrl-2", () => Key(Godot.Key.Key2, ctrl: true), tab: "Browse");
+        Step("desktop-ctrl-4", () => Key(Godot.Key.Key4, ctrl: true), tab: "Settings");
+        Step("desktop-settings-layout", () =>
+        {
+            FindFocusable(GetTree().Root, "Controller or desktop layout")?.GrabFocus();
+            Press(Pad.Accept);
+        }, expect: "Controller: full screen");
+        Step("controller-layout", () => Main.Instance.ApplyLayout("auto"), wait: 1.2, expect: "Controller: full screen");
     }
 
     private static void TypeText(string text)
@@ -288,6 +305,20 @@ public partial class SmokeTest : Node
     private static void Mouse(Vector2 at, bool pressed) =>
         Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = pressed, Position = at, GlobalPosition = at });
 
+    private static void RightClick(Control? c)
+    {
+        if (c == null)
+        {
+            return;
+        }
+        var at = c.GetViewport().GetFinalTransform() * c.GetGlobalRect().GetCenter();
+        Input.ParseInputEvent(new InputEventMouseMotion { Position = at, GlobalPosition = at });
+        Input.FlushBufferedEvents();
+        Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Right, Pressed = true, Position = at, GlobalPosition = at });
+        Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Right, Pressed = false, Position = at, GlobalPosition = at });
+        Input.FlushBufferedEvents();
+    }
+
     private static void TouchTap(Control? c)
     {
         if (c == null)
@@ -313,10 +344,10 @@ public partial class SmokeTest : Node
         Input.ParseInputEvent(new InputEventJoypadMotion { Device = 0, Axis = JoyAxis.LeftY, AxisValue = y });
     }
 
-    private static void Key(Key k, bool shift = false)
+    private static void Key(Key k, bool shift = false, bool ctrl = false)
     {
-        Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, ShiftPressed = shift, Pressed = true });
-        Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, ShiftPressed = shift, Pressed = false });
+        Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, ShiftPressed = shift, CtrlPressed = ctrl, Pressed = true });
+        Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, ShiftPressed = shift, CtrlPressed = ctrl, Pressed = false });
         Input.FlushBufferedEvents();
     }
 

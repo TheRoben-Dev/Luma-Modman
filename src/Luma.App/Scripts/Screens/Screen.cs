@@ -117,6 +117,9 @@ public abstract partial class Screen : MarginContainer
     /// <summary>Called when B is pressed while this screen is on top. True = handled here.</summary>
     public virtual bool OnBack() => false;
 
+    /// <summary>A key press with no other meaning (Ctrl+F, Ctrl+Up...). True = handled here.</summary>
+    public virtual bool OnShortcut(InputEventKey key) => false;
+
     /// <summary>Called for the Secondary / Tertiary context buttons.</summary>
     public virtual void OnAction(string action)
     {

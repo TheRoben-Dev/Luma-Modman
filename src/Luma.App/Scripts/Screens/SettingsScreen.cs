@@ -13,6 +13,7 @@ public partial class SettingsScreen : TwoPaneScreen
         ("Games", "Finding installed games, and the supported list."),
         ("Appearance", "Theme, accent colour, CRT effect and animations."),
         ("Sound & feel", "Menu sounds and controller rumble."),
+        ("Layout", "Controller or desktop layout, and keyboard shortcuts."),
         ("Updates", "Version, changelog and updates."),
         ("About", "Where Luma keeps its files, and the app log."),
     ];
@@ -33,6 +34,9 @@ public partial class SettingsScreen : TwoPaneScreen
                 break;
             case "Sound & feel":
                 BuildFeedback(col, Add);
+                break;
+            case "Layout":
+                BuildLayout(col, Add);
                 break;
             case "Updates":
                 BuildUpdates(col, Add);
@@ -61,6 +65,35 @@ public partial class SettingsScreen : TwoPaneScreen
         foreach (var p in lib.Catalog.Problems)
         {
             col.AddChild(UiTheme.Label("Skipped profile: " + p, UiTheme.SmallSize, UiTheme.Warn, wrap: true));
+        }
+    }
+
+    private void BuildLayout(VBoxContainer col, Action<Control> Add)
+    {
+        var current = Host.Settings.Layout;
+        var layout = new Stepper("Layout", UiLayout.Choices.Select(c => (c.Id, c.Label)), UiLayout.Choices.Any(c => c.Id == current) ? current : UiLayout.Auto,
+            "Controller: full screen, big rows. Desktop: a resizable window with more on screen.")
+        {
+            Expands = true,
+            DetailFor = UiLayout.Describe,
+        };
+        layout.Changed += v =>
+        {
+            App.ApplyLayout(v);
+            Callable.From(RefreshPane).CallDeferred();
+        };
+        Add(layout);
+        col.AddChild(Section("Keyboard and mouse"));
+        foreach (var line in new[]
+        {
+            "Right-click a row (desktop layout): its options, like A or Enter.",
+            "Ctrl+1 to Ctrl+4: Mods, Browse, Downloads, Settings.",
+            "Ctrl+F: search the mod site you're browsing.",
+            "Ctrl+Up / Ctrl+Down: move the selected mod in the load order.",
+            "R: turn the selected mod on or off.  G: switch game.  Tab: next tab.  Esc: back.",
+        })
+        {
+            col.AddChild(UiTheme.Label("•  " + line, UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
     }
 
