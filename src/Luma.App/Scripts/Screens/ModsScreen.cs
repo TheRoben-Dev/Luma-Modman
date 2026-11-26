@@ -167,6 +167,8 @@ public partial class ModsScreen : Screen
         {
             items.Add(Add(scrollCol, new ActionButton("Check for updates", () => ModActions.CheckUpdates(game), "Asks the mod sites for newer versions.")));
         }
+        items.Add(Add(scrollCol, new ActionButton("Add a mod from a file", () => App.Push(new AddFilePage(game)),
+            "Install a mod you downloaded yourself, such as a script extender.")));
         foreach (var link in game.Profile.Links.Where(l => l.ImportTo != null))
         {
             var l = link;
@@ -226,6 +228,21 @@ public partial class ModsScreen : Screen
     }
 
     /// <summary>Y turns the focused mod on or off.</summary>
+    public override bool OnShortcut(InputEventKey key)
+    {
+        if (!key.CtrlPressed || key.Keycode is not (Key.Up or Key.Down) || Host.ActiveGame is not { } game
+            || GetViewport().GuiGetFocusOwner() is not { } f || !f.HasMeta("mod"))
+        {
+            return false;
+        }
+        var id = (string)f.GetMeta("mod");
+        App.Guard(() => Host.Mods.Store(game).Move(id, key.Keycode == Key.Up ? -1 : +1));
+        _focusMod = id;
+        Rebuild();
+        _modRow?.GrabFocus();
+        return true;
+    }
+
     public override void OnAction(string action)
     {
         if (action != Pad.Secondary || Host.ActiveGame is not { } game || GetViewport().GuiGetFocusOwner() is not { } f || !f.HasMeta("mod"))

@@ -1,0 +1,17 @@
+{
+  "id": "liesofp",
+  "name": "Lies of P",
+  "steam": [
+    1627720
+  ],
+  "detect": [
+    "LiesofP/Binaries/Win64"
+  ],
+  "runtime": "proton",
+  "modsPath": "LiesofP/Content/Paks/~mods",
+  "loader": "ue4ss",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "liesofp"
+  }
+}

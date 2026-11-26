@@ -16,7 +16,7 @@
     "modio": "Baldur's Gate 3"
   },
   "quirks": [
-    "Mods load from the profile folder inside the Proton prefix; Luma writes the load order to modsettings.lsx.",
+    "Mods load from the profile folder inside the Proton prefix; Luma doesn't write modsettings.lsx yet, so turn new mods on in the game's own mod manager.",
     "Mods from the in-game mod.io browser are managed by the game."
   ]
 }

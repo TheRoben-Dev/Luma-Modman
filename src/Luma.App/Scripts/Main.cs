@@ -108,10 +108,13 @@ public partial class Main : Control
         Anim.Enabled = !(host?.Settings.ReduceMotion ?? false);
         Theme = UiTheme.Build();
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        if (OS.GetCmdlineUserArgs().Contains("--windowed"))
+        var windowed = OS.GetCmdlineUserArgs().Contains("--windowed");
+        if (windowed)
         {
             DisplayServer.WindowSetMode(DisplayServer.WindowMode.Windowed);
         }
+        UiLayout.Apply(GetWindow(), host?.Settings.Layout, windowed);
+        AppLog.Info($"layout {(UiLayout.Desktop ? "desktop" : "controller")} ({host?.Settings.Layout ?? "auto"})");
 
         _bgLayer = new Control { MouseFilter = MouseFilterEnum.Ignore };
         _bgLayer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -546,6 +549,19 @@ public partial class Main : Control
     private Feedback? _feedback;
 
     /// <summary>Applies the sound and rumble settings right away (Settings → Sound & feel).</summary>
+    /// <summary>Switches between the controller and desktop layouts (Settings).</summary>
+    public void ApplyLayout(string setting)
+    {
+        if (Host == null)
+        {
+            return;
+        }
+        Host.SaveSettings(Host.Settings with { Layout = setting });
+        UiLayout.Apply(GetWindow(), setting, OS.GetCmdlineUserArgs().Contains("--windowed"));
+        _header.Relayout();
+        AppLog.Info($"layout -> {(UiLayout.Desktop ? "desktop" : "controller")} ({setting})");
+    }
+
     public void ApplyFeedback(int volume, bool haptics)
     {
         if (_feedback != null)
@@ -567,6 +583,21 @@ public partial class Main : Control
             {
                 Feedback.Play(Cue.Confirm);
             }
+        }
+        // Ctrl shortcuts run before the menus see the key (Ctrl+Up must not also move the focus).
+        if (!GameRunning && _stack.Count > 0 && e is InputEventKey { Pressed: true, CtrlPressed: true } key && Shortcut(_stack[^1], key))
+        {
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+        // Desktop layout: right-click opens a row's options, as A / Enter does.
+        if (!GameRunning && UiLayout.Desktop && e is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }
+            && ButtonUnder(GetViewport().GuiGetHoveredControl()) is { Disabled: false } target)
+        {
+            target.GrabFocus();
+            target.EmitSignal(BaseButton.SignalName.Pressed);
+            GetViewport().SetInputAsHandled();
+            return;
         }
         switch (e)
         {
@@ -646,6 +677,38 @@ public partial class Main : Control
             return;
         }
         GetViewport().SetInputAsHandled();
+    }
+
+    /// <summary>Keyboard shortcuts: Ctrl+1–4 pick a tab, the rest go to the screen on top.</summary>
+    private bool Shortcut(Screen top, InputEventKey key)
+    {
+        if (key.Echo && key.Keycode is not (Key.Up or Key.Down))
+        {
+            return false;
+        }
+        if (key.Keycode is >= Key.Key1 and <= Key.Key9)
+        {
+            var i = (int)(key.Keycode - Key.Key1);
+            if (i < TabNames.Length && _stack.Count == 1)
+            {
+                SwitchTab(i);
+                return true;
+            }
+            return false;
+        }
+        return top.OnShortcut(key);
+    }
+
+    private static BaseButton? ButtonUnder(Control? c)
+    {
+        for (var n = (Node?)c; n != null; n = n.GetParent())
+        {
+            if (n is BaseButton b)
+            {
+                return b;
+            }
+        }
+        return null;
     }
 
     // ---- navigation ----

@@ -87,6 +87,8 @@ public partial class Header : HBoxContainer
         _underline.TopLevel = true;
         _underline.Draw += () => _underline.DrawRect(new Rect2(Vector2.Zero, _underline.Size), UiTheme.Accent);
         _tabRow.AddChild(_underline);
+        // The window can be resized (desktop layout) or rescaled: keep the underline under its tab.
+        _tabRow.ItemRectChanged += Relayout;
         _tabRow.SortChildren += () => Callable.From(() =>
         {
             if (_tween == null || !_tween.IsRunning())
@@ -180,6 +182,15 @@ public partial class Header : HBoxContainer
         _next.SetGlyph(Pad.Glyph(Pad.TabNext));
         _switch.SetGlyph(Pad.Glyph(Pad.Switch));
     }
+
+    /// <summary>Puts the underline back under the current tab after the layout settles.</summary>
+    public void Relayout() => Callable.From(() =>
+    {
+        if (IsInstanceValid(this) && IsInsideTree())
+        {
+            Place(false);
+        }
+    }).CallDeferred();
 
     /// <summary>Moves the underline under the current tab. Animated: the leading edge goes first.</summary>
     private void Place(bool animate)

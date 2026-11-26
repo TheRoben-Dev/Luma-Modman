@@ -1,0 +1,19 @@
+{
+  "id": "arksurvivalevolved",
+  "name": "ARK: Survival Evolved",
+  "steam": [
+    346110
+  ],
+  "detect": [
+    "ShooterGame/Binaries/Win64"
+  ],
+  "runtime": "proton",
+  "modsPath": "ShooterGame/Content/Mods",
+  "sites": {
+    "nexus": "arksurvivalevolved"
+  },
+  "quirks": [
+    "Steam Workshop mods are installed by Steam; Luma handles the ones from Nexus Mods.",
+    "Official servers use BattlEye: play with mods in single player or on unofficial servers that run the same mods."
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "grounded",
+  "name": "Grounded",
+  "steam": [
+    962130
+  ],
+  "detect": [
+    "Maine/Binaries/Win64"
+  ],
+  "runtime": "proton",
+  "modsPath": "Maine/Content/Paks/~mods",
+  "loader": "ue4ss",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "grounded"
+  },
+  "quirks": [
+    "Everyone in a multiplayer session needs the same gameplay mods."
+  ]
+}

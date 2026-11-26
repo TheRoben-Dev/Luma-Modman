@@ -14,6 +14,9 @@ public sealed record AppSettings
     /// <summary>Accent colour per theme id (a swatch id from the app's list); missing = the theme's own.</summary>
     public Dictionary<string, string> Accents { get; init; } = new();
 
+    /// <summary>Screen layout: "auto" (controller in Game Mode, desktop elsewhere), "controller" or "desktop".</summary>
+    public string Layout { get; init; } = "auto";
+
     /// <summary>Turns off UI animations.</summary>
     public bool ReduceMotion { get; init; }
 
@@ -84,7 +87,7 @@ public sealed class AppHost
         Keys = new CredentialStore(Path.Combine(Paths.Config, "credentials.json"));
         _sites = new Lazy<ModSites>(() => new ModSites(Keys));
         _downloads = new Lazy<DownloadQueue>(() => new DownloadQueue(Paths));
-        Mods = new ModManager(Paths);
+        Mods = new ModManager(Paths, Games.Catalog);
     }
 
     /// <summary>The app's pid file, so `luma nxm` knows whether to start the app.</summary>

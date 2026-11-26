@@ -1,0 +1,12 @@
+{
+  "id": "eldenringnightreign",
+  "name": "Elden Ring Nightreign",
+  "steam": [
+    2622380
+  ],
+  "detect": [
+    "Game/nightreign.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Online-only with Easy Anti-Cheat; modified files get accounts flagged."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "phasmophobia",
+  "name": "Phasmophobia",
+  "steam": [
+    739630
+  ],
+  "detect": [
+    "Phasmophobia.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Easy Anti-Cheat: modified game files get players banned."
+}

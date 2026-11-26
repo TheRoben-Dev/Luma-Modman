@@ -1,0 +1,16 @@
+{
+  "id": "theplanetcrafter",
+  "name": "The Planet Crafter",
+  "steam": [
+    1284190
+  ],
+  "detect": [
+    "Planet Crafter.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "theplanetcrafter"
+  }
+}

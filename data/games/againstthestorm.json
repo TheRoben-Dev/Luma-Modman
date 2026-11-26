@@ -1,0 +1,16 @@
+{
+  "id": "againstthestorm",
+  "name": "Against the Storm",
+  "steam": [
+    1336490
+  ],
+  "detect": [
+    "Against the Storm.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "thunderstore": "against-the-storm"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "manorlords",
+  "name": "Manor Lords",
+  "steam": [
+    1363080
+  ],
+  "detect": [
+    "ManorLords/Binaries/Win64"
+  ],
+  "runtime": "proton",
+  "modsPath": "ManorLords/Content/Paks/~mods",
+  "loader": "ue4ss",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "manorlords"
+  },
+  "quirks": [
+    "Early access: mods often break after a game update."
+  ]
+}

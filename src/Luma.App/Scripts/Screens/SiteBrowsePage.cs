@@ -317,6 +317,16 @@ public partial class SiteBrowsePage : Screen
 
     private static string Stats(ModSummary m) => m.Downloads > 0 ? $"↓ {Count(m.Downloads)}" : m.Likes > 0 ? $"♥ {Count(m.Likes)}" : "";
 
+    public override bool OnShortcut(InputEventKey key)
+    {
+        if (key.CtrlPressed && key.Keycode == Key.F && !key.Echo)
+        {
+            OpenSearch();
+            return true;
+        }
+        return false;
+    }
+
     public override void OnAction(string action)
     {
         if (action == Pad.Secondary)

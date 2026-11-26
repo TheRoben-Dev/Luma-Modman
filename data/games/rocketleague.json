@@ -1,0 +1,12 @@
+{
+  "id": "rocketleague",
+  "name": "Rocket League",
+  "steam": [
+    252950
+  ],
+  "detect": [
+    "Binaries/Win64/RocketLeague.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Easy Anti-Cheat in online play, and BakkesMod only works on Windows."
+}

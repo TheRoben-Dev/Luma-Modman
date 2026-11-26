@@ -1,0 +1,16 @@
+{
+  "id": "subnauticabelowzero",
+  "name": "Subnautica: Below Zero",
+  "steam": [
+    848450
+  ],
+  "detect": [
+    "SubnauticaZero.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "nexus": "subnauticabelowzero"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "divinityoriginalsin2",
+  "name": "Divinity: Original Sin 2",
+  "steam": [
+    435150
+  ],
+  "detect": [
+    "DefEd/bin/EoCApp.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "{documents}/Larian Studios/Divinity Original Sin 2 Definitive Edition/Mods",
+  "sites": {
+    "nexus": "divinityoriginalsin2definitiveedition"
+  },
+  "quirks": [
+    "Turn mods on in the game's own Mods menu after they're in place.",
+    "Mods load from the Documents folder inside the Proton prefix."
+  ]
+}

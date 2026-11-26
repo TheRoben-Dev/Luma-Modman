@@ -1,0 +1,12 @@
+{
+  "id": "seaofthieves",
+  "name": "Sea of Thieves",
+  "steam": [
+    1172620
+  ],
+  "detect": [
+    "SoTGame.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Online-only with anti-cheat; Rare bans modified clients."
+}

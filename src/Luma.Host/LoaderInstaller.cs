@@ -15,8 +15,9 @@ public static class LoaderInstaller
     public static string ModId(LoaderInfo l) => "loader:" + l.Id;
 
     /// <summary>Where the loader's files go, relative to the game folder: UE4SS next to the game's exe, others in the game folder.</summary>
-    public static string InstallPath(GameProfile p) =>
-        p.Loader == "ue4ss" && p.Detect.Select(d => d.Replace('\\', '/')).FirstOrDefault(d => d.Contains("/Binaries/Win64", StringComparison.OrdinalIgnoreCase)) is { } exe
+    public static string InstallPath(GameProfile p, LoaderInfo? l = null) =>
+        l?.Launcher != null ? l.LauncherDir
+        : p.Loader == "ue4ss" && p.Detect.Select(d => d.Replace('\\', '/')).FirstOrDefault(d => d.Contains("/Binaries/Win64", StringComparison.OrdinalIgnoreCase)) is { } exe
             ? exe[..(exe.IndexOf("/Binaries/Win64", StringComparison.OrdinalIgnoreCase) + "/Binaries/Win64".Length)]
             : "";
 
@@ -26,6 +27,10 @@ public static class LoaderInstaller
         if (mods.Mods.Any(m => m.Id == ModId(l) || (l.Id == "bepinex" && m.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase))))
         {
             return true;
+        }
+        if (l.Launcher != null)
+        {
+            return File.Exists(Path.Combine(game.GameDir, l.Launcher));
         }
         return l.Id switch
         {

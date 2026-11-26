@@ -1,0 +1,12 @@
+{
+  "id": "rust",
+  "name": "Rust",
+  "steam": [
+    252490
+  ],
+  "detect": [
+    "RustClient.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Easy Anti-Cheat: client mods are bannable. Mods run on servers, not players' games."
+}

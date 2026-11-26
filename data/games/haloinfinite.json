@@ -1,0 +1,12 @@
+{
+  "id": "haloinfinite",
+  "name": "Halo Infinite",
+  "steam": [
+    1240440
+  ],
+  "detect": [
+    "HaloInfinite.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Easy Anti-Cheat in multiplayer; modified files are bannable."
+}

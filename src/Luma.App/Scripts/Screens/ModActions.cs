@@ -223,8 +223,9 @@ public static class ModActions
     {
         if (!l.AutoInstall)
         {
-            App.Push(new ChoicePage($"{l.Name} is installed from its own website. Download it there, then add it like any mod file.",
-                ("Open the website", () => OpenUrl(LoaderPage(l))), ("Cancel", () => { })));
+            var then = l.Launcher != null ? $" Luma then starts {game.Title} through it." : "";
+            App.Push(new ChoicePage($"{l.Name} is installed from its own website. Download it there (the 7z or zip archive), then choose \"Add a mod from a file\".{then}",
+                ("Open the website", () => OpenUrl(LoaderPage(l))), ("Add a mod from a file", () => App.Push(new AddFilePage(game))), ("Cancel", () => { })));
             return;
         }
         if (Host.Downloads.Items.Any(i => i.Site == "loader" && i.ModId == l.Id && i.Game == game.Key && i.State is DownloadState.Queued or DownloadState.Downloading))

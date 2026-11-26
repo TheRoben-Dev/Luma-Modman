@@ -3,6 +3,13 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.7.0
+
+- A desktop layout: a resizable window with more on screen, right-click for a row's options, and keyboard shortcuts (Ctrl+1–4 tabs, Ctrl+F search, Ctrl+Up/Down to reorder mods). It's on automatically outside Game Mode; change it in Settings → Layout.
+- Script extenders install as mods: download SKSE, F4SE, SFSE, OBSE, xNVSE or FOSE, then choose "Add a mod from a file". Starting the game from Steam with Luma's launch option then goes through the extender.
+- Add a mod from a file: install any mod archive from Downloads or the Desktop.
+- 28 more games, 165 in all. New moddable ones include ARK: Survival Evolved, Lies of P, Silent Hill 2, Grounded, Manor Lords and Divinity: Original Sin 2. Games with anti-cheat, like Honkai: Star Rail, Fortnite and Helldivers 2, are listed with the reason they can't be modded.
+
 ## 0.6.0
 
 - Luma for Windows: download `Luma-windows-x86_64.zip` and double-click "Install Luma.cmd". Same app, same controls, on desktops and Windows handhelds (ROG Ally, Legion Go, MSI Claw).

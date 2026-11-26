@@ -118,26 +118,45 @@ public sealed class ModStore
     /// Unpacks <paramref name="archive"/> and stores it as <paramref name="mod"/>, replacing an
     /// earlier version (kept in its history for rollback). New mods are enabled at the end of every profile.
     /// </summary>
-    public InstalledMod Install(string archive, InstalledMod mod, GameProfile profile, string? gamePrefix = null)
+    /// <remarks>
+    /// When <paramref name="loader"/> has a launcher and the archive holds it (SKSE64 added by hand),
+    /// the archive is installed as that loader: in the launcher's folder, as "loader:&lt;id&gt;".
+    /// </remarks>
+    public InstalledMod Install(string archive, InstalledMod mod, GameProfile profile, string? gamePrefix = null, LoaderInfo? loader = null)
     {
         Directory.CreateDirectory(Root);
         var tmp = Path.Combine(Root, ".unpack-" + Guid.NewGuid().ToString("N")[..8]);
-        var staged = ModDir(mod.Id) + ".new";
+        string? staged = null;
         try
         {
             Archive.Extract(archive, tmp);
-            var plan = ModLayout.Plan(tmp, profile, mod.ModId.Length > 0 ? mod.ModId : mod.Name, gamePrefix);
+            var root = tmp;
+            if (loader?.Launcher is { } launcher && mod.Site != "loader" && FindFile(tmp, Path.GetFileName(launcher)) is { } found)
+            {
+                root = Path.GetDirectoryName(found)!;
+                gamePrefix = loader.LauncherDir;
+                mod = mod with { Id = "loader:" + loader.Id, Site = "loader", ModId = loader.Id, Name = loader.Name };
+            }
+            var stage = staged = ModDir(mod.Id) + ".new";
+            var plan = ModLayout.Plan(root, profile, mod.ModId.Length > 0 ? mod.ModId : mod.Name, gamePrefix);
+            if (mod.Site == "loader")
+            {
+                // Script extenders ship their source code and readmes alongside; the game doesn't need them.
+                var src = (gamePrefix is { Length: > 0 } ? gamePrefix.Trim('/') + "/" : "") + "src/";
+                plan.RemoveAll(e => e.Target.StartsWith(src, StringComparison.OrdinalIgnoreCase)
+                    || (e.Target.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) && e.Target.Count(c => c == '/') == src.Count(c => c == '/') - 1));
+            }
             if (plan.Count == 0)
             {
                 throw new InvalidDataException($"{Path.GetFileName(archive)} has no files to install.");
             }
-            if (Directory.Exists(staged))
+            if (Directory.Exists(stage))
             {
-                Directory.Delete(staged, true);
+                Directory.Delete(stage, true);
             }
             foreach (var e in plan)
             {
-                var dest = Path.Combine(staged, e.Root == DeployRoot.Game ? "game" : "mods", e.Target);
+                var dest = Path.Combine(stage, e.Root == DeployRoot.Game ? "game" : "mods", e.Target);
                 Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
                 File.Move(e.Source, dest, overwrite: true);
             }
@@ -146,7 +165,7 @@ public sealed class ModStore
             {
                 Directory.Delete(dir, true);
             }
-            Directory.Move(staged, dir);
+            Directory.Move(stage, dir);
 
             var old = State.Find(mod.Id);
             var history = old?.History.ToList() ?? new List<ModVersion>();
@@ -167,12 +186,15 @@ public sealed class ModStore
             {
                 Directory.Delete(tmp, true);
             }
-            if (Directory.Exists(staged))
+            if (staged != null && Directory.Exists(staged))
             {
                 Directory.Delete(staged, true);
             }
         }
     }
+
+    private static string? FindFile(string dir, string name) =>
+        Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories).FirstOrDefault(f => Path.GetFileName(f).Equals(name, StringComparison.OrdinalIgnoreCase));
 
     public void Uninstall(string id)
     {

@@ -1,0 +1,12 @@
+{
+  "id": "counterstrike2",
+  "name": "Counter-Strike 2",
+  "steam": [
+    730
+  ],
+  "detect": [
+    "game/bin/win64/cs2.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "VAC anti-cheat: modified game files can get you banned. Workshop maps are handled by Steam."
+}

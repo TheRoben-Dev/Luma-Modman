@@ -1,0 +1,12 @@
+{
+  "id": "callofduty",
+  "name": "Call of Duty",
+  "steam": [
+    1938090
+  ],
+  "detect": [
+    "cod.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Ricochet anti-cheat blocks Linux, and any modification is bannable."
+}

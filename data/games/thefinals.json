@@ -1,0 +1,12 @@
+{
+  "id": "thefinals",
+  "name": "The Finals",
+  "steam": [
+    2073850
+  ],
+  "detect": [
+    "Discovery.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Online-only with Easy Anti-Cheat; modified game files are bannable."
+}
