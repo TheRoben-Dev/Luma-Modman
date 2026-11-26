@@ -15,7 +15,24 @@
   "sites": {
     "nexus": "oblivion"
   },
+  "plugins": {
+    "file": "{localappdata}/Oblivion/Plugins.txt",
+    "style": "plain",
+    "timestamps": true,
+    "base": [
+      "Oblivion.esm"
+    ]
+  },
+  "ini": [
+    {
+      "file": "{mygames}/Oblivion/Oblivion.ini",
+      "section": "Archive",
+      "key": "bInvalidateOlderFiles",
+      "value": "1"
+    }
+  ],
   "quirks": [
-    "Archive invalidation is needed for replaced textures; Luma turns it on."
+    "Archive invalidation (for replaced textures) is turned on in Oblivion.ini while mods are in; start the game once first so the file exists.",
+    "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins. The game orders plugins by file date, which Luma sets."
   ]
 }

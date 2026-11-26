@@ -87,6 +87,12 @@ public sealed record GameProfile
     /// <summary>Extra Steam launch options beyond Luma's wrapper (e.g. "-skipintro").</summary>
     public string? LaunchOptions { get; init; }
 
+    /// <summary>Bethesda-style plugin list (plugins.txt) Luma keeps in step with the enabled mods; null for other games.</summary>
+    public PluginSettings? Plugins { get; init; }
+
+    /// <summary>INI settings mods need (archive invalidation): written while mods are in, put back after.</summary>
+    public List<IniSetting> Ini { get; init; } = new();
+
     /// <summary>Set when the game can't be modded safely (anti-cheat, online-only bans): the reason shown to the player.</summary>
     public string? NotModdable { get; init; }
 
@@ -149,6 +155,14 @@ public sealed record GameProfile
             {
                 errors.Add($"unknown location token in modsPath '{ModsPath}'");
             }
+            if (Plugins is { } pl && (!pl.File.StartsWith('{') || pl.Style is not ("asterisk" or "plain")))
+            {
+                errors.Add("plugins.file must start with a location token and plugins.style must be asterisk or plain");
+            }
+            if (Ini.Any(i => !i.File.StartsWith('{') || i.Section.Length == 0 || i.Key.Length == 0))
+            {
+                errors.Add("each ini setting needs a file with a location token, a section and a key");
+            }
             if (WindowsModsPath is { } w && (w.StartsWith('/') || w.Contains("..") || (w.StartsWith('{') && !WindowsTokens.Any(t => w.StartsWith(t, StringComparison.Ordinal)))))
             {
                 errors.Add($"windowsModsPath must be relative or start with a Windows location token: '{w}'");
@@ -162,6 +176,31 @@ public sealed record GameProfile
 
     public static readonly string[] ModsTokens = ["{documents}", "{appdata}", "{localappdata}", "{mygames}", "{xdgdata}", "{xdgconfig}"];
 }
+
+/// <summary>Where a Bethesda game keeps its plugin list, and how it reads it.</summary>
+public sealed record PluginSettings
+{
+    /// <summary>plugins.txt, with a location token ("{localappdata}/Skyrim Special Edition/plugins.txt").</summary>
+    public string File { get; init; } = "";
+
+    /// <summary>
+    /// "asterisk": every plugin listed in load order, "*" before the active ones (Skyrim SE,
+    /// Fallout 4, Starfield). "plain": only active plugins (Skyrim 2011, Oblivion, Fallout 3/NV).
+    /// </summary>
+    public string Style { get; init; } = "asterisk";
+
+    /// <summary>Also write loadorder.txt next to plugins.txt (Skyrim 2011).</summary>
+    public bool LoadOrderFile { get; init; }
+
+    /// <summary>The game orders plugins by file date (Oblivion, Fallout 3, New Vegas).</summary>
+    public bool Timestamps { get; init; }
+
+    /// <summary>The game's own plugins, always loaded first and never written by Luma.</summary>
+    public List<string> Base { get; init; } = new();
+}
+
+/// <summary>One INI value: [Section] Key=Value in File (a location token path).</summary>
+public sealed record IniSetting(string File, string Section, string Key, string Value);
 
 /// <summary>A community site for a game, used through the browser (see <see cref="GameProfile.Links"/>).</summary>
 public sealed record GameLink

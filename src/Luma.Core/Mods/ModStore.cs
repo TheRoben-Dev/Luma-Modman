@@ -55,6 +55,12 @@ public sealed record GameMods
     public InstalledMod? Find(string id) => Mods.FirstOrDefault(m => m.Id == id);
 
     public bool IsEnabled(string id) => Order.Any(e => e.Id == id && e.Enabled);
+
+    /// <summary>Plugins (.esp/.esm/.esl) turned off by hand, per profile; plugins of enabled mods are on otherwise.</summary>
+    public Dictionary<string, List<string>> PluginsOff { get; init; } = new();
+
+    public bool IsPluginOn(string plugin) =>
+        !(PluginsOff.TryGetValue(Active, out var off) && off.Contains(plugin, StringComparer.OrdinalIgnoreCase));
 }
 
 /// <summary>
@@ -255,6 +261,19 @@ public sealed class ModStore
         var profiles = State.Profiles.ToDictionary(p => p.Key, p => p.Value.ToList());
         profiles[name] = entries.ToList();
         Save(State with { Profiles = profiles, Active = name });
+    }
+
+    /// <summary>Turns one plugin of an enabled mod on or off in the active profile.</summary>
+    public void SetPluginEnabled(string plugin, bool on)
+    {
+        var all = State.PluginsOff.ToDictionary(p => p.Key, p => p.Value.ToList());
+        var off = all.TryGetValue(State.Active, out var l) ? l : all[State.Active] = new List<string>();
+        off.RemoveAll(p => string.Equals(p, plugin, StringComparison.OrdinalIgnoreCase));
+        if (!on)
+        {
+            off.Add(plugin);
+        }
+        Save(State with { PluginsOff = all });
     }
 
     /// <summary>Takes entries whose mod isn't installed (a modpack's that never arrived) out of the active profile.</summary>

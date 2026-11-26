@@ -19,6 +19,9 @@ public sealed record DeployManifest
 
     /// <summary>Folders created for mod files, deepest last (removed again when empty).</summary>
     public List<string> Dirs { get; init; } = new();
+
+    /// <summary>Files Luma generated (plugins.txt, INI settings): deleted at undeploy, before the game's own are put back.</summary>
+    public List<string> Written { get; init; } = new();
 }
 
 /// <summary>A placed file: a symlink to the mod store, or a copy (or Windows hard link) where symlinks don't work.</summary>
@@ -128,6 +131,17 @@ public static class Deployer
             return;
         }
         var problems = new List<string>();
+        foreach (var w in m.Written)
+        {
+            try
+            {
+                File.Delete(w);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                problems.Add(e.Message);
+            }
+        }
         foreach (var f in m.Files)
         {
             try
@@ -202,7 +216,7 @@ public static class Deployer
         }
     }
 
-    private static void Write(string file, DeployManifest m)
+    public static void Write(string file, DeployManifest m)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
         File.WriteAllText(file + ".tmp", JsonSerializer.Serialize(m, Json));
