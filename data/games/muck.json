@@ -1,0 +1,16 @@
+{
+  "id": "muck",
+  "name": "Muck",
+  "steam": [
+    1625450
+  ],
+  "detect": [
+    "Muck.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "thunderstore": "muck"
+  }
+}

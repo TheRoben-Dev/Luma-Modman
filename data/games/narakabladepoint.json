@@ -1,0 +1,12 @@
+{
+  "id": "narakabladepoint",
+  "name": "Naraka: Bladepoint",
+  "steam": [
+    1203220
+  ],
+  "detect": [
+    "NarakaBladepoint.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Online-only with anti-cheat; modified clients are banned."
+}

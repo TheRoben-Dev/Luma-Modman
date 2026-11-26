@@ -1,0 +1,12 @@
+{
+  "id": "huntshowdown",
+  "name": "Hunt: Showdown 1896",
+  "steam": [
+    594650
+  ],
+  "detect": [
+    "HuntGame.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Online-only with Easy Anti-Cheat; modified files are bannable."
+}

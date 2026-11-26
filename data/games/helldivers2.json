@@ -1,0 +1,12 @@
+{
+  "id": "helldivers2",
+  "name": "Helldivers 2",
+  "steam": [
+    553850
+  ],
+  "detect": [
+    "bin/helldivers2.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "nProtect GameGuard anti-cheat: modified game files risk a ban."
+}

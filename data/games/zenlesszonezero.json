@@ -1,0 +1,9 @@
+{
+  "id": "zenlesszonezero",
+  "name": "Zenless Zone Zero",
+  "detect": [
+    "ZenlessZoneZero.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "HoYoverse's anti-cheat and terms forbid modified clients; accounts get banned."
+}

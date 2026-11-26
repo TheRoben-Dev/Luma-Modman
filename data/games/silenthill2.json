@@ -1,0 +1,20 @@
+{
+  "id": "silenthill2",
+  "name": "Silent Hill 2",
+  "steam": [
+    2124490
+  ],
+  "detect": [
+    "SHProto/Binaries/Win64"
+  ],
+  "runtime": "proton",
+  "modsPath": "SHProto/Content/Paks/~mods",
+  "loader": "ue4ss",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "silenthill2"
+  },
+  "quirks": [
+    "This is the 2024 remake; its game files live under SHProto."
+  ]
+}

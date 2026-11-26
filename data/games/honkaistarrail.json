@@ -1,0 +1,9 @@
+{
+  "id": "honkaistarrail",
+  "name": "Honkai: Star Rail",
+  "detect": [
+    "StarRail.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "HoYoverse's anti-cheat and terms forbid modified clients; accounts get banned."
+}

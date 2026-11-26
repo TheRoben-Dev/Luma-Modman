@@ -1,0 +1,12 @@
+{
+  "id": "overwatch2",
+  "name": "Overwatch 2",
+  "steam": [
+    2357570
+  ],
+  "detect": [
+    "Overwatch.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Online-only with anti-cheat; Blizzard bans modified clients."
+}

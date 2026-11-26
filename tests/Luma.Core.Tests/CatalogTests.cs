@@ -27,6 +27,11 @@ public class CatalogTests
     }
 
     [Fact]
+    public void Ue4ssGamesNameTheirBinariesFolder() =>
+        Assert.All(Catalog.Games.Where(g => g.Loader == "ue4ss"), g =>
+            Assert.Contains(g.Detect, d => d.Contains("/Binaries/Win64", StringComparison.OrdinalIgnoreCase)));
+
+    [Fact]
     public void LookupsWork()
     {
         Assert.Equal("skyrimspecialedition", Catalog.BySteamId(489830)?.Id);

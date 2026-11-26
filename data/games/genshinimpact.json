@@ -1,0 +1,9 @@
+{
+  "id": "genshinimpact",
+  "name": "Genshin Impact",
+  "detect": [
+    "GenshinImpact.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "HoYoverse's anti-cheat and terms forbid modified clients; accounts get banned."
+}

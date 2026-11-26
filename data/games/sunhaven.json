@@ -1,0 +1,16 @@
+{
+  "id": "sunhaven",
+  "name": "Sun Haven",
+  "steam": [
+    1432860
+  ],
+  "detect": [
+    "Sun Haven.exe"
+  ],
+  "runtime": "proton",
+  "modsPath": "BepInEx/plugins",
+  "loader": "bepinex",
+  "sites": {
+    "thunderstore": "sun-haven"
+  }
+}

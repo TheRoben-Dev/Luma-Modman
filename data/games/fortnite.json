@@ -1,0 +1,9 @@
+{
+  "id": "fortnite",
+  "name": "Fortnite",
+  "detect": [
+    "FortniteGame/Binaries/Win64/FortniteClient-Win64-Shipping.exe"
+  ],
+  "runtime": "proton",
+  "notModdable": "Easy Anti-Cheat and BattlEye block Linux, so Fortnite doesn't run on SteamOS, and modifying it is bannable."
+}
