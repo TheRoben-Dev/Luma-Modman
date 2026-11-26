@@ -9,6 +9,7 @@
   ],
   "runtime": "native",
   "modsPath": "{xdgdata}/American Truck Simulator/mod",
+  "windowsModsPath": "{documents}/American Truck Simulator/mod",
   "sites": {
     "nexus": "americantrucksimulator",
     "curseforge": "american-truck-simulator"

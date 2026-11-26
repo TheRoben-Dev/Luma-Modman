@@ -228,7 +228,7 @@ public class SourcesTests
         var root = Path.Combine(Path.GetTempPath(), "luma-dl-" + Guid.NewGuid().ToString("N")[..8]);
         try
         {
-            var paths = new AppPaths(v => v switch { "HOME" => root, "XDG_DATA_HOME" => Path.Combine(root, "data"), _ => null });
+            var paths = new AppPaths(v => v switch { "HOME" => root, "XDG_DATA_HOME" => Path.Combine(root, "data"), _ => null }, windows: false);
             var (_, fake) = Gate(_ => (HttpStatusCode.OK, "zipbytes"));
             var q = new DownloadQueue(paths, new HttpClient(fake));
             var done = new TaskCompletionSource<DownloadItem>();
@@ -261,7 +261,7 @@ public class SourcesTests
         var root = Path.Combine(Path.GetTempPath(), "luma-nxm-" + Guid.NewGuid().ToString("N")[..8]);
         try
         {
-            var paths = new AppPaths(v => v switch { "HOME" => root, _ => null });
+            var paths = new AppPaths(v => v switch { "HOME" => root, _ => null }, windows: false);
             Assert.False(NxmHandler.Drop(paths, "https://example.com"));
             Assert.True(NxmHandler.Drop(paths, "nxm://deadasdisco/mods/188/files/900?key=k&expires=1"));
             var l = Assert.Single(NxmHandler.Take(paths));

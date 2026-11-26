@@ -20,7 +20,7 @@ public partial class SteamLaunchPage : Screen
         AddChild(Scroller(col));
         col.AddChild(UiTheme.Label("Start with mods from Steam", UiTheme.TitleSize));
         col.AddChild(UiTheme.Label(
-            $"With this launch option, starting {_game.Title} from Steam (Game Mode too) links your mods in first and takes them out when the game closes. The game folder stays as Steam installed it, and a problem with mods never stops the game from starting.",
+            $"With this launch option, starting {_game.Title} from Steam ({GameText.SteamTvMode} too) links your mods in first and takes them out when the game closes. The game folder stays as Steam installed it, and a problem with mods never stops the game from starting.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         var box = new PanelContainer();
         var bs = UiTheme.Box(UiTheme.PanelHi, 1, 10, UiTheme.Line);
@@ -33,7 +33,7 @@ public partial class SteamLaunchPage : Screen
         string[] steps =
         [
             "Copy the launch option below.",
-            $"In Steam, open {_game.Title}'s Properties (the gear, or the menu button in Game Mode).",
+            $"In Steam, open {_game.Title}'s Properties (the gear, or the menu button in {GameText.SteamTvMode}).",
             "Under General → Launch options, paste it. If something is already there, put it in front of %command% instead of replacing it.",
             "Start the game as usual.",
         ];

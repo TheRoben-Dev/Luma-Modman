@@ -4,7 +4,8 @@ namespace Luma.Core.Detection;
 /// Reads Steam's own files (never runs Steam): every library from libraryfolders.vdf, including
 /// SD cards and extra drives, the installed apps' manifests, Proton prefixes (compatdata),
 /// the compatibility tool and launch options per game, and the cached library art.
-/// Covers the native Steam install and the Flatpak one.
+/// Covers the native Steam install and the Flatpak one on Linux, and the registry-listed install
+/// on Windows (where games run directly, so there are no prefixes).
 /// </summary>
 public sealed class SteamScanner
 {
@@ -15,6 +16,10 @@ public sealed class SteamScanner
     /// <summary>Steam root folders that exist (native first, then Flatpak), de-duplicated through symlinks.</summary>
     public IReadOnlyList<(string Root, string Packaging)> Roots()
     {
+        if (OperatingSystem.IsWindows())
+        {
+            return WindowsSteam.Roots().Select(r => (r, "native")).ToList();
+        }
         var candidates = new (string, string)[]
         {
             (Path.Combine(_home, ".local/share/Steam"), "native"),
@@ -58,7 +63,7 @@ public sealed class SteamScanner
                 }
             }
         }
-        var seen = new HashSet<string>();
+        var seen = new HashSet<string>(Platform.PathComparer);
         return libs.Where(l => Directory.Exists(Path.Combine(l, "steamapps")) && seen.Add(PathUtil.RealPath(l))).ToList();
     }
 
@@ -143,6 +148,10 @@ public sealed class SteamScanner
     /// </summary>
     public static string? FindPrefix(string appId, string lib, IReadOnlyList<string> libs)
     {
+        if (Platform.IsWindows)
+        {
+            return null;  // Windows games run directly
+        }
         foreach (var l in libs.Prepend(lib))
         {
             var pfx = Path.Combine(l, "steamapps", "compatdata", appId, "pfx");

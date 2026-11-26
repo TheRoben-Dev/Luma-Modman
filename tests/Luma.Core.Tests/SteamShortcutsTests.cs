@@ -98,7 +98,7 @@ public class SteamShortcutsTests : IDisposable
         Assert.Equal(SteamFile(), File.ReadAllBytes(Path.Combine(config, "shortcuts.vdf")));
     }
 
-    [Fact]
+    [LinuxFact]
     public void FindsSignedInAccountsOnceAndStartsAnEmptyFile()
     {
         Assert.Empty(SteamShortcuts.AccountConfigDirs(_home));

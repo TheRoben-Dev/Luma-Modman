@@ -5,8 +5,8 @@ using Luma.Core.Sources;
 namespace Luma.Host;
 
 /// <summary>
-/// Nexus "Mod Manager Download" links. The desktop entry runs `luma nxm &lt;link&gt;`, which drops the
-/// link into an inbox folder; the app picks it up (and is started if it isn't running).
+/// Nexus "Mod Manager Download" links. The desktop entry (on Windows, the nxm:// protocol key in
+/// HKCU\Software\Classes) runs `luma nxm &lt;link&gt;`, which drops the link into an inbox folder; the app picks it up (and is started if it isn't running).
 /// </summary>
 public static class NxmHandler
 {
@@ -72,7 +72,13 @@ public static class NxmHandler
     {
         if (!File.Exists(cliPath))
         {
-            throw new FileNotFoundException("Luma's command line helper (luma) wasn't found next to the app. Install Luma from a release to use Nexus download links.", cliPath);
+            throw new FileNotFoundException($"Luma's command line helper ({Platform.CliBinary}) wasn't found next to the app. Install Luma from a release to use Nexus download links.", cliPath);
+        }
+        if (OperatingSystem.IsWindows())
+        {
+            WindowsRegister(cliPath);
+            AppLog.Info($"nxm handler registered: {cliPath}");
+            return;
         }
         var apps = Path.Combine(paths.Home, ".local", "share", "applications");
         Directory.CreateDirectory(apps);
@@ -83,7 +89,43 @@ public static class NxmHandler
     }
 
     public static bool IsRegistered(AppPaths paths) =>
-        File.Exists(Path.Combine(paths.Home, ".local", "share", "applications", DesktopFile));
+        OperatingSystem.IsWindows()
+            ? WindowsCommand()?.Contains(Platform.CliBinary, StringComparison.OrdinalIgnoreCase) == true
+            : File.Exists(Path.Combine(paths.Home, ".local", "share", "applications", DesktopFile));
+
+    private const string ClassesKey = @"Software\Classes\nxm";
+
+    /// <summary>The command line Windows runs for nxm:// links: `"...\luma-cli.exe" nxm "%1"`.</summary>
+    public static string WindowsCommandLine(string cliPath) => $"\"{cliPath}\" nxm \"%1\"";
+
+    /// <summary>The nxm:// handler for this user (HKCU, no admin rights needed); takes over from another mod manager.</summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static void WindowsRegister(string cliPath)
+    {
+        using var key = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(ClassesKey);
+        key.SetValue("", "URL:NXM Protocol");
+        key.SetValue("URL Protocol", "");
+        using (var icon = key.CreateSubKey("DefaultIcon"))
+        {
+            icon.SetValue("", $"\"{Path.Combine(Path.GetDirectoryName(cliPath)!, Platform.AppBinary)}\",0");
+        }
+        using var cmd = key.CreateSubKey(@"shell\open\command");
+        cmd.SetValue("", WindowsCommandLine(cliPath));
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static string? WindowsCommand()
+    {
+        try
+        {
+            using var cmd = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(ClassesKey + @"\shell\open\command");
+            return cmd?.GetValue("") as string;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            return null;
+        }
+    }
 
     private static void Run(string exe, params string[] args)
     {

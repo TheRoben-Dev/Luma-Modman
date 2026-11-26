@@ -3,6 +3,13 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.6.0
+
+- Luma for Windows: download `Luma-windows-x86_64.zip` and double-click "Install Luma.cmd". Same app, same controls, on desktops and Windows handhelds (ROG Ally, Legion Go, MSI Claw).
+- On Windows, games are found in Steam (every library), the Epic Games Launcher, GOG Galaxy and Heroic. Mods that go in Documents or AppData use your own folders.
+- On Windows, the Steam launch option, Nexus "Mod Manager Download" links, Add Luma to Steam, and in-app updates with rollback all work as on Linux.
+- Games started through a launcher or script extender keep their mods until the game itself closes.
+
 ## 0.5.0
 
 - First release: download `Luma-linux-x86_64.tar.gz` and run `./install.sh`. Luma installs to ~/Applications/Luma with a menu entry.

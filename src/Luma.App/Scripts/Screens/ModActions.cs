@@ -89,8 +89,8 @@ public static class ModActions
         }
     }
 
-    /// <summary>The `luma` helper ships next to the app executable.</summary>
-    public static string CliPath() => Path.Combine(Path.GetDirectoryName(OS.GetExecutablePath()) ?? ".", "luma");
+    /// <summary>The `luma` helper (luma-cli.exe on Windows) ships next to the app executable.</summary>
+    public static string CliPath() => Path.Combine(Path.GetDirectoryName(OS.GetExecutablePath()) ?? ".", Luma.Core.Platform.CliBinary);
 
     /// <summary>Picks up links dropped by `luma nxm` and queues them.</summary>
     public static void TakeNxmLinks()

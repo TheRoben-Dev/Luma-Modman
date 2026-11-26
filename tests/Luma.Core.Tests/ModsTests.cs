@@ -154,7 +154,7 @@ public sealed class ModsTests : IDisposable
         Assert.False(Directory.Exists(reloaded.ModDir("thunderstore:a-X")));
     }
 
-    [Fact]
+    [LinuxFact]
     public void ModsDirResolvesTokensInsideThePrefix()
     {
         var install = new InstalledGame { InstallDir = "/g", Prefix = "/pfx" };

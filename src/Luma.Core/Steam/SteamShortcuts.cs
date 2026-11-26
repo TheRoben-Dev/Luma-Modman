@@ -62,9 +62,17 @@ public sealed class SteamShortcuts
 
     public string FilePath => _file;
 
-    /// <summary>Steam install roots in the order Steam itself prefers (native, then Flatpak).</summary>
+    /// <summary>Steam install roots in the order Steam itself prefers (native, then Flatpak; the registry's on Windows).</summary>
     public static IEnumerable<string> SteamRoots(string home)
     {
+        if (OperatingSystem.IsWindows())
+        {
+            foreach (var r in WindowsSteam.Roots())
+            {
+                yield return r;
+            }
+            yield break;
+        }
         yield return Path.Combine(home, ".local", "share", "Steam");
         yield return Path.Combine(home, ".steam", "steam");
         yield return Path.Combine(home, ".steam", "root");
@@ -77,7 +85,7 @@ public sealed class SteamShortcuts
     /// </summary>
     public static IReadOnlyList<string> AccountConfigDirs(string home)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var seen = new HashSet<string>(Platform.PathComparer);
         var dirs = new List<(string Dir, DateTime Used)>();
         foreach (var root in SteamRoots(home))
         {
@@ -113,11 +121,15 @@ public sealed class SteamShortcuts
     /// <summary>True while a Steam client is running for this user (its pid file names a live process).</summary>
     public static bool SteamRunning(string home)
     {
+        if (OperatingSystem.IsWindows())
+        {
+            return WindowsSteam.Running();
+        }
         foreach (var pidFile in new[] { Path.Combine(home, ".steam", "steam.pid"), Path.Combine(home, ".var", "app", "com.valvesoftware.Steam", ".steam", "steam.pid") })
         {
             try
             {
-                if (File.Exists(pidFile) && int.TryParse(File.ReadAllText(pidFile).Trim(), out var pid) && Directory.Exists($"/proc/{pid}"))
+                if (File.Exists(pidFile) && int.TryParse(File.ReadAllText(pidFile).Trim(), out var pid) && Platform.ProcessAlive(pid))
                 {
                     return true;
                 }

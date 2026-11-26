@@ -18,7 +18,7 @@ public sealed record DetectedGame
 }
 
 /// <summary>
-/// Scans every launcher and keeps the installs that match a support profile: Steam by app id,
+/// Scans every launcher (Steam, Heroic, Lutris on Linux; Steam, Heroic, Epic, GOG on Windows) and keeps the installs that match a support profile: Steam by app id,
 /// everything else by the profile's detect files in the game folder (or a few folders above it,
 /// since Lutris points at the executable, which can sit in bin/x64).
 /// </summary>
@@ -42,7 +42,15 @@ public sealed class GameDetector
         installs.AddRange(new SteamScanner(_home).Scan(ct));
         ct.ThrowIfCancellationRequested();
         installs.AddRange(new HeroicScanner(_home).Scan());
-        installs.AddRange(new LutrisScanner(_home).Scan());
+        if (OperatingSystem.IsWindows())
+        {
+            installs.AddRange(WindowsLaunchers.Epic());
+            installs.AddRange(WindowsLaunchers.Gog());
+        }
+        else
+        {
+            installs.AddRange(new LutrisScanner(_home).Scan());
+        }
         LastInstalls = installs;
         return Match(installs);
     }

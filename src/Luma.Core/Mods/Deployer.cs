@@ -21,7 +21,7 @@ public sealed record DeployManifest
     public List<string> Dirs { get; init; } = new();
 }
 
-/// <summary>A placed file: a symlink to the mod store, or a copy where links don't work.</summary>
+/// <summary>A placed file: a symlink to the mod store, or a copy (or Windows hard link) where symlinks don't work.</summary>
 public sealed record DeployedFile(string Target, string Source, bool Copy);
 
 /// <summary>
@@ -100,15 +100,11 @@ public static class Deployer
                     File.Move(target, backup);
                     m.Backups[target] = backup;
                 }
-                var copy = false;
-                try
-                {
-                    File.CreateSymbolicLink(target, source);
-                }
-                catch (IOException)
+                // Hard links (Windows without symlink rights) are recorded as copies: removing one never touches the store.
+                var copy = FileLinks.TryLink(target, source) != FileLinks.Kind.Symlink;
+                if (!File.Exists(target))
                 {
                     File.Copy(source, target);
-                    copy = true;
                 }
                 m.Files.Add(new DeployedFile(target, source, copy));
             }
@@ -136,7 +132,7 @@ public static class Deployer
         {
             try
             {
-                if (IsLink(f.Target) ? File.ResolveLinkTarget(f.Target, false)?.FullName == f.Source || new FileInfo(f.Target).LinkTarget == f.Source : f.Copy && File.Exists(f.Target))
+                if (IsLink(f.Target) ? SamePath(File.ResolveLinkTarget(f.Target, false)?.FullName, f.Source) || SamePath(new FileInfo(f.Target).LinkTarget, f.Source) : f.Copy && File.Exists(f.Target))
                 {
                     File.Delete(f.Target);
                 }
@@ -182,6 +178,8 @@ public static class Deployer
     }
 
     private static bool IsLink(string path) => new FileInfo(path).LinkTarget != null;
+
+    private static bool SamePath(string? a, string b) => a != null && string.Equals(a, b, Platform.PathComparison);
 
     private static void MakeDirs(string dir, DeployManifest m)
     {

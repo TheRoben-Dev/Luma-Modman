@@ -61,13 +61,25 @@ public static class Pad
         try
         {
             string Read(string f) => File.Exists(f) ? File.ReadAllText(f).Trim() : "";
-            var vendor = Read("/sys/class/dmi/id/board_vendor") + " " + Read("/sys/class/dmi/id/sys_vendor");
-            var product = Read("/sys/class/dmi/id/product_name") + " " + Read("/sys/class/dmi/id/board_name");
+            string vendor, product;
+            if (OperatingSystem.IsWindows())
+            {
+                // Windows handhelds (ROG Ally, Legion Go, Claw): the same SMBIOS fields, from the registry.
+                using var bios = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\BIOS");
+                string Reg(string name) => bios?.GetValue(name) as string ?? "";
+                vendor = Reg("BaseBoardManufacturer") + " " + Reg("SystemManufacturer");
+                product = Reg("SystemProductName") + " " + Reg("BaseBoardProduct");
+            }
+            else
+            {
+                vendor = Read("/sys/class/dmi/id/board_vendor") + " " + Read("/sys/class/dmi/id/sys_vendor");
+                product = Read("/sys/class/dmi/id/product_name") + " " + Read("/sys/class/dmi/id/board_name");
+            }
             return vendor.Contains("Valve") || product.Contains("Jupiter") || product.Contains("Galileo")
                 || product.Contains("ROG Ally") || product.Contains("RC71L") || product.Contains("RC72L")
                 || product.Contains("Legion Go") || product.Contains("83E1") || product.Contains("Claw");
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.SecurityException)
         {
             return false;
         }

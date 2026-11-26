@@ -63,6 +63,16 @@ public sealed record GameProfile
     /// </summary>
     public string ModsPath { get; init; } = "";
 
+    /// <summary>
+    /// Where mods go when Luma runs on Windows, if not <see cref="ModsPath"/>: only needed for games
+    /// whose Linux build keeps mods somewhere else ({xdgdata} → "{documents}/My Games/...").
+    /// </summary>
+    public string? WindowsModsPath { get; init; }
+
+    /// <summary>The mods path for the OS Luma runs on.</summary>
+    [JsonIgnore]
+    public string ModsPathHere => Platform.IsWindows && WindowsModsPath != null ? WindowsModsPath : ModsPath;
+
     /// <summary>The mod loader this game needs (id from data/loaders.json), or null when mods load without one.</summary>
     public string? Loader { get; init; }
 
@@ -139,9 +149,16 @@ public sealed record GameProfile
             {
                 errors.Add($"unknown location token in modsPath '{ModsPath}'");
             }
+            if (WindowsModsPath is { } w && (w.StartsWith('/') || w.Contains("..") || (w.StartsWith('{') && !WindowsTokens.Any(t => w.StartsWith(t, StringComparison.Ordinal)))))
+            {
+                errors.Add($"windowsModsPath must be relative or start with a Windows location token: '{w}'");
+            }
         }
         return errors;
     }
+
+    /// <summary>Tokens that mean something on Windows (the {xdg...} ones don't).</summary>
+    public static readonly string[] WindowsTokens = ["{documents}", "{appdata}", "{localappdata}", "{mygames}"];
 
     public static readonly string[] ModsTokens = ["{documents}", "{appdata}", "{localappdata}", "{mygames}", "{xdgdata}", "{xdgconfig}"];
 }

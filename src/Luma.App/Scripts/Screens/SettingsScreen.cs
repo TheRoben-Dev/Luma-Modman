@@ -211,7 +211,7 @@ public partial class SettingsScreen : TwoPaneScreen
             var dir = updater.InstallDir;
             var added = Try(() => SteamSetup.IsAdded(Host.Paths.Home, dir), false, "Steam's shortcuts", col);
             Add(new ActionButton(added ? "Add Luma to Steam again (refresh art)" : "Add Luma to Steam", () => AddToSteam(dir),
-                "A Steam shortcut with Luma's own art, so it opens from Game Mode."));
+                $"A Steam shortcut with Luma's own art, so it opens from {GameText.SteamTvMode}."));
         }
         else
         {

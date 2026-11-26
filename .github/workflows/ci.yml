@@ -26,7 +26,7 @@ jobs:
       - name: Workflow files and scripts are valid
         run: |
           python3 -c "import sys, yaml; [yaml.safe_load(open(f)) for f in sys.argv[1:]]" .github/workflows/*.yml
-          bash -n tools/smoke/*.sh
+          bash -n tools/smoke/*.sh tools/release/*.sh
       - name: Build (warnings are errors)
         run: dotnet build Luma.sln -c Release
       - name: Test
@@ -35,7 +35,7 @@ jobs:
         run: dotnet src/Luma.Cli/bin/Release/net8.0/luma.dll version
 
   app:
-    name: Godot app (import, UI smoke test, Linux export)
+    name: Godot app (import, UI smoke test, Linux and Windows export)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
           echo "GODOT=$(ls ~/godot-dl/editor/*/Godot_v*_mono_linux.x86_64)" >> "$GITHUB_ENV"
           dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono
           mkdir -p "$dest"
-          unzip -q -o -j templates.tpz 'templates/linux_*x86_64*' 'templates/version.txt' -d "$dest"
+          unzip -q -o -j templates.tpz 'templates/linux_*x86_64*' 'templates/windows_*x86_64*' 'templates/version.txt' -d "$dest"
 
       - name: Build
         run: |
@@ -102,6 +102,22 @@ jobs:
       - name: UI smoke test (exported build)
         run: tools/smoke/run-ui-smoke.sh build/godot/Luma.x86_64 "${{ runner.temp }}/shots"
 
+      - name: Export Windows build
+        working-directory: src/Luma.App
+        run: |
+          mkdir -p ../../build/godot-windows
+          timeout 600 "$GODOT" --headless --export-release Windows ../../build/godot-windows/Luma.exe 2>&1 | tee export-windows.log
+          test -f ../../build/godot-windows/Luma.exe
+          test -d ../../build/godot-windows/data_Luma.App_windows_x86_64
+          ! grep -E "^ERROR" export-windows.log
+
+      - name: Headless CLI for Windows (luma-cli.exe)
+        run: |
+          dotnet publish src/Luma.Cli -c Release -r win-x64 --self-contained \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -o build/godot-windows
+          test -f build/godot-windows/luma-cli.exe
+          tools/release/package-windows.sh build/godot-windows 0.0.0 dist-windows   # for the installer test on Windows
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -116,11 +132,76 @@ jobs:
           name: Luma-linux-x86_64
           path: build/godot
 
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Luma-windows-x86_64
+          path: build/godot-windows
+
+      - name: Upload Windows package (CI test copy)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Luma-windows-zip-test
+          path: dist-windows/Luma-windows-x86_64.zip
+
+  windows:
+    # The same code on a real Windows machine: tests (registry, known folders, job objects),
+    # the exported build starting headless, the CLI, and the installer script.
+    name: Windows (tests, exported build, installer)
+    needs: [app]
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build (warnings are errors)
+        run: dotnet build Luma.sln -c Release
+      - name: Test
+        run: dotnet test Luma.sln -c Release --no-build --logger "console;verbosity=normal"
+      - uses: actions/download-artifact@v4
+        with:
+          name: Luma-windows-x86_64
+          path: build/godot-windows
+      - uses: actions/download-artifact@v4
+        with:
+          name: Luma-windows-zip-test
+          path: dist
+      - name: CLI runs
+        shell: pwsh
+        run: |
+          $cli = "build/godot-windows/luma-cli.exe"
+          & $cli version; if ($LASTEXITCODE) { exit 1 }
+          & $cli games;   if ($LASTEXITCODE) { exit 1 }
+          & $cli games --all | Select-Object -Last 1
+      - name: Exported app starts (headless)
+        shell: pwsh
+        run: |
+          $p = Start-Process build/godot-windows/Luma.exe -ArgumentList '--headless','--quit-after','600' -PassThru -Wait `
+            -RedirectStandardOutput app-out.log -RedirectStandardError app-err.log
+          Get-Content app-out.log, app-err.log
+          $log = Join-Path $env:LOCALAPPDATA 'Luma\logs\app.log'
+          if (Test-Path $log) { Get-Content $log }
+          if (Select-String -Path app-out.log, app-err.log -Pattern 'Unhandled exception|System\.[A-Za-z.]*Exception') { throw 'exceptions while starting' }
+          if ($p.ExitCode -ne 0) { throw "exit code $($p.ExitCode)" }
+      - name: Installer
+        shell: pwsh
+        run: |
+          Expand-Archive dist/Luma-windows-x86_64.zip -DestinationPath $env:RUNNER_TEMP/unzipped
+          $dest = Join-Path $env:RUNNER_TEMP 'Programs\Luma'
+          & "$env:RUNNER_TEMP/unzipped/Luma/install.ps1" -Dest $dest -NoSteam
+          if (-not (Test-Path "$dest/Luma.exe")) { throw 'not installed' }
+          if (-not (Test-Path (Join-Path ([Environment]::GetFolderPath('Programs')) 'Luma.lnk'))) { throw 'no Start menu entry' }
+          (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Luma').DisplayVersion
+          & "$dest/uninstall.ps1" -Quiet
+          Start-Sleep -Seconds 5
+          if (Test-Path "$dest/Luma.exe") { throw 'not uninstalled' }
+
   release:
     # Every push to main whose version (Directory.Build.props) has no release yet publishes one:
     # the tarball and checksums the in-app updater reads, with that version's changelog as notes.
     name: Publish release
-    needs: [dotnet, app]
+    needs: [dotnet, app, windows]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
@@ -140,18 +221,25 @@ jobs:
         with:
           name: Luma-linux-x86_64
           path: build/godot
+      - uses: actions/download-artifact@v4
+        if: steps.v.outputs.exists == 'false'
+        with:
+          name: Luma-windows-x86_64
+          path: build/godot-windows
       - name: Package
         if: steps.v.outputs.exists == 'false'
         run: |
           chmod +x build/godot/Luma.x86_64 build/godot/luma
           tools/release/package.sh build/godot "${{ steps.v.outputs.version }}" dist
+          tools/release/package-windows.sh build/godot-windows "${{ steps.v.outputs.version }}" dist
+          grep -q "Luma-linux-x86_64.tar.gz" dist/SHA256SUMS && grep -q "Luma-windows-x86_64.zip" dist/SHA256SUMS
           # Release notes: this version's section of CHANGELOG.md.
           awk -v v="## ${{ steps.v.outputs.version }}" '$0==v{on=1;next} /^## /{on=0} on' CHANGELOG.md > dist/notes.md
           test -s dist/notes.md
       - name: Publish
         if: steps.v.outputs.exists == 'false'
         run: |
-          gh release create "v${{ steps.v.outputs.version }}" dist/Luma-linux-x86_64.tar.gz dist/SHA256SUMS \
+          gh release create "v${{ steps.v.outputs.version }}" dist/Luma-linux-x86_64.tar.gz dist/Luma-windows-x86_64.zip dist/SHA256SUMS \
             --target "$GITHUB_SHA" --title "Luma ${{ steps.v.outputs.version }}" --notes-file dist/notes.md
         env:
           GH_TOKEN: ${{ github.token }}
