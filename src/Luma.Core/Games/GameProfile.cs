@@ -174,4 +174,10 @@ public sealed record LoaderInfo
 
     /// <summary>What it is, in one line, for the game page.</summary>
     public string About { get; init; } = "";
+
+    /// <summary>For GitHub sources: a regular expression picking the release file to install (Windows build, for Proton).</summary>
+    public string? Asset { get; init; }
+
+    /// <summary>True when Luma can download and install it by itself (a GitHub release with a known file).</summary>
+    public bool AutoInstall => Source.StartsWith("github:", StringComparison.Ordinal) && Asset != null;
 }

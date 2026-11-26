@@ -1,4 +1,5 @@
 using Luma.Core.Detection;
+using Luma.Core.Games;
 using Luma.Core.Sources;
 using Luma.Host;
 using Godot;
@@ -12,8 +13,13 @@ public static class ModActions
     private static AppHost Host => Main.Instance.Host!;
 
     /// <summary>Queues one file of a mod, or explains what the site needs first.</summary>
-    public static void Download(IModSource site, DetectedGame game, ModSummary mod, ModFile file)
+    public static void Download(IModSource site, DetectedGame game, ModSummary mod, ModFile file, IReadOnlyList<ModDependency>? needs = null)
     {
+        // The game's loader comes first (once), unless the mod brings its own (a Thunderstore BepInExPack dependency).
+        if (MissingLoader(game) is { AutoInstall: true, } loader && !game.Profile.LoaderOptional && !(needs ?? file.Dependencies).Any(d => d.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase)))
+        {
+            InstallLoader(game, loader);
+        }
         if (site is NexusSource nexus && !(nexus.HasKey && Host.Keys.Current.NexusPremium))
         {
             NexusManual(nexus, game, mod, file);
@@ -31,10 +37,12 @@ public static class ModActions
             Game = game.Key,
             ModId = mod.Id,
             ModName = mod.Name,
+            Author = mod.Author,
             FileId = file.Id,
             Version = file.Version,
             FileName = file.FileName,
             PageUrl = mod.PageUrl,
+            Dependencies = (file.Dependencies.Count > 0 ? file.Dependencies : needs ?? []).ToList(),
         }, ct => site.DownloadAsync(game.Profile, mod.Id, file, ct));
     }
 
@@ -147,5 +155,102 @@ public static class ModActions
         }
         var err = OS.ShellOpen(url);
         App.Toast(err == Error.Ok ? "Opened in your browser." : $"Couldn't open the browser. The address is {url}");
+    }
+
+    /// <summary>Downloads the newest main file of a mod (dependencies, updates).</summary>
+    public static async void DownloadLatest(IModSource site, DetectedGame game, string modId, string name)
+    {
+        try
+        {
+            var d = await site.DetailsAsync(game.Profile, modId);
+            var file = d.Files.FirstOrDefault(f => f.Kind is "" or "Main") ?? d.Files.FirstOrDefault()
+                ?? throw new InvalidOperationException($"{site.Name} has no file to download for {name}.");
+            Download(site, game, d.Mod, file, d.Dependencies);
+        }
+        catch (Exception e) when (Main.IsUserFacing(e))
+        {
+            App.Error(e.Message);
+        }
+    }
+
+    /// <summary>Asks each mod's site for its newest version and marks the mods that have one.</summary>
+    public static async void CheckUpdates(DetectedGame game)
+    {
+        var store = Host.Mods.Store(game);
+        var found = 0;
+        var failed = 0;
+        App.Toast("Checking for updates…");
+        foreach (var mod in store.State.Mods.Where(m => m.ModId.Length > 0).ToList())
+        {
+            var site = Host.Sites.All.FirstOrDefault(s => s.Id == mod.Site);
+            if (site == null || !site.Ready || !site.Carries(game.Profile))
+            {
+                continue;
+            }
+            try
+            {
+                var d = await site.DetailsAsync(game.Profile, mod.ModId);
+                var latest = d.Files.FirstOrDefault(f => f.Kind is "" or "Main") ?? d.Files.FirstOrDefault();
+                var newer = latest != null && latest.Id != mod.FileId && latest.Version != mod.Version ? latest.Version : null;
+                if (newer != null)
+                {
+                    found++;
+                }
+                var current = store.State.Find(mod.Id);
+                if (current != null && current.UpdateVersion != newer)
+                {
+                    store.Save(store.State with { Mods = store.State.Mods.Select(m => m.Id == mod.Id ? m with { UpdateVersion = newer } : m).ToList() });
+                }
+            }
+            catch (Exception e) when (Main.IsUserFacing(e))
+            {
+                failed++;
+            }
+        }
+        Host.Mods.NotifyChanged(game);
+        App.Toast(found > 0 ? $"{found} update{(found == 1 ? "" : "s")} available." : failed > 0 ? $"Everything checked is up to date ({failed} couldn't be checked)." : "Everything is up to date.");
+    }
+
+    /// <summary>The game's loader when it isn't installed yet and Luma can fetch it.</summary>
+    public static LoaderInfo? MissingLoader(DetectedGame game)
+    {
+        var p = game.Profile;
+        return p.Loader != null && Host.Games.Catalog.Loaders.TryGetValue(p.Loader, out var l) && !LoaderInstaller.Installed(game, l, Host.Mods.Store(game).State) ? l : null;
+    }
+
+    /// <summary>Queues the loader's newest official release; it installs like a mod.</summary>
+    public static void InstallLoader(DetectedGame game, LoaderInfo l)
+    {
+        if (!l.AutoInstall)
+        {
+            App.Push(new ChoicePage($"{l.Name} is installed from its own website. Download it there, then add it like any mod file.",
+                ("Open the website", () => OpenUrl(LoaderPage(l))), ("Cancel", () => { })));
+            return;
+        }
+        if (Host.Downloads.Items.Any(i => i.Site == "loader" && i.ModId == l.Id && i.Game == game.Key && i.State is DownloadState.Queued or DownloadState.Downloading))
+        {
+            return;
+        }
+        Queue(new DownloadItem
+        {
+            Site = "loader",
+            Game = game.Key,
+            ModId = l.Id,
+            ModName = l.Name,
+            PageUrl = "https://github.com/" + l.Source["github:".Length..],
+        }, async ct => (await LoaderInstaller.LatestAsync(Host.Sites.Http, l, ct)).Ticket);
+    }
+
+    /// <summary>A loader's download page: GitHub releases, its Nexus page or its homepage.</summary>
+    public static string? LoaderPage(LoaderInfo l)
+    {
+        var (kind, rest) = l.Source.IndexOf(':') is var i and > 0 && !l.Source.StartsWith("http") ? (l.Source[..i], l.Source[(i + 1)..]) : ("url", l.Source);
+        return kind switch
+        {
+            "github" => $"https://github.com/{rest}/releases/latest",
+            "nexus" when rest.Split('/') is [var domain, var id] => $"https://www.nexusmods.com/{domain}/mods/{id}",
+            "thunderstore" => $"https://thunderstore.io/package/{rest}/",
+            _ => l.Source.StartsWith("http") ? l.Source : null,
+        };
     }
 }

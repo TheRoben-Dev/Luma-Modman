@@ -1,0 +1,178 @@
+using System.IO.Compression;
+using Luma.Core.Detection;
+using Luma.Core.Games;
+using Luma.Core.Mods;
+using Luma.Core.Sources;
+using Xunit;
+
+namespace Luma.Core.Tests;
+
+public sealed class ModsTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "luma-mods-" + Guid.NewGuid().ToString("N")[..8]);
+
+    public ModsTests() => Directory.CreateDirectory(_dir);
+
+    public void Dispose() => Directory.Delete(_dir, true);
+
+    private static GameProfile Profile(string modsPath, string? loader = null) =>
+        new() { Id = "g", Name = "Game", Steam = [1], ModsPath = modsPath, Loader = loader, Sites = new SiteIds { Nexus = "g" } };
+
+    private string Zip(string name, params string[] entries)
+    {
+        var path = Path.Combine(_dir, name);
+        using var z = ZipFile.Open(path, ZipArchiveMode.Create);
+        foreach (var e in entries)
+        {
+            using var w = new StreamWriter(z.CreateEntry(e).Open());
+            w.Write("content of " + e);
+        }
+        return path;
+    }
+
+    private List<string> Layout(string zip, GameProfile p, string folder = "Mod")
+    {
+        var dest = Path.Combine(_dir, "x-" + Guid.NewGuid().ToString("N")[..6]);
+        Archive.Extract(zip, dest);
+        return ModLayout.Plan(dest, p, folder).Select(e => $"{e.Root}:{e.Target}").Order(StringComparer.Ordinal).ToList();
+    }
+
+    [Fact]
+    public void ThunderstorePluginGoesIntoItsOwnFolder()
+    {
+        var zip = Zip("a.zip", "manifest.json", "icon.png", "README.md", "MoreCompany.dll", "assets/hats.bundle");
+        Assert.Equal(["Mods:MoreCompany/MoreCompany.dll", "Mods:MoreCompany/assets/hats.bundle"], Layout(zip, Profile("BepInEx/plugins", "bepinex"), "MoreCompany"));
+    }
+
+    [Fact]
+    public void BepInExFoldersMapUnderBepInEx()
+    {
+        var zip = Zip("b.zip", "manifest.json", "plugins/x.dll", "config/x.cfg");
+        Assert.Equal(["Game:BepInEx/config/x.cfg", "Game:BepInEx/plugins/x.dll"], Layout(zip, Profile("BepInEx/plugins", "bepinex")));
+    }
+
+    [Fact]
+    public void LoaderPackUnwrapsToTheGameFolder()
+    {
+        var zip = Zip("c.zip", "manifest.json", "icon.png", "BepInExPack/winhttp.dll", "BepInExPack/doorstop_config.ini", "BepInExPack/BepInEx/core/BepInEx.dll");
+        Assert.Equal(["Game:BepInEx/core/BepInEx.dll", "Game:doorstop_config.ini", "Game:winhttp.dll"], Layout(zip, Profile("BepInEx/plugins", "bepinex")));
+    }
+
+    [Fact]
+    public void WrapperFolderAndDataFolderForSkyrim()
+    {
+        var p = Profile("Data");
+        Assert.Equal(["Mods:a.esp", "Mods:textures/t.dds"], Layout(Zip("d.zip", "Cool Mod 1.2/a.esp", "Cool Mod 1.2/textures/t.dds"), p));
+        Assert.Equal(["Game:Data/a.esp"], Layout(Zip("e.zip", "Data/a.esp"), p));
+    }
+
+    [Fact]
+    public void UnrealPaksFindTheirFolder()
+    {
+        var p = Profile("Pagoda/Content/Paks/~mods");
+        Assert.Equal(["Mods:x_P.pak"], Layout(Zip("f.zip", "x_P.pak"), p));
+        Assert.Equal(["Game:Pagoda/Content/Paks/~mods/x_P.pak"], Layout(Zip("g.zip", "~mods/x_P.pak"), p));
+        Assert.Equal(["Game:Pagoda/Content/Paks/LogicMods/y.pak"], Layout(Zip("h.zip", "Paks/LogicMods/y.pak"), p));
+    }
+
+    [Fact]
+    public void ModsFolderOutsideTheGameIsStripped()
+    {
+        var p = Profile("{appdata}/Balatro/Mods");
+        Assert.Equal(["Mods:Steamodded/main.lua"], Layout(Zip("i.zip", "Mods/Steamodded/main.lua"), p));
+    }
+
+    [Fact]
+    public void ZipSlipIsRefused()
+    {
+        var zip = Zip("evil.zip", "../../escape.txt");
+        Assert.Throws<InvalidDataException>(() => Archive.Extract(zip, Path.Combine(_dir, "evil")));
+    }
+
+    [Fact]
+    public void InstallDeployUndeployRoundTrip()
+    {
+        var game = Path.Combine(_dir, "game");
+        Directory.CreateDirectory(Path.Combine(game, "Data"));
+        File.WriteAllText(Path.Combine(game, "Data", "shared.txt"), "original");
+        var store = new ModStore(Path.Combine(_dir, "store"), "steam:1");
+        var p = Profile("Data");
+        store.Install(Zip("m1.zip", "shared.txt", "one.esp"), new InstalledMod { Id = "nexus:1", Name = "One", Version = "1.0" }, p);
+        store.Install(Zip("m2.zip", "Shared.txt", "meshes/two.nif"), new InstalledMod { Id = "nexus:2", Name = "Two", Version = "1.0" }, p);
+
+        var plan = Deployer.Plan(store, game, GamePaths.Resolve(game, "Data"));
+        var c = Assert.Single(plan.Conflicts);
+        Assert.Equal("nexus:2", c.Winner);
+        Assert.Equal(["nexus:1"], c.Losers);
+        Assert.Equal(3, plan.Files.Count);
+
+        var manifest = Path.Combine(_dir, "deploy.json");
+        var m = Deployer.Deploy(plan, "steam:1", manifest, Path.Combine(_dir, "backup"));
+        Assert.Equal("content of Shared.txt", File.ReadAllText(Path.Combine(game, "Data", "shared.txt")));
+        Assert.True(File.Exists(Path.Combine(game, "Data", "meshes", "two.nif")));
+        Assert.Single(m.Backups);
+
+        // Reordering changes the winner on the next deploy.
+        store.Move("nexus:1", +1);
+        Deployer.Deploy(Deployer.Plan(store, game, GamePaths.Resolve(game, "Data")), "steam:1", manifest, Path.Combine(_dir, "backup"));
+        Assert.Equal("content of shared.txt", File.ReadAllText(Path.Combine(game, "Data", "shared.txt")));
+
+        Deployer.Undeploy(manifest);
+        Assert.Equal("original", File.ReadAllText(Path.Combine(game, "Data", "shared.txt")));
+        Assert.Equal(["shared.txt"], Directory.EnumerateFileSystemEntries(Path.Combine(game, "Data")).Select(Path.GetFileName).ToList());
+        Assert.False(File.Exists(manifest));
+    }
+
+    [Fact]
+    public void ProfilesDependenciesAndRollbackHistory()
+    {
+        var store = new ModStore(Path.Combine(_dir, "store"), "steam:1");
+        var p = Profile("BepInEx/plugins", "bepinex");
+        var v1 = Zip("x1.zip", "X.dll");
+        store.Install(v1, new InstalledMod
+        {
+            Id = "thunderstore:a-X", ModId = "a-X", Name = "X", Version = "1.0",
+            Dependencies = [new ModDependency("thunderstore", "BepInEx-BepInExPack", "BepInExPack")],
+        }, p);
+        Assert.Single(store.MissingDependencies());
+        store.Install(Zip("x2.zip", "X.dll"), store.State.Find("thunderstore:a-X")! with { Version = "2.0" }, p);
+        var mod = store.State.Find("thunderstore:a-X")!;
+        Assert.Equal("2.0", mod.Version);
+        Assert.Equal(v1, Assert.Single(mod.History).Archive);
+
+        store.UseProfile("Vanilla", copyActive: false);
+        Assert.Empty(store.State.Enabled());
+        store.UseProfile(GameMods.DefaultProfile);
+        Assert.Single(store.State.Enabled());
+        store.SetEnabled("thunderstore:a-X", false);
+        Assert.Empty(store.MissingDependencies());
+
+        var reloaded = new ModStore(Path.Combine(_dir, "store"), "steam:1");
+        Assert.Equal(["Default", "Vanilla"], reloaded.State.Profiles.Keys.Order());
+        reloaded.Uninstall("thunderstore:a-X");
+        Assert.Empty(reloaded.State.Mods);
+        Assert.False(Directory.Exists(reloaded.ModDir("thunderstore:a-X")));
+    }
+
+    [Fact]
+    public void ModsDirResolvesTokensInsideThePrefix()
+    {
+        var install = new InstalledGame { InstallDir = "/g", Prefix = "/pfx" };
+        var game = new DetectedGame { Profile = Profile("{localappdata}/Pagoda/Saved"), Install = install, GameDir = "/g" };
+        Assert.Equal("/pfx/drive_c/users/steamuser/AppData/Local/Pagoda/Saved", GamePaths.ModsDir(game, "/home/x"));
+        Assert.Null(GamePaths.ModsDir(game with { Install = install with { Prefix = null } }, "/home/x"));
+    }
+
+    [Fact]
+    public void LoaderGoesToItsFolder()
+    {
+        var p = Profile("Pagoda/Content/Paks/~mods", "ue4ss") with { Detect = ["Pagoda/Binaries/Win64/Pagoda-Win64-Shipping.exe"] };
+        var prefix = Luma.Host.LoaderInstaller.InstallPath(p);
+        Assert.Equal("Pagoda/Binaries/Win64", prefix);
+        var dest = Path.Combine(_dir, "ue4ss");
+        Archive.Extract(Zip("UE4SS_v4.0.0.zip", "dwmapi.dll", "ue4ss/UE4SS.dll", "ue4ss/Mods/mods.txt"), dest);
+        Assert.Equal(["Game:Pagoda/Binaries/Win64/dwmapi.dll", "Game:Pagoda/Binaries/Win64/ue4ss/Mods/mods.txt", "Game:Pagoda/Binaries/Win64/ue4ss/UE4SS.dll"],
+            ModLayout.Plan(dest, p, "ue4ss", prefix).Select(e => $"{e.Root}:{e.Target}").Order(StringComparer.Ordinal).ToList());
+        Assert.Equal("", Luma.Host.LoaderInstaller.InstallPath(Profile("BepInEx/plugins", "bepinex")));
+    }
+}

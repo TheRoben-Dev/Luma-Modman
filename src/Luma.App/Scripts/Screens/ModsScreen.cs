@@ -1,5 +1,6 @@
 using Luma.App.Ui;
 using Luma.Core.Detection;
+using Luma.Core.Mods;
 using Godot;
 
 namespace Luma.App.Screens;
@@ -13,10 +14,11 @@ public partial class ModsScreen : Screen
 {
     private Control? _first;
 
-    public override IEnumerable<(string Action, string Label)> Hints => [(Pad.Switch, "Switch game")];
+    public override IEnumerable<(string Action, string Label)> Hints => [(Pad.Secondary, "On / off"), (Pad.Switch, "Switch game")];
 
     protected override void Build()
     {
+        _modRow = null;
         var game = Host.ActiveGame;
         if (game == null)
         {
@@ -42,24 +44,217 @@ public partial class ModsScreen : Screen
         }
         else
         {
-            right.AddChild(UiTheme.Label("Mods", UiTheme.TitleSize));
-            right.AddChild(UiTheme.Label($"No mods for {game.Title} yet. Find some in Browse; they install here, outside the game folder.",
-                UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
-            items.Add(Add(right, new ActionButton("Browse mods", () => App.SwitchTab("Browse"), $"Search mod sites for {game.Title} mods.")));
-            items.Add(Add(right, new ActionButton("Switch game", App.OpenGamePicker, "Pick the game to work on.")));
-            if (game.Profile.Quirks.Count > 0)
-            {
-                right.AddChild(Section("Good to know"));
-                foreach (var q in game.Profile.Quirks)
-                {
-                    right.AddChild(UiTheme.Label("•  " + q, UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
-                }
-            }
+            BuildMods(game, right, items);
         }
         Focus.Column(items);
         Anim.Stagger(items);
-        _first = items.FirstOrDefault();
+        _first = _modRow != null && IsInstanceValid(_modRow) ? _modRow : items.FirstOrDefault();
     }
+
+    private void BuildMods(DetectedGame game, VBoxContainer right, List<Control> items)
+    {
+        var mods = Host.Mods;
+        var store = mods.Store(game);
+        var state = store.State;
+        var title = new HBoxContainer();
+        title.AddThemeConstantOverride("separation", 14);
+        right.AddChild(title);
+        title.AddChild(UiTheme.Label("Mods", UiTheme.TitleSize));
+        var on = state.Enabled().Count();
+        if (state.Mods.Count > 0)
+        {
+            var count = UiTheme.Label($"{on} of {state.Mods.Count} on", UiTheme.FontSize, UiTheme.Dim);
+            count.SizeFlagsVertical = SizeFlags.ShrinkEnd;
+            title.AddChild(count);
+        }
+        var deployed = mods.IsDeployed(game);
+        var viaSteam = game.Install.LaunchOptions?.Contains(" run ", StringComparison.Ordinal) == true && game.Install.LaunchOptions.Contains("luma", StringComparison.OrdinalIgnoreCase);
+        right.AddChild(UiTheme.Label(
+            deployed ? "Mods are in the game now. Take them out to play without them."
+            : viaSteam ? "Mods are linked in when the game starts from Steam and taken out when it closes."
+            : state.Mods.Count == 0 ? $"No mods for {game.Title} yet. Find some in Browse: they're kept in Luma's folder, not the game's."
+            : "Set up starting from Steam once, or put the mods in now.",
+            UiTheme.SmallSize + 1, deployed ? UiTheme.Good : UiTheme.Dim, wrap: true));
+
+        var scrollCol = Column(8);
+        right.AddChild(Scroller(scrollCol));
+        items.Add(Add(scrollCol, new ActionButton("Browse mods", () => App.SwitchTab("Browse"), $"Search mod sites for {game.Title} mods.")));
+        // A Thunderstore mod that needs BepInExPack gets the loader through "needed mods" instead.
+        var packNeeded = store.MissingDependencies().Any(m => m.Missing.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase));
+        if (!packNeeded && ModActions.MissingLoader(game) is { } loader)
+        {
+            var row = new ListRow($"Install {loader.Name}", loader.About, loader.AutoInstall ? "Get it" : "Website", game.Profile.LoaderOptional ? UiTheme.Dim : UiTheme.Warn, null,
+                () => ModActions.InstallLoader(game, loader), $"{loader.Name}: {(game.Profile.LoaderOptional ? "some mods need it." : "mods for this game need it.")}");
+            scrollCol.AddChild(row);
+            items.Add(row);
+        }
+        if (state.Mods.Count > 0)
+        {
+            var profiles = state.Profiles.Keys.OrderBy(k => k == GameMods.DefaultProfile ? "" : k).Select(k => (k, k)).Append(("+", "New profile…"));
+            var profile = new Stepper("Profile", profiles, state.Active, "Profiles are separate sets of mods and orders for the same game.");
+            profile.Changed += v =>
+            {
+                if (v == "+")
+                {
+                    App.Push(new TextEntryPage("New profile", "", name =>
+                    {
+                        if (name.Length > 0)
+                        {
+                            App.Guard(() => store.UseProfile(name));
+                        }
+                        Rebuild();
+                    }, "A copy of the current profile, to change without losing it."));
+                    return;
+                }
+                App.Guard(() => store.UseProfile(v));
+                CallDeferred(MethodName.Rebuild);
+            };
+            items.Add(Add(scrollCol, profile));
+            if (deployed)
+            {
+                items.Add(Add(scrollCol, new ActionButton("Take the mods out of the game", () => Run(() => mods.Undeploy(game), "Mods taken out."),
+                    "Puts the game folder back as it was.")));
+            }
+            else
+            {
+                items.Add(Add(scrollCol, new ActionButton("Put the mods in the game now", () => Deploy(game),
+                    "For starting the game from another launcher. They stay until you take them out.")));
+            }
+            if (game.Install.Source == GameSource.Steam && !viaSteam)
+            {
+                items.Add(Add(scrollCol, new ActionButton("Start with mods from Steam", () => App.Push(new SteamLaunchPage(game)),
+                    "One launch option makes Steam link the mods in at every start.")));
+            }
+            var missing = store.MissingDependencies().GroupBy(m => m.Missing.Id).Select(g => g.First()).ToList();
+            if (missing.Count > 0)
+            {
+                var names = string.Join(", ", missing.Take(3).Select(m => m.Missing.Name)) + (missing.Count > 3 ? "…" : "");
+                var fix = new ListRow($"{missing.Count} needed mod{(missing.Count == 1 ? "" : "s")} missing", names, "Get them", UiTheme.Warn, null,
+                    () => GetMissing(game, missing.Select(m => m.Missing).ToList()), "Mods you turned on need these to work.");
+                scrollCol.AddChild(fix);
+                items.Add(fix);
+            }
+            var plan = Try<DeployPlan?>(() => mods.Plan(game), null, "the load order", scrollCol);
+            var losers = plan?.Conflicts.SelectMany(c => c.Losers).GroupBy(x => x).ToDictionary(g => g.Key, g => g.Count()) ?? new();
+
+            scrollCol.AddChild(Section($"Load order  ·  {state.Active}"));
+            foreach (var entry in state.Order)
+            {
+                var mod = state.Find(entry.Id);
+                if (mod == null)
+                {
+                    continue;
+                }
+                var detail = string.Join("  ·  ", new[] { mod.Version, SiteName(mod.Site), mod.UpdateVersion != null ? $"update {mod.UpdateVersion}" : "",
+                    losers.TryGetValue(mod.Id, out var n) ? $"{n} file{(n == 1 ? "" : "s")} replaced by later mods" : "" }.Where(x => x.Length > 0));
+                var id = mod.Id;
+                var row = new ListRow(mod.Name, detail, entry.Enabled ? "On" : "Off", entry.Enabled ? UiTheme.Good : UiTheme.Dim, null,
+                    () =>
+                    {
+                        _focusMod = id;
+                        App.Push(new InstalledModPage(game, id));
+                    }, $"{mod.Name}: A for options, Y turns it {(entry.Enabled ? "off" : "on")}.");
+                row.SetMeta("mod", id);
+                if (id == _focusMod)
+                {
+                    _modRow = row;
+                }
+                scrollCol.AddChild(row);
+                items.Add(row);
+            }
+        }
+        if (state.Mods.Any(m => m.Site is "thunderstore" or "nexus" or "modio" or "curseforge"))
+        {
+            items.Add(Add(scrollCol, new ActionButton("Check for updates", () => ModActions.CheckUpdates(game), "Asks the mod sites for newer versions.")));
+        }
+        foreach (var link in game.Profile.Links.Where(l => l.ImportTo != null))
+        {
+            var l = link;
+            items.Add(Add(scrollCol, new ActionButton($"Add {l.Item}s from {l.Name}", () => App.Push(new ImportPage(game, l)),
+                $"Install {l.Item}s you downloaded from {l.Name}.")));
+        }
+        items.Add(Add(scrollCol, new ActionButton("Switch game", App.OpenGamePicker, "Pick the game to work on.")));
+        if (game.Profile.Quirks.Count > 0)
+        {
+            scrollCol.AddChild(Section("Good to know"));
+            foreach (var q in game.Profile.Quirks)
+            {
+                scrollCol.AddChild(UiTheme.Label("•  " + q, UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            }
+        }
+    }
+
+    public static string SiteName(string id) => id switch
+    {
+        "thunderstore" => "Thunderstore",
+        "nexus" => "Nexus Mods",
+        "modio" => "mod.io",
+        "curseforge" => "CurseForge",
+        "local" => "Added by hand",
+        "loader" => "Mod loader",
+        _ => id,
+    };
+
+    private void Deploy(DetectedGame game) => App.Busy("Putting mods in the game…", (_, _) => Task.FromResult(Host.Mods.Deploy(game)), m =>
+    {
+        App.Success(m.Files.Count == 1 ? "1 mod file is in the game." : $"{m.Files.Count} mod files are in the game.");
+        Rebuild();
+    }, cancellable: false);
+
+    private void Run(Action act, string done)
+    {
+        if (App.Guard(act))
+        {
+            App.Success(done);
+        }
+        Rebuild();
+    }
+
+    /// <summary>Downloads missing dependencies from Thunderstore; other sites open the mod's page.</summary>
+    private void GetMissing(DetectedGame game, List<Luma.Core.Sources.ModDependency> missing)
+    {
+        var ts = missing.Where(d => d.Site == "thunderstore").ToList();
+        foreach (var d in ts)
+        {
+            ModActions.DownloadLatest(Host.Sites.Thunderstore, game, d.Id, d.Name);
+        }
+        var other = missing.Except(ts).FirstOrDefault();
+        if (other != null)
+        {
+            App.Toast($"Find {other.Name} on {SiteName(other.Site)} in Browse.");
+        }
+    }
+
+    /// <summary>Y turns the focused mod on or off.</summary>
+    public override void OnAction(string action)
+    {
+        if (action != Pad.Secondary || Host.ActiveGame is not { } game || GetViewport().GuiGetFocusOwner() is not { } f || !f.HasMeta("mod"))
+        {
+            return;
+        }
+        var id = (string)f.GetMeta("mod");
+        var store = Host.Mods.Store(game);
+        App.Guard(() => store.SetEnabled(id, !store.State.IsEnabled(id)));
+        _focusMod = id;
+        Rebuild();
+        _modRow?.GrabFocus();
+    }
+
+    /// <summary>The mod row to come back to after a rebuild (rows above it can appear or go).</summary>
+    private string? _focusMod;
+    private Control? _modRow;
+
+    public override void _EnterTree() => Host.Mods.Changed += OnModsChanged;
+
+    public override void _ExitTree() => Host.Mods.Changed -= OnModsChanged;
+
+    private void OnModsChanged(string key) => Callable.From(() =>
+    {
+        if (IsInstanceValid(this) && IsInsideTree() && Host.ActiveGame?.Key == key)
+        {
+            Rebuild();
+        }
+    }).CallDeferred();
 
     private static T Add<T>(Control parent, T c) where T : Control
     {

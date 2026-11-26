@@ -1,7 +1,7 @@
 using Luma.Host;
 using Luma.Host.Updates;
 
-// Headless entry point (`luma`). Later phases add the Steam launch wrapper (`luma run -- %command%`)
+// Headless entry point (`luma`), including the Steam launch wrapper (`luma run -- %command%`)
 // that links a game's enabled mods in before it starts and takes them out again after it exits.
 
 return Cli.Run(args);
@@ -16,6 +16,11 @@ internal static class Cli
           luma games                   scan for installed games Luma supports
           luma games --all             list every supported game (profiles)
           luma nxm <nxm://link>        hand a Nexus "Mod Manager Download" link to the app
+          luma run [--game KEY] -- CMD start a game with its mods linked in, removed after it exits
+                                       (Steam launch options: luma run -- %command%)
+          luma deploy KEY              link a game's enabled mods in and leave them there
+          luma undeploy KEY            take a game's mods out again
+          luma mods KEY                list a game's mods in load order
 
         Luma never downloads games, DRM bypasses or pirated content.
         """;
@@ -36,6 +41,14 @@ internal static class Cli
         {
             Console.WriteLine("Link saved. Luma picks it up the next time it starts.");
         }
+    }
+
+    /// <summary>A detected game by key ("steam:489830") or profile id ("skyrimse").</summary>
+    public static Luma.Core.Detection.DetectedGame FindGame(AppHost host, string key)
+    {
+        var games = host.Games.Games.Count > 0 ? host.Games.Games : host.Games.Scan();
+        return games.FirstOrDefault(g => g.Key == key) ?? games.FirstOrDefault(g => g.Profile.Id == key)
+            ?? throw new ArgumentException($"no installed game \"{key}\" (see `luma games`)");
     }
 
     public static int Run(string[] args)
@@ -89,6 +102,34 @@ internal static class Cli
                         }
                     }
                     return 0;
+                case "run":
+                    return Launch.Run(host, args[1..]);
+                case "deploy" when args.Length > 1:
+                {
+                    var g = FindGame(host, args[1]);
+                    var m = host.Mods.Deploy(g);
+                    Console.WriteLine($"{m.Files.Count} mod files linked into {g.Title}.");
+                    return 0;
+                }
+                case "undeploy" when args.Length > 1:
+                {
+                    var g = FindGame(host, args[1]);
+                    host.Mods.Undeploy(g);
+                    Console.WriteLine($"Mods taken out of {g.Title}.");
+                    return 0;
+                }
+                case "mods" when args.Length > 1:
+                {
+                    var g = FindGame(host, args[1]);
+                    var state = host.Mods.Store(g).State;
+                    Console.WriteLine($"{g.Title}, profile {state.Active}{(host.Mods.IsDeployed(g) ? " (deployed)" : "")}");
+                    foreach (var e in state.Order)
+                    {
+                        var mod = state.Find(e.Id);
+                        Console.WriteLine($"  [{(e.Enabled ? "x" : " ")}] {mod?.Name ?? e.Id} {mod?.Version}");
+                    }
+                    return 0;
+                }
                 default:
                     Console.Error.WriteLine(Usage);
                     return 2;

@@ -985,6 +985,7 @@ public partial class Main : Control
             AppLog.Warn("pid file: " + e.Message);
         }
         Host.Downloads.Changed += _ => Callable.From(UpdateDownloadsBadge).CallDeferred();
+        Host.StartAutoInstall();
         UpdateDownloadsBadge();
     }
 

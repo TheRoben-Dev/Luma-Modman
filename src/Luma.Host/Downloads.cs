@@ -21,6 +21,16 @@ public sealed class DownloadItem
     public string Game { get; init; } = "";
     public string ModId { get; init; } = "";
     public string ModName { get; init; } = "";
+    public string Author { get; init; } = "";
+
+    /// <summary>Mods this one needs (installed alongside when the site says so).</summary>
+    public List<ModDependency> Dependencies { get; init; } = new();
+
+    /// <summary>Set once the finished file has been installed for its game.</summary>
+    public bool Installed { get; set; }
+
+    /// <summary>Why installing failed, when it did.</summary>
+    public string? InstallError { get; set; }
     public string FileId { get; init; } = "";
     public string Version { get; init; } = "";
     public string FileName { get; set; } = "";
@@ -264,6 +274,13 @@ public sealed class DownloadQueue
                 }
             }
         }
+        Save();
+        Changed?.Invoke(item);
+    }
+
+    /// <summary>Records install results (called by the installer after a finished download).</summary>
+    public void Update(DownloadItem item)
+    {
         Save();
         Changed?.Invoke(item);
     }

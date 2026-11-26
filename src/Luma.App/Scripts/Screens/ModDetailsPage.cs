@@ -69,6 +69,7 @@ public partial class ModDetailsPage : Screen
         var main = _details?.Files.FirstOrDefault(f => f.Kind is "" or "Main") ?? _details?.Files.FirstOrDefault();
         if (_details != null)
         {
+            var needs = _details.Dependencies;
             if (main != null)
             {
                 var label = main.Version.Length > 0 ? $"Download {main.Version}" : "Download";
@@ -76,7 +77,7 @@ public partial class ModDetailsPage : Screen
                 {
                     label += $"  ·  {Bytes(main.Size)}";
                 }
-                buttons.Add(Add(left, new ActionButton(label, () => ModActions.Download(_site, _game, mod, main), $"Download {main.Name}.")));
+                buttons.Add(Add(left, new ActionButton(label, () => ModActions.Download(_site, _game, mod, main, needs), $"Download {main.Name}.")));
             }
             if (_details.Files.Count > 1)
             {
@@ -216,11 +217,12 @@ public partial class ModDetailsPage : Screen
             return;
         }
         var mod = _details.Mod;
+        var needs = _details.Dependencies;
         var options = _details.Files.Take(12).Select(f =>
         {
             var file = f;
             var label = string.Join("  ·  ", new[] { f.Kind, f.Name, f.Version, f.Size > 0 ? Bytes(f.Size) : "" }.Where(s => s.Length > 0).Distinct());
-            return (label, (Action)(() => ModActions.Download(_site, _game, mod, file)));
+            return (label, (Action)(() => ModActions.Download(_site, _game, mod, file, needs)));
         }).Append(("Cancel", () => { })).ToArray();
         App.Push(new ChoicePage($"Which file of {mod.Name}?", options));
     }

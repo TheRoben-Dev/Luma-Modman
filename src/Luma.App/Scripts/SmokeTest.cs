@@ -25,7 +25,7 @@ public partial class SmokeTest : Node
         // The first scan runs in the background; the run script sets up a fake Steam library.
         Step("mods-after-scan", () => SetAnimatedBackground(false), wait: 2.5, expect: "Browse mods", tab: "Mods");
         // Real joypad and keyboard events (not actions), through Pad's translation layer.
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Switch game");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "BepInEx 5");
         Step("joy-dpad-up", () => { Joy(JoyButton.DpadUp, true); Joy(JoyButton.DpadUp, false); }, expect: "Browse mods");
         // View / Select opens the game switcher, focused on the game being worked on.
         Step("joy-view-switcher", () => Tap(JoyButton.Back), expect: "Lethal Company");
@@ -195,6 +195,38 @@ public partial class SmokeTest : Node
         }, wait: 1.2, expect: "MoreCompany from Thunderstore", tab: "Downloads");
         Step("download-options", () => Tap(JoyButton.A), expect: "Show the file");
         Step("download-options-back", () => Tap(JoyButton.B), expect: "MoreCompany from Thunderstore");
+        // The finished download was installed for Lethal Company: it's in the Mods tab's load order.
+        Step("mods-installed", () =>
+        {
+            Tap(JoyButton.LeftShoulder);
+            Tap(JoyButton.LeftShoulder);
+            FindFocusable(GetTree().Root, "MoreCompany:")?.GrabFocus();
+        }, wait: 1.2, expect: "MoreCompany: A for options", tab: "Mods");
+        Step("mod-toggle-off", () => Press(Pad.Secondary), expect: "MoreCompany: A for options, Y turns it on");
+        Step("mod-page", () => Press(Pad.Accept), expect: "Turn on");
+        Step("mod-turn-on", () => Press(Pad.Accept), expect: "Turn off");
+        Step("mod-page-back", () => Press(Pad.Back), expect: "MoreCompany: A for options, Y turns it off");
+        Step("deploy", () => FindFocusable(GetTree().Root, "For starting the game from another launcher")?.GrabFocus(), expect: "Put the mods in the game now");
+        Step("deploy-run", () => Press(Pad.Accept), wait: 1.5);
+        Step("deployed-check", () =>
+        {
+            var game = Main.Instance.Host!.ActiveGame!;
+            var plugin = Directory.EnumerateFiles(Path.Combine(game.GameDir, "BepInEx", "plugins"), "*.dll", SearchOption.AllDirectories).FirstOrDefault();
+            if (plugin == null || new FileInfo(plugin).LinkTarget == null)
+            {
+                throw new InvalidOperationException("the mod wasn't linked into the game folder");
+            }
+            FindFocusable(GetTree().Root, "Puts the game folder back")?.GrabFocus();
+        }, expect: "Take the mods out of the game");
+        Step("undeploy", () => Press(Pad.Accept), wait: 1.2);
+        Step("undeployed-check", () =>
+        {
+            var game = Main.Instance.Host!.ActiveGame!;
+            if (Directory.Exists(Path.Combine(game.GameDir, "BepInEx")))
+            {
+                throw new InvalidOperationException("mod files were left in the game folder");
+            }
+        });
     }
 
     private static void TypeText(string text)

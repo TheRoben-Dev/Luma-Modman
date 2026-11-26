@@ -70,6 +70,9 @@ public sealed class AppHost
     /// <summary>The download queue (created on first use; the CLI never starts it).</summary>
     public DownloadQueue Downloads => _downloads.Value;
 
+    /// <summary>Installed mods and deploying them, for every game.</summary>
+    public ModManager Mods { get; }
+
     public AppHost(AppPaths? paths = null, HttpClient? http = null)
     {
         Paths = paths ?? new AppPaths();
@@ -81,6 +84,7 @@ public sealed class AppHost
         Keys = new CredentialStore(Path.Combine(Paths.Config, "credentials.json"));
         _sites = new Lazy<ModSites>(() => new ModSites(Keys));
         _downloads = new Lazy<DownloadQueue>(() => new DownloadQueue(Paths));
+        Mods = new ModManager(Paths);
     }
 
     /// <summary>The app's pid file, so `luma nxm` knows whether to start the app.</summary>
@@ -116,5 +120,68 @@ public sealed class AppHost
         var tmp = path + ".tmp";
         File.WriteAllText(tmp, JsonSerializer.Serialize(value, Json));
         File.Move(tmp, path, overwrite: true);
+    }
+
+    private bool _autoInstall;
+
+    /// <summary>Installs each finished download for its game (the app turns this on at start).</summary>
+    public void StartAutoInstall()
+    {
+        if (_autoInstall)
+        {
+            return;
+        }
+        _autoInstall = true;
+        Downloads.Changed += item =>
+        {
+            if (item is { State: DownloadState.Done, Installed: false, InstallError: null, Path: not null })
+            {
+                Task.Run(() => InstallDownload(item));
+            }
+        };
+    }
+
+    private readonly object _installLock = new();
+
+    /// <summary>Installs a finished download for the game it was fetched for.</summary>
+    public void InstallDownload(DownloadItem item)
+    {
+        lock (_installLock)
+        {
+            if (item.Installed || item.Path == null)
+            {
+                return;
+            }
+            var game = Games.Find(item.Game);
+            if (game == null)
+            {
+                item.InstallError = "Downloaded. Luma hasn't found the game it's for on this device, so it wasn't installed.";
+                Downloads.Update(item);
+                return;
+            }
+            try
+            {
+                Mods.Install(game, item.Path, new Luma.Core.Mods.InstalledMod
+                {
+                    Id = $"{item.Site}:{item.ModId}",
+                    Site = item.Site,
+                    ModId = item.ModId,
+                    Name = item.ModName,
+                    Author = item.Author,
+                    Version = item.Version,
+                    FileId = item.FileId,
+                    PageUrl = item.PageUrl,
+                    Dependencies = item.Dependencies,
+                });
+                item.Installed = true;
+                item.InstallError = null;
+            }
+            catch (Exception e) when (e is IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
+            {
+                item.InstallError = e.Message;
+                AppLog.Warn($"install failed: {item.ModName}: {e.Message}");
+            }
+            Downloads.Update(item);
+        }
     }
 }
