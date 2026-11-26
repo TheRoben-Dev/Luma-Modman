@@ -82,6 +82,9 @@ public static class Anim
         t.SetParallel();
         t.TweenProperty(c, "modulate:a", 1f, Slow).SetDelay(delay);
         t.TweenProperty(c, "position", target, Slow).SetDelay(delay);
+        // Moving a full-rect page pins its offsets to the size it had at that moment (a page that was
+        // still laying out can be far taller than the screen, and then never scrolls): snap it back.
+        t.Chain().TweenCallback(Callable.From(() => c.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect)));
     }
 
     /// <summary>

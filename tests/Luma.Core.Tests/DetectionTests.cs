@@ -221,6 +221,19 @@ public class WindowsPlatformTests : IDisposable
         Assert.Equal(Path.Combine(@"C:\Users\me\AppData\Local", "Luma"), p.Data);
         Assert.Equal(Path.Combine(@"C:\Users\me\AppData\Roaming", "Luma"), p.Config);
         Assert.StartsWith(p.Data, p.Cache);
+        Assert.Equal(@"%LOCALAPPDATA%\Luma\mods", p.Short(@"c:\users\me\AppData\Local\Luma\mods"));
+        Assert.Equal(@"%APPDATA%\Luma", p.Short(@"C:\Users\me\AppData\Roaming\Luma"));
+        Assert.Equal(@"~\Documents", p.Short(@"C:\Users\me\Documents"));
+        Assert.Equal(@"D:\Games", p.Short(@"D:\Games"));
+    }
+
+    [LinuxFact]
+    public void ShortPathsUseTildeForHomeOnly()
+    {
+        var p = new AppPaths(v => v switch { "HOME" => "/home/deck", _ => null }, windows: false);
+        Assert.Equal("~/.local/share/luma/mods", p.Short(p.ModsDir));
+        Assert.Equal("/home/deckard/x", p.Short("/home/deckard/x"));
+        Assert.Equal("~", p.Short("/home/deck"));
     }
 
     [Fact]

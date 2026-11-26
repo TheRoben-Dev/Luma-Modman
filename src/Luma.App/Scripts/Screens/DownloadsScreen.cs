@@ -52,7 +52,7 @@ public partial class DownloadsScreen : Screen
         var col = Column(10);
         AddChild(col);
         col.AddChild(UiTheme.Label("Downloads", UiTheme.TitleSize));
-        col.AddChild(UiTheme.Label("Kept in " + Host.Paths.DownloadsDir.Replace(Host.Paths.Home, "~"), UiTheme.SmallSize, UiTheme.Dim));
+        col.AddChild(UiTheme.Label("Kept in " + Host.Paths.Short(Host.Paths.DownloadsDir), UiTheme.SmallSize, UiTheme.Dim));
         var list = Column(8);
         col.AddChild(Scroller(list));
         var rows = new List<Control>();

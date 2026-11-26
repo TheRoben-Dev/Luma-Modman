@@ -3,6 +3,14 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.13.0
+
+- Update all: one button downloads every mod update Check for updates found (Mods in controller mode, the toolbar and Mods menu on the desktop). Mods a site only lets you get from its website (free Nexus accounts, some CurseForge authors) are counted so you can update them one by one.
+- Touchscreen: hold a mod in the load order for a moment to pick it up, drag it up or down, and let go to drop it there.
+- Folder paths in Settings and Downloads are shorter: `~/.local/share/luma/mods` on Linux, `%LOCALAPPDATA%\Luma\mods` on Windows (the full path shows on hover in the desktop layout).
+- Fixed: in controller mode the Mods page of a game with many options could grow taller than the screen after a change, so its bottom (the load order) couldn't be scrolled to.
+- Windows builds are code-signed once the project's signing certificate is set up.
+
 ## 0.12.0
 
 - Conflicts: see every file that more than one of your mods has, which mod's copy goes in, and pick another winner per file, MO2-style. The pick is kept per profile and beats the load order. Both layouts: Mods → Conflicts in controller mode, Mods → Conflicts… (Ctrl+K) or a mod's right-click menu on the desktop, where several rows can be picked at once. A mod's own page has "Make it win all of these".

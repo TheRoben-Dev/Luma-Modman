@@ -64,7 +64,7 @@ public partial class SettingsScreen : TwoPaneScreen
         Add(new ActionButton("Scan again", App.ScanGames, "Look for installed games again: Steam (every library, SD cards too), Heroic and Lutris, native and Flatpak."));
         Add(new ActionButton($"Supported games ({lib.Catalog.Games.Count})", () => App.Push(new SupportedGamesPage()), "Every game Luma can mod, and the ones it can't."));
         col.AddChild(UiTheme.Label("Add or fix a game without waiting for an update: put a profile (.json, same format as Luma's own) in "
-                                   + System.IO.Path.Combine(Host.Paths.Config, "games") + ". Yours win over the built-in ones.",
+                                   + Host.Paths.Short(System.IO.Path.Combine(Host.Paths.Config, "games")) + ". Yours win over the built-in ones.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         foreach (var p in lib.Catalog.Problems)
         {
@@ -309,7 +309,7 @@ public partial class SettingsScreen : TwoPaneScreen
             ("App log", AppLog.FilePath ?? "(not open)"),
         })
         {
-            col.AddChild(UiTheme.Label($"{label}:  {path}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
+            col.AddChild(UiTheme.Label($"{label}:  {Host.Paths.Short(path)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
         }
         Add(new ActionButton("Open the app log", () => App.Push(new LogPage()), "The app's own log: navigation, downloads, installs and errors."));
     }

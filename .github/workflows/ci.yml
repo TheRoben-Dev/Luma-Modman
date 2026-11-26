@@ -195,6 +195,19 @@ jobs:
           if (Test-Path $log) { Get-Content $log }
           if (Select-String -Path app-out.log, app-err.log -Pattern 'Unhandled exception|System\.[A-Za-z.]*Exception') { throw 'exceptions while starting' }
           if ($p.ExitCode -ne 0) { throw "exit code $($p.ExitCode)" }
+      - name: Signed build still starts (throwaway certificate)
+        # The release signs Luma.exe after export; this proves a signed exe (with its embedded pack) still runs.
+        shell: pwsh
+        run: |
+          $copy = Join-Path $env:RUNNER_TEMP 'signed'
+          Copy-Item -Recurse build/godot-windows $copy
+          & tools/release/sign-windows.ps1 -Dir $copy -SelfSigned
+          & "$copy/luma-cli.exe" version; if ($LASTEXITCODE) { exit 1 }
+          $p = Start-Process "$copy/Luma.exe" -ArgumentList '--headless','--quit-after','300' -PassThru -Wait `
+            -RedirectStandardOutput signed-out.log -RedirectStandardError signed-err.log
+          Get-Content signed-out.log, signed-err.log
+          if (Select-String -Path signed-out.log, signed-err.log -Pattern "Couldn't load project data|Unhandled exception") { throw 'the signed build does not start' }
+          if ($p.ExitCode -ne 0) { throw "exit code $($p.ExitCode)" }
       - name: Installer
         shell: pwsh
         run: |
@@ -208,11 +221,49 @@ jobs:
           Start-Sleep -Seconds 5
           if (Test-Path "$dest/Luma.exe") { throw 'not uninstalled' }
 
+  sign:
+    # On main: signs the Windows build with the project's code-signing secrets (see
+    # tools/release/sign-windows.ps1). Without them it passes the build on unsigned.
+    name: Sign Windows build
+    needs: [app, windows]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: Luma-windows-x86_64
+          path: build/godot-windows
+      - name: Sign
+        id: sign
+        shell: pwsh
+        run: tools/release/sign-windows.ps1 -Dir build/godot-windows
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGNING_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ secrets.AZURE_SIGNING_PROFILE }}
+          WINDOWS_CERT_PFX: ${{ secrets.WINDOWS_CERT_PFX }}
+          WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
+      - name: Signed build starts (headless)
+        if: steps.sign.outputs.signed == 'true'
+        shell: pwsh
+        run: |
+          $p = Start-Process build/godot-windows/Luma.exe -ArgumentList '--headless','--quit-after','300' -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "exit code $($p.ExitCode)" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Luma-windows-x86_64-release
+          path: build/godot-windows
+          if-no-files-found: error
+
   release:
     # Every push to main whose version (Directory.Build.props) has no release yet publishes one:
     # the tarball and checksums the in-app updater reads, with that version's changelog as notes.
     name: Publish release
-    needs: [dotnet, app, windows]
+    needs: [dotnet, app, windows, sign]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
@@ -235,7 +286,7 @@ jobs:
       - uses: actions/download-artifact@v4
         if: steps.v.outputs.exists == 'false'
         with:
-          name: Luma-windows-x86_64
+          name: Luma-windows-x86_64-release
           path: build/godot-windows
       - name: Package
         if: steps.v.outputs.exists == 'false'

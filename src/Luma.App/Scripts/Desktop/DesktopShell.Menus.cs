@@ -15,6 +15,7 @@ public partial class DesktopShell
     private Button _pluginsButton = null!;
     private Button _conflictsButton = null!;
     private Button _updatesButton = null!;
+    private Button _updateAllButton = null!;
     private Button _addFileButton = null!;
     private OptionButton _profiles = null!;
     private Button _deleteProfile = null!;
@@ -146,6 +147,7 @@ public partial class DesktopShell
         }
         var store = Host.Mods.Store(game);
         yield return new MenuItem("Check for updates", () => ModActions.CheckUpdates(game), "Ctrl+U", store.State.Mods.Any(m => m.Site is "thunderstore" or "nexus" or "modio" or "curseforge"));
+        yield return new MenuItem("Update all", () => ModActions.UpdateAll(game), "", ModActions.Updatable(game).Count > 0);
         var missing = store.MissingDependencies().GroupBy(m => m.Missing.Id).Select(g => g.First().Missing).ToList();
         yield return new MenuItem(missing.Count > 0 ? $"Get {missing.Count} missing needed mod{(missing.Count == 1 ? "" : "s")}" : "No needed mods missing",
             () => ModsScreen.GetMissing(game, missing), "", missing.Count > 0);
@@ -236,6 +238,14 @@ public partial class DesktopShell
         row.AddChild(_steamButton);
         row.AddChild(new VSeparator());
         row.AddChild(_updatesButton);
+        _updateAllButton = DesktopTheme.Button("Update all", () =>
+        {
+            if (Host.ActiveGame is { } g)
+            {
+                ModActions.UpdateAll(g);
+            }
+        }, "Downloads the newest version of every mod marked in the Update column; the old versions stay for rollback.", "ToolButton");
+        row.AddChild(_updateAllButton);
         row.AddChild(_addFileButton);
         row.AddChild(DesktopTheme.Button("Browse mods", () => SelectTab("Browse"), "Search the mod sites that carry this game (Ctrl+2).", "ToolButton"));
         _pluginsButton = DesktopTheme.Button("Plugins…", ShowPlugins, "The plugin load order Luma writes to plugins.txt, with each plugin on or off (Ctrl+P).", "ToolButton");
@@ -276,7 +286,7 @@ public partial class DesktopShell
     {
         var game = Host.ActiveGame;
         var moddable = game?.Profile.Moddable == true;
-        foreach (var b in new[] { _deployButton, _steamButton, _updatesButton, _addFileButton, _newProfile, _deleteProfile, _conflictsButton })
+        foreach (var b in new[] { _deployButton, _steamButton, _updatesButton, _addFileButton, _newProfile, _deleteProfile, _conflictsButton, _updateAllButton })
         {
             b.Disabled = !moddable;
         }
@@ -293,6 +303,9 @@ public partial class DesktopShell
             _steamButton.Disabled = game.Install.Source != GameSource.Steam;
             _pluginsButton.Visible = game.Profile.Plugins != null;
             _updatesButton.Disabled = !state.Mods.Any(m => m.Site is "thunderstore" or "nexus" or "modio" or "curseforge");
+            var updates = ModActions.Updatable(game).Count;
+            _updateAllButton.Disabled = updates == 0;
+            _updateAllButton.Text = updates > 0 ? $"Update all ({updates})" : "Update all";
             foreach (var k in state.Profiles.Keys.OrderBy(k => k == GameMods.DefaultProfile ? "" : k))
             {
                 _profiles.AddItem(k);

@@ -96,6 +96,34 @@ public partial class SmokeTest : Node
         Step("conflicts-pick", () => Press(Pad.Accept), wait: 0.8, expect: "Smoke Armor");
         Step("conflicts-choose", () => Press(Pad.Accept), wait: 0.8, expect: "meshes/armor.nif: A picks", check: () => ArmorWinner("Smoke Armor"));
         Step("conflicts-back", () => Press(Pad.Back), wait: 0.8, tab: "Mods");
+        // Touch reorder: hold a mod row still to pick it up, drag it above the one before it, lift.
+        Luma.App.Ui.ListRow? ModRow(string name) =>
+            All(GetTree().Root).OfType<Luma.App.Ui.ListRow>().FirstOrDefault(r => r.IsVisibleInTree() && r.HasMeta("mod") && r.TooltipText.StartsWith(name + ":", StringComparison.Ordinal));
+        Step("touch-reorder-focus", () => ModRow("Smoke Retexture")?.GrabFocus(), wait: 0.8, expect: "Smoke Retexture", check: () =>
+            All(GetTree().Root).OfType<Luma.App.Screens.ModsScreen>().FirstOrDefault(m => m.IsVisibleInTree()) is { } page && page.Size.Y > GetViewport().GetVisibleRect().Size.Y
+                ? $"the Mods page is taller than the window ({page.Size.Y}), so it can't scroll" : null);
+        Step("touch-hold", () =>
+        {
+            if (ModRow("Smoke Retexture") is { } r)
+            {
+                var at = r.GetGlobalRect().GetCenter();
+                Input.ParseInputEvent(new InputEventMouseMotion { Position = at, GlobalPosition = at });
+                Mouse(at, true);
+            }
+        }, wait: 1.0, check: () => Luma.App.Ui.TouchScroll.Reordering ? null : "holding the row didn't pick it up");
+        Step("touch-reorder", () =>
+        {
+            if (ModRow("Smoke Armor") is { } target)
+            {
+                var at = target.GetGlobalRect().GetCenter();
+                Input.ParseInputEvent(new InputEventMouseMotion { Position = at, GlobalPosition = at, ButtonMask = MouseButtonMask.Left });
+                Mouse(at, false);
+            }
+        }, wait: 1.0, tab: "Mods", expect: "Smoke Retexture", check: () =>
+        {
+            var order = Main.Instance.Host!.Mods.Store(Main.Instance.Host.ActiveGame!).State.Order.Select(e => e.Id).ToList();
+            return order.IndexOf("local:smoke-retexture") < order.IndexOf("local:Smoke_Armor") ? null : "dragging didn't move Smoke Retexture above Smoke Armor: " + string.Join(", ", order);
+        });
         // A game with anti-cheat shows why it can't be modded instead of mod actions.
         Step("pick-not-moddable", () =>
         {
