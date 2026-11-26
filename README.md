@@ -34,8 +34,8 @@ Select), and every tab works on that game. Games still start from Steam or their
 - **Games**: finds supported games in every Steam library (including the SD card) and in Heroic,
   Lutris and Flatpak installs, with their Proton prefix, launch options and cover art.
 - **Mods**: the game's setup (loader, where mods go, Proton or native) and its mods: per-game
-  profiles, one-tap enable/disable, load order on the d-pad, conflict and missing-dependency
-  warnings, update checks and full rollback.
+  profiles, enable/disable with Y, load order, conflict and missing-dependency warnings, update
+  checks and rollback. Loaders (BepInEx, MelonLoader, UE4SS) install from their official releases.
 - **Browse**: Thunderstore, mod.io, CurseForge and Nexus Mods, showing only the sites that carry
   the game, with guided setup for sites that need an account or API key.
 - **Downloads**: progress, retry, and "Mod Manager Download" links from Nexus Mods. Finished
