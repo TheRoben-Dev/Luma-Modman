@@ -214,7 +214,7 @@ public sealed class ModsTests : IDisposable
             "/home/deck/.steam/steam/ubuntu12_32/steam-launch-wrapper", "--",
             "/home/deck/.steam/steam/steamapps/common/Proton - Experimental/proton", "waitforexitandrun", game + "/SkyrimSELauncher.exe"];
         var through = Luma.Host.LaunchCommand.ThroughLauncher(cmd, game, "skse64_loader.exe");
-        Assert.Equal(game + "/skse64_loader.exe", through[^1]);
+        Assert.Equal(Path.Combine(game, "skse64_loader.exe"), through[^1]);
         Assert.Equal(cmd[..^1], through[..^1]);
         // Windows: Steam's command is the game's own program.
         var win = Luma.Host.LaunchCommand.ThroughLauncher([@"C:\Games\Steam\steamapps\common\Skyrim Special Edition\SkyrimSE.exe"], @"C:\Games\Steam\steamapps\common\Skyrim Special Edition", "skse64_loader.exe");
