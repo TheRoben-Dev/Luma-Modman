@@ -39,8 +39,8 @@ public static class ModLayout
     public static List<LayoutEntry> Plan(string dir, GameProfile profile, string modFolder, string? gamePrefix = null)
     {
         var root = dir;
-        var segs = profile.ModsPath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var outside = profile.ModsPath.StartsWith('{');
+        var segs = profile.ModsPathHere.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var outside = profile.ModsPathHere.StartsWith('{');
         var inGame = outside ? [] : segs;
         var markers = new HashSet<string>(segs.Where(s => !s.StartsWith('{')).Select(s => s.ToLowerInvariant())) { "bepinex" };
 

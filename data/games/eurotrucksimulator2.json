@@ -9,6 +9,7 @@
   ],
   "runtime": "native",
   "modsPath": "{xdgdata}/Euro Truck Simulator 2/mod",
+  "windowsModsPath": "{documents}/Euro Truck Simulator 2/mod",
   "sites": {
     "nexus": "eurotrucksimulator2"
   },

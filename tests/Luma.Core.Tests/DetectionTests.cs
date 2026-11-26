@@ -93,7 +93,7 @@ public class DetectionTests : IDisposable
         return (root, sd);
     }
 
-    [Fact]
+    [LinuxFact]
     public void SteamScanFindsAllLibrariesPrefixesOptionsAndArt()
     {
         var (root, sd) = FakeSteam();
@@ -113,7 +113,7 @@ public class DetectionTests : IDisposable
         Assert.Null(lethal.Prefix);  // never launched yet
     }
 
-    [Fact]
+    [LinuxFact]
     public void FlatpakSteamIsFound()
     {
         Write(".var/app/com.valvesoftware.Steam/.local/share/Steam/steamapps/appmanifest_413150.acf",
@@ -123,7 +123,7 @@ public class DetectionTests : IDisposable
         Assert.Equal("flatpak", g.Packaging);
     }
 
-    [Fact]
+    [LinuxFact]
     public void HeroicEpicAndGogInstallsWithPrefixes()
     {
         var game = Dir("Games/Heroic/Cyberpunk 2077");
@@ -152,7 +152,7 @@ public class DetectionTests : IDisposable
         Assert.Equal("cyberpunk2077", d.Profile.Id);
     }
 
-    [Fact]
+    [LinuxFact]
     public void LutrisGameFoundFromExeDeepInTheFolder()
     {
         Write("Games/skyrim/drive_c/Games/Skyrim/SkyrimSE.exe", "");
@@ -175,7 +175,7 @@ public class DetectionTests : IDisposable
         Assert.Equal("skyrimspecialedition", d?.Profile.Id);
     }
 
-    [Fact]
+    [LinuxFact]
     public void DetectorMatchesSteamByAppIdAndSkipsUnsupported()
     {
         FakeSteam();
@@ -192,5 +192,85 @@ public class DetectionTests : IDisposable
         Write("g/Bin/X64/Game.EXE", "");
         Assert.NotNull(PathUtil.FindCaseInsensitive(Path.Combine(_home, "g"), "bin/x64/game.exe"));
         Assert.Null(PathUtil.FindCaseInsensitive(Path.Combine(_home, "g"), "bin/x64/other.exe"));
+    }
+}
+
+public class WindowsPlatformTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "luma-win-" + Guid.NewGuid().ToString("N")[..8]);
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_root))
+        {
+            Directory.Delete(_root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void AppPathsUseAppDataOnWindows()
+    {
+        var p = new AppPaths(v => v switch
+        {
+            "USERPROFILE" => @"C:\Users\me",
+            "LOCALAPPDATA" => @"C:\Users\me\AppData\Local",
+            "APPDATA" => @"C:\Users\me\AppData\Roaming",
+            _ => null,
+        }, windows: true);
+        Assert.Equal(@"C:\Users\me", p.Home);
+        Assert.Equal(Path.Combine(@"C:\Users\me\AppData\Local", "Luma"), p.Data);
+        Assert.Equal(Path.Combine(@"C:\Users\me\AppData\Roaming", "Luma"), p.Config);
+        Assert.StartsWith(p.Data, p.Cache);
+    }
+
+    [Fact]
+    public void EpicLauncherManifestsAreRead()
+    {
+        var game = Directory.CreateDirectory(Path.Combine(_root, "Games", "Hades")).FullName;
+        var manifests = Directory.CreateDirectory(Path.Combine(_root, "Manifests")).FullName;
+        File.WriteAllText(Path.Combine(manifests, "A.item"), $$"""
+            { "AppName": "Min", "DisplayName": "Hades", "InstallLocation": {{System.Text.Json.JsonSerializer.Serialize(game)}}, "MainGameAppName": "Min" }
+            """);
+        File.WriteAllText(Path.Combine(manifests, "B.item"), $$"""
+            { "AppName": "MinDlc", "DisplayName": "Hades DLC", "InstallLocation": {{System.Text.Json.JsonSerializer.Serialize(game)}}, "MainGameAppName": "Min" }
+            """);
+        File.WriteAllText(Path.Combine(manifests, "C.item"), """{ "AppName": "Gone", "InstallLocation": "/nowhere" }""");
+        File.WriteAllText(Path.Combine(manifests, "D.item"), "not json");
+        var found = Assert.Single(WindowsLaunchers.Epic(manifests));
+        Assert.Equal(GameSource.Epic, found.Source);
+        Assert.Equal("Min", found.SourceId);
+        Assert.Equal("Hades", found.Title);
+        Assert.Equal(WindowsLaunchers.Packaging, found.Packaging);
+    }
+
+    [Fact]
+    public void WindowsModsPathOverridesLinuxOnlyLocations()
+    {
+        var catalog = GameCatalog.Load();
+        foreach (var g in catalog.Games.Where(g => g.Moddable))
+        {
+            var path = g.WindowsModsPath ?? g.ModsPath;
+            Assert.False(path.StartsWith("{xdg", StringComparison.Ordinal), $"{g.Id} has no Windows mods location ({g.ModsPath})");
+        }
+        Assert.Empty(catalog.Problems);
+    }
+
+    [WindowsFact]
+    public void WindowsTokensAreTheUsersOwnFolders()
+    {
+        Assert.Equal(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), Luma.Core.Mods.GamePaths.WindowsFolder("{documents}"));
+        Assert.EndsWith("My Games", Luma.Core.Mods.GamePaths.WindowsFolder("{mygames}"));
+        Assert.Equal("", Luma.Core.Mods.GamePaths.WindowsFolder("{xdgdata}"));
+    }
+
+    [WindowsFact]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    public void WindowsRegistryLookupsDontThrow()
+    {
+        _ = WindowsSteam.Roots();
+        _ = WindowsSteam.Running();
+        _ = WindowsLaunchers.Gog();
+        Assert.False(Platform.ProcessAlive(-1));
+        Assert.True(Platform.ProcessAlive(Environment.ProcessId));
     }
 }

@@ -1,7 +1,7 @@
 namespace Luma.Core;
 
 /// <summary>
-/// Luma's own directories (XDG). Mods, downloads and backups live here, never inside a game folder:
+/// Luma's own directories: XDG on Linux, %LOCALAPPDATA%\Luma and %APPDATA%\Luma on Windows. Mods, downloads and backups live here, never inside a game folder:
 /// games only see mods through links that are put in at launch and taken out again afterwards.
 /// </summary>
 public sealed class AppPaths
@@ -14,9 +14,21 @@ public sealed class AppPaths
     public string Runtime { get; }
     public string Home { get; }
 
-    public AppPaths(Func<string, string?>? env = null)
+    /// <param name="env">Environment variables (tests pass their own).</param>
+    /// <param name="windows">Windows layout; null = the OS Luma runs on.</param>
+    public AppPaths(Func<string, string?>? env = null, bool? windows = null)
     {
         env ??= System.Environment.GetEnvironmentVariable;
+        if (windows ?? Platform.IsWindows)
+        {
+            Home = NonEmpty(env("USERPROFILE")) ?? System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
+            var local = Path.Combine(NonEmpty(env("LOCALAPPDATA")) ?? Path.Combine(Home, "AppData", "Local"), "Luma");
+            Data = local;
+            Config = Path.Combine(NonEmpty(env("APPDATA")) ?? Path.Combine(Home, "AppData", "Roaming"), "Luma");
+            Cache = Path.Combine(local, "cache");
+            Runtime = Path.Combine(local, "run");
+            return;
+        }
         Home = env("HOME") ?? System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile);
         Data = Path.Combine(Xdg(env, "XDG_DATA_HOME", Home, ".local/share"), Name);
         Config = Path.Combine(Xdg(env, "XDG_CONFIG_HOME", Home, ".config"), Name);
@@ -41,6 +53,8 @@ public sealed class AppPaths
 
     /// <summary>Cover art and screenshots fetched for the UI.</summary>
     public string ArtCacheDir => Path.Combine(Cache, "art");
+
+    private static string? NonEmpty(string? s) => string.IsNullOrEmpty(s) ? null : s;
 
     private static string Xdg(Func<string, string?> env, string name, string home, string fallback)
     {

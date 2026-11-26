@@ -76,7 +76,7 @@ public partial class SiteSetupPage : Screen
         {
             Add(col, new ActionButton("Open the key page in your browser", () => ModActions.OpenUrl(g.KeyPage), g.KeyPage)),
             Add(col, new ActionButton(CurrentKey == null ? "Paste or type the key" : "Change the key", EnterKey,
-                "Paste with the Paste key (or Ctrl+V). In Game Mode, Steam + X opens Steam's keyboard.")),
+                $"Paste with the Paste key (or Ctrl+V). In {GameText.SteamTvMode}, Steam + X opens Steam's keyboard.")),
         };
         if (CurrentKey != null)
         {

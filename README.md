@@ -1,9 +1,12 @@
 # Luma Modman
 
-A controller-first mod manager for SteamOS and Bazzite (Steam Deck), built with Godot 4 (.NET).
-It runs in Game Mode and Desktop Mode, and works just as well with touch and a mouse.
+A controller-first mod manager for SteamOS and Bazzite (Steam Deck), and Windows (desktops and
+handhelds like the ROG Ally and Legion Go), built with Godot 4 (.NET). It runs in Game Mode,
+Desktop Mode and Big Picture, and works just as well with touch and a mouse.
 
 ## Install
+
+### Linux (SteamOS, Bazzite)
 
 1. Download `Luma-linux-x86_64.tar.gz` from the [latest release](https://github.com/TheRoben-Dev/Luma-Modman/releases/latest)
    (in Desktop Mode on a Steam Deck).
@@ -24,7 +27,31 @@ mods from Steam**:
 "/home/deck/Applications/Luma/luma" run -- %command%
 ```
 
+On Windows the line is the same with Luma's Windows path:
+
+```
+"C:\Users\you\AppData\Local\Programs\Luma\luma-cli.exe" run -- %command%
+```
+
 For other launchers, use **Put the mods in the game now** and **Take the mods out** when done.
+
+### Windows (10 and 11, x64)
+
+1. Download `Luma-windows-x86_64.zip` from the [latest release](https://github.com/TheRoben-Dev/Luma-Modman/releases/latest)
+   and unpack it.
+2. Double-click **Install Luma.cmd** in the `Luma` folder. Luma goes to
+   `%LOCALAPPDATA%\Programs\Luma` (no admin rights) with a Start menu entry and an entry in
+   Settings → Apps to uninstall it. If Steam is closed it also adds a Steam shortcut with Luma's
+   art (or run `"Install Luma.cmd" -RestartSteam`, or use Settings → Updates → "Add Luma to Steam").
+   Windows may warn about an unrecognised app the first time: the builds aren't code-signed yet.
+3. Open Luma from the Start menu or Steam (Big Picture too). Updates install from inside the app,
+   with one-step rollback, exactly as on Linux.
+
+Differences from Linux: games run directly (no Proton prefixes), so mods that go in Documents or
+AppData use your own folders. Games are found in Steam (every library), the Epic Games Launcher,
+GOG Galaxy and Heroic. Mod files are linked in as symbolic links when Windows allows it
+(Developer Mode on), else as hard links, else copied; either way they come out again when the game
+closes. 7z and rar archives need 7-Zip, or Windows 11's built-in `tar`.
 
 ## What it does
 
@@ -32,7 +59,8 @@ Luma is a mod manager, not a launcher: you pick the game you're modding in the h
 Select), and every tab works on that game. Games still start from Steam or their launcher.
 
 - **Games**: finds supported games in every Steam library (including the SD card) and in Heroic,
-  Lutris and Flatpak installs, with their Proton prefix, launch options and cover art.
+  Lutris and Flatpak installs, with their Proton prefix, launch options and cover art. On Windows:
+  Steam, the Epic Games Launcher, GOG Galaxy and Heroic.
 - **Mods**: the game's setup (loader, where mods go, Proton or native) and its mods: per-game
   profiles, enable/disable with Y, load order, conflict and missing-dependency warnings, update
   checks and rollback. Loaders (BepInEx, MelonLoader, UE4SS) install from their official releases.
@@ -55,7 +83,7 @@ Select), and every tab works on that game. Games still start from Steam or their
 
 There is no visible cursor; touch and mouse clicks work everywhere. Text entry has its own
 on-screen keyboard (Y deletes, X adds a space, Paste for API keys); a real keyboard and Steam's
-keyboard (Steam + X) type straight in.
+keyboard (Steam + X in Game Mode or Big Picture) type straight in.
 
 ## Rules
 
@@ -75,19 +103,25 @@ godot --path src/Luma.App                      # run the app
 tools/smoke/run-ui-smoke.sh "$(which godot)" /tmp/shots   # scripted UI test under Xvfb
 ```
 
+The Windows build exports from Linux too (`--export-release Windows`, with the Windows export
+templates installed); CI also builds and tests on a Windows runner and checks the installer.
+Platform differences live behind `Luma.Core.Platform` and the `Windows*` classes; Linux code paths
+are unchanged.
+
 ## Layout
 
 ```
 src/
   Luma.Core/   Godot-free: paths, game profiles, detection, mod store and deployment
   Luma.Host/   composition root shared by the app and the CLI, settings, self-update, log
-  Luma.Cli/    `luma`: Steam launch wrapper (`luma run`), deploy/undeploy, nxm links, steam-add
+  Luma.Cli/    `luma` (luma-cli.exe on Windows): Steam launch wrapper (`luma run`), deploy/undeploy, nxm links, steam-add
   Luma.App/    Godot project: screens, focus, input, themes, sounds, animation
 tests/         xUnit tests, run in CI without Godot or a display
 data/games/    per-game support profiles (JSON): add a game by adding a file
 data/loaders.json  mod loaders and script extenders Luma can install
 data/steam-art/    Steam library art (drawn by tools/art/make_steam_art.py)
-tools/release/     packaging and install.sh; CI publishes a release when the version changes
+tools/release/     packaging, install.sh (Linux) and windows/ (Install Luma.cmd, install.ps1, uninstall.ps1);
+                   CI publishes a release, both platforms, when the version changes
 ```
 
 ## Supported games

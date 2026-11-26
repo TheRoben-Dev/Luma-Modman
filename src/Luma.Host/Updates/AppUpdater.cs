@@ -5,54 +5,70 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
+using Luma.Core;
 
 namespace Luma.Host.Updates;
 
 public sealed record AppRelease(Version Version, string Tag, string TarballUrl, string SumsUrl, long Size, string Notes);
 
+/// <summary>A release package for one OS: the asset name and the app folder inside it.</summary>
+/// <param name="Zip">A .zip (Windows) rather than a .tar.gz (Linux).</param>
+public sealed record UpdatePackage(string Asset, string Folder, string Binary, string Launcher, bool Zip)
+{
+    public static readonly UpdatePackage Linux = new("Luma-linux-x86_64.tar.gz", "Luma", "Luma.x86_64", "luma", false);
+    public static readonly UpdatePackage Windows = new("Luma-windows-x86_64.zip", "Luma", "Luma.exe", "luma-cli.exe", true);
+
+    /// <summary>The package for the OS Luma runs on.</summary>
+    public static UpdatePackage Here => Platform.IsWindows ? Windows : Linux;
+
+    public static readonly UpdatePackage[] All = [Linux, Windows];
+}
+
 /// <summary>
 /// In-app self-update from this project's GitHub Releases (the same assets the installer uses).
 /// Download and checksum check happen next to the install folder (never /tmp, which is a small
 /// RAM disk on SteamOS/Bazzite), then the install folder is swapped by rename and the previous
-/// version is kept as "&lt;install&gt;.previous" for rollback. Mods, profiles and settings live
+/// version is kept as "&lt;install&gt;.previous" for rollback. On Windows, where the folder of a
+/// running program can't be renamed, its files are moved one by one instead (running files can). Mods, profiles and settings live
 /// elsewhere and are never touched.
 /// </summary>
 public sealed class AppUpdater
 {
     public const string Repo = "TheRoben-Dev/Luma-Modman";
-    public const string Asset = "Luma-linux-x86_64.tar.gz";
     public const string LatestApi = $"https://api.github.com/repos/{Repo}/releases/latest";
 
     private static readonly string[] Repos = [Repo];
-    private static readonly string[] Assets = [Asset];
-    private static readonly (string Folder, string Binary, string Launcher)[] Layouts =
-        [("Luma", "Luma.x86_64", "luma")];
 
     /// <summary>The app binary in an install folder, or null.</summary>
     public static string? AppBinary(string dir) =>
-        Layouts.Select(l => Path.Combine(dir, l.Binary)).FirstOrDefault(File.Exists);
+        UpdatePackage.All.Select(l => Path.Combine(dir, l.Binary)).FirstOrDefault(File.Exists);
 
     private readonly HttpClient _http;
 
-    /// <param name="installDir">Folder holding Luma.x86_64; null = the running app's folder.</param>
-    public AppUpdater(HttpClient? http = null, string? installDir = null, Version? current = null)
+    /// <param name="installDir">Folder holding Luma.x86_64 (Luma.exe); null = the running app's folder.</param>
+    /// <param name="package">Which release package to use; null = this OS's.</param>
+    public AppUpdater(HttpClient? http = null, string? installDir = null, Version? current = null, UpdatePackage? package = null)
     {
+        Package = package ?? UpdatePackage.Here;
         _http = http ?? DefaultClient();
         InstallDir = installDir ?? (Environment.ProcessPath is { } exe ? Path.GetDirectoryName(exe)! : AppContext.BaseDirectory);
         CurrentVersion = current ?? CurrentAppVersion();
     }
 
     public string InstallDir { get; }
+    public UpdatePackage Package { get; }
     public Version CurrentVersion { get; }
-    public string PreviousDir => InstallDir.TrimEnd('/') + ".previous";
+    public string PreviousDir => Trim(InstallDir) + ".previous";
+
+    private static string Trim(string dir) => dir.TrimEnd('/', '\\');
 
     /// <summary>
     /// Self-update only works for the portable install (installer or tarball): a folder with the
     /// app binary and the launcher that we can write next to. Not for dev builds or packages.
     /// </summary>
     public bool CanSelfUpdate =>
-        Layouts.Any(l => File.Exists(Path.Combine(InstallDir, l.Binary)) && File.Exists(Path.Combine(InstallDir, l.Launcher))) &&
-        Directory.GetParent(InstallDir.TrimEnd('/')) is { } parent && IsWritable(parent.FullName);
+        File.Exists(Path.Combine(InstallDir, Package.Binary)) && File.Exists(Path.Combine(InstallDir, Package.Launcher)) &&
+        Directory.GetParent(Trim(InstallDir)) is { } parent && IsWritable(parent.FullName);
 
     public bool CanRollback => Directory.Exists(PreviousDir) && AppBinary(PreviousDir) != null;
 
@@ -107,12 +123,13 @@ public sealed class AppUpdater
             return null;
         }
         resp.EnsureSuccessStatusCode();
-        var release = ParseRelease(await resp.Content.ReadAsStringAsync(ct));
+        var release = ParseRelease(await resp.Content.ReadAsStringAsync(ct), Package);
         return release != null && release.Version > CurrentVersion ? release : null;
     }
 
-    public static AppRelease? ParseRelease(string json)
+    public static AppRelease? ParseRelease(string json, UpdatePackage? package = null)
     {
+        package ??= UpdatePackage.Here;
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
         if (root.TryGetProperty("draft", out var draft) && draft.GetBoolean() ||
@@ -126,16 +143,14 @@ public sealed class AppUpdater
         {
             return null;
         }
-        string? tarball = null, sums = null, tarballName = null;
+        string? tarball = null, sums = null;
         long size = 0;
         foreach (var a in assets.EnumerateArray())
         {
             var name = a.GetProperty("name").GetString();
             var url = a.GetProperty("browser_download_url").GetString();
-            // Prefer the new package name when a release carries both.
-            if (name != null && Assets.Contains(name) && (tarballName == null || Array.IndexOf(Assets, name) > Array.IndexOf(Assets, tarballName)))
+            if (name == package.Asset)
             {
-                tarballName = name;
                 tarball = url;
                 size = a.TryGetProperty("size", out var sz) ? sz.GetInt64() : 0;
             }
@@ -168,7 +183,7 @@ public sealed class AppUpdater
         {
             throw new InvalidOperationException("This copy of Luma can't update itself. Re-run the installer instead.");
         }
-        var parent = Directory.GetParent(InstallDir.TrimEnd('/'))!.FullName;
+        var parent = Directory.GetParent(Trim(InstallDir))!.FullName;
         var stage = Path.Combine(parent, ".luma-update-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(stage);
         try
@@ -181,34 +196,42 @@ public sealed class AppUpdater
 
             var extracted = Path.Combine(stage, "x");
             Directory.CreateDirectory(extracted);
-            await using (var file = File.OpenRead(tarball))
-            await using (var gz = new GZipStream(file, CompressionMode.Decompress))
+            if (Package.Zip)
             {
+                ZipFile.ExtractToDirectory(tarball, extracted, overwriteFiles: false);
+            }
+            else
+            {
+                await using var file = File.OpenRead(tarball);
+                await using var gz = new GZipStream(file, CompressionMode.Decompress);
                 await TarFile.ExtractToDirectoryAsync(gz, extracted, overwriteFiles: false, ct);
             }
-            var layout = Layouts.FirstOrDefault(l => File.Exists(Path.Combine(extracted, l.Folder, l.Binary)));
-            if (layout.Folder == null)
+            if (!File.Exists(Path.Combine(extracted, Package.Folder, Package.Binary)))
             {
                 throw new InvalidDataException("The update package is missing the app binary.");
             }
-            var newApp = Path.Combine(extracted, layout.Folder);
+            var newApp = Path.Combine(extracted, Package.Folder);
 
             // Swap: current -> .previous (replacing an older .previous), new -> current.
             if (Directory.Exists(PreviousDir))
             {
                 Directory.Delete(PreviousDir, recursive: true);
             }
-            Directory.Move(InstallDir, PreviousDir);
+            Move(InstallDir, PreviousDir);
             try
             {
-                Directory.Move(newApp, InstallDir);
+                Move(newApp, InstallDir);
             }
             catch
             {
-                Directory.Move(PreviousDir, InstallDir);
+                if (OperatingSystem.IsWindows())
+                {
+                    MoveTree(InstallDir, Path.Combine(stage, "failed"));
+                }
+                Move(PreviousDir, InstallDir);
                 throw;
             }
-            return Path.Combine(InstallDir, layout.Binary);
+            return Path.Combine(InstallDir, Package.Binary);
         }
         finally
         {
@@ -229,11 +252,52 @@ public sealed class AppUpdater
         {
             throw new InvalidOperationException("There is no previous version to go back to.");
         }
-        var temp = InstallDir.TrimEnd('/') + ".rollback-" + Guid.NewGuid().ToString("N")[..6];
-        Directory.Move(InstallDir, temp);
-        Directory.Move(PreviousDir, InstallDir);
-        Directory.Move(temp, PreviousDir);
+        var temp = Trim(InstallDir) + ".rollback-" + Guid.NewGuid().ToString("N")[..6];
+        Move(InstallDir, temp);
+        Move(PreviousDir, InstallDir);
+        Move(temp, PreviousDir);
         return AppBinary(InstallDir)!;
+    }
+
+    /// <summary>Renames a folder; on Windows moves its files into <paramref name="to"/> one by one (see the class notes).</summary>
+    private static void Move(string from, string to)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            MoveTree(from, to);
+        }
+        else
+        {
+            Directory.Move(from, to);
+        }
+    }
+
+    /// <summary>
+    /// Moves every file under <paramref name="from"/> to the same place under <paramref name="to"/>,
+    /// then removes the folders left empty (a folder still in use stays, empty, and is reused).
+    /// </summary>
+    internal static void MoveTree(string from, string to)
+    {
+        Directory.CreateDirectory(to);
+        foreach (var file in Directory.EnumerateFiles(from, "*", SearchOption.AllDirectories).ToList())
+        {
+            var dest = Path.Combine(to, Path.GetRelativePath(from, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+            File.Move(file, dest, overwrite: true);
+        }
+        foreach (var dir in Directory.EnumerateDirectories(from, "*", SearchOption.AllDirectories).OrderByDescending(d => d.Length).Append(from))
+        {
+            try
+            {
+                if (!Directory.EnumerateFileSystemEntries(dir).Any())
+                {
+                    Directory.Delete(dir);
+                }
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
     }
 
     /// <summary>Starts the (new) app binary with the same arguments. The caller then quits.</summary>

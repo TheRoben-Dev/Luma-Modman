@@ -5,10 +5,11 @@ using Luma.Host;
 
 /// <summary>
 /// `luma run -- %command%`: Steam starts the game through this. Mods are linked in, the game runs
-/// with the loader's DLL overrides added to WINEDLLOVERRIDES, and when it exits the mods are taken
-/// out again, so the game folder is left as Steam installed it. When the game's script extender is
-/// in the game (installed as a mod, or by hand), the game starts through its loader. A problem with
-/// mods never stops the game from starting: it then runs without them.
+/// with the loader's DLL overrides added to WINEDLLOVERRIDES (Linux; Windows loads them itself),
+/// and when it exits the mods are taken out again, so the game folder is left as Steam installed
+/// it. When the game's script extender is in the game (installed as a mod, or by hand), the game
+/// starts through its loader. A problem with mods never stops the game from starting: it then
+/// runs without them.
 /// </summary>
 internal static class Launch
 {
@@ -64,7 +65,7 @@ internal static class Launch
         {
             psi.ArgumentList.Add(a);
         }
-        if (deployed && game != null)
+        if (deployed && game != null && !OperatingSystem.IsWindows())
         {
             var overrides = game.Profile.DllOverrides.ToList();
             if (game.Profile.Loader != null && host.Games.Catalog.Loaders.TryGetValue(game.Profile.Loader, out var loader))
@@ -85,9 +86,7 @@ internal static class Launch
         int code;
         try
         {
-            using var p = Process.Start(psi)!;
-            p.WaitForExit();
-            code = p.ExitCode;
+            code = GameProcess.Run(psi);
         }
         finally
         {

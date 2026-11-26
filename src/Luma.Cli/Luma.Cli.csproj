@@ -3,6 +3,8 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <AssemblyName>luma</AssemblyName>
+    <!-- Windows file names ignore case: luma.exe would clash with the app's Luma.exe. -->
+    <AssemblyName Condition="$(RuntimeIdentifier.StartsWith('win'))">luma-cli</AssemblyName>
     <RootNamespace>Luma.Cli</RootNamespace>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
