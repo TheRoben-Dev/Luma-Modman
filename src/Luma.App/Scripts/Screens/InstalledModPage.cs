@@ -73,6 +73,11 @@ public partial class InstalledModPage : Screen
             items.Add(Add(col, new ActionButton(mod.UpdateVersion != null ? $"Update to {mod.UpdateVersion}" : "Download the newest version",
                 () => ModActions.DownloadLatest(site, _game, mod.ModId, mod.Name), "Downloads it and installs it over this version; this one stays for rollback.")));
         }
+        if (mod.Fomod != null)
+        {
+            items.Add(Add(col, new ActionButton("Change install options", () => FomodSession.Change(_game, mod),
+                "Opens the mod's installer again and reinstalls it with what you pick.")));
+        }
         foreach (var h in mod.History.Where(h => File.Exists(h.Archive)))
         {
             var v = h;

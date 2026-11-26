@@ -127,7 +127,7 @@ public static class PackImporter
                 host.Mods.Install(game, archive, ToInstalled(mod), onlyProfile: profile);
                 return new PackModResult(mod, PackModOutcome.Installed);
             }
-            catch (Exception e) when (e is IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
+            catch (Exception e) when (e is IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException or FomodNeededException)
             {
                 AppLog.Warn($"modpack: {mod.Name}: {e.Message}");
                 return new PackModResult(mod, PackModOutcome.Failed, e.Message);
@@ -172,6 +172,7 @@ public static class PackImporter
             PageUrl = mod.PageUrl,
             Dependencies = mod.Dependencies,
             Profile = profile,
+            Fomod = mod.Fomod,
         }, ct => Resolve(site, game.Profile, mod, ct));
         return new PackModResult(mod, PackModOutcome.Downloading);
     }
@@ -203,5 +204,6 @@ public static class PackImporter
         FileId = m.FileId,
         PageUrl = m.PageUrl,
         Dependencies = m.Dependencies,
+        Fomod = m.Fomod,
     };
 }

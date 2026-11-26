@@ -1183,10 +1183,26 @@ public partial class Main : Control
         {
             AppLog.Warn("pid file: " + e.Message);
         }
-        Host.Downloads.Changed += _ => Callable.From(UpdateDownloadsBadge).CallDeferred();
+        Host.Downloads.Changed += item =>
+        {
+            Callable.From(UpdateDownloadsBadge).CallDeferred();
+            if (item.NeedsOptions && !item.Installed)
+            {
+                lock (_optionsAnnounced)
+                {
+                    if (!_optionsAnnounced.Add(item.Id))
+                    {
+                        return;
+                    }
+                }
+                Callable.From(() => Toast($"{item.ModName} has install options. Choose them in Downloads.")).CallDeferred();
+            }
+        };
         Host.StartAutoInstall();
         UpdateDownloadsBadge();
     }
+
+    private readonly HashSet<string> _optionsAnnounced = new();
 
     private void UpdateDownloadsBadge()
     {

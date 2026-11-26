@@ -175,9 +175,17 @@ public sealed class AppHost
                     FileId = item.FileId,
                     PageUrl = item.PageUrl,
                     Dependencies = item.Dependencies,
+                    Fomod = item.Fomod,
                 }, onlyProfile: item.Profile);
                 item.Installed = true;
                 item.InstallError = null;
+                item.NeedsOptions = false;
+            }
+            catch (Luma.Core.Mods.FomodNeededException)
+            {
+                item.NeedsOptions = true;
+                item.InstallError = "Has install options: choose them to install it.";
+                AppLog.Info($"{item.ModName} has a FOMOD installer; waiting for the player's options");
             }
             catch (Exception e) when (e is IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException)
             {

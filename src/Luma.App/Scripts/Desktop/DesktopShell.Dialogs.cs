@@ -39,6 +39,7 @@ public partial class DesktopShell
             AddFilePage a => AddFileDialog(a),
             ModPackPage m => m.Export ? ExportPackDialog(m) : ImportPackDialog(m),
             PluginsPage p => PluginsDialog(p),
+            FomodPage f => FomodDialog(f),
             _ => null,
         };
         if (w == null)
@@ -288,6 +289,114 @@ public partial class DesktopShell
         return ShowDialog(d, page, filter);
     }
 
+    /// <summary>A FOMOD installer as a wizard window: option groups on the left, the hovered option's picture and description on the right.</summary>
+    private Window FomodDialog(FomodPage page)
+    {
+        var s = page.Session;
+        var d = new DesktopDialog($"Install options: {s.ModName}", new Vector2I(1000, 680));
+        d.Dismissed += s.Cleanup;
+        var stepLabel = d.AddText("", DesktopTheme.Dim);
+        var split = new HSplitContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
+        d.Body.AddChild(split);
+        var scroll = new ScrollContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 1.3f, CustomMinimumSize = new Vector2(360, 0), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+        var groups = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        groups.AddThemeConstantOverride("separation", 4);
+        scroll.AddChild(groups);
+        split.AddChild(scroll);
+        var side = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(320, 0) };
+        side.AddThemeConstantOverride("separation", 8);
+        var image = new TextureRect { ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, CustomMinimumSize = new Vector2(0, 280) };
+        side.AddChild(image);
+        var title = DesktopTheme.Label("", null, 0);
+        title.ThemeTypeVariation = "HeaderLabel";
+        side.AddChild(title);
+        var about = DesktopTheme.Label("", DesktopTheme.Dim, 0, wrap: true);
+        about.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        side.AddChild(about);
+        split.AddChild(side);
+        void Preview(FomodOption o)
+        {
+            image.Texture = s.Image(o.Image) ?? s.Image(s.Config.Image);
+            title.Text = o.Name;
+            about.Text = o.Description.Length > 0 ? o.Description : "";
+        }
+        Button back = null!, next = null!;
+        void Fill()
+        {
+            foreach (var c in groups.GetChildren())
+            {
+                c.QueueFree();
+            }
+            var step = s.Current;
+            stepLabel.Text = $"Step {s.StepIndex + 1} of {s.Visible.Count}: {step?.Name}";
+            foreach (var g in step?.Groups ?? [])
+            {
+                var group = g;
+                var header = DesktopTheme.Label($"{g.Name}  ({FomodSession.Rule(g)})", null, 0);
+                header.ThemeTypeVariation = "PaneTitle";
+                groups.AddChild(header);
+                var picked = s.Picked(g);
+                foreach (var o in g.Options)
+                {
+                    var option = o;
+                    var type = s.TypeOf(o);
+                    var note = FomodPage.Describe(type);
+                    var box = new CheckBox
+                    {
+                        Text = o.Name + (note.Length > 0 ? $"   ({note})" : ""),
+                        ButtonPressed = picked.Contains(o.Name, StringComparer.OrdinalIgnoreCase),
+                        Disabled = type == "NotUsable" || g.Type == "SelectAll",
+                        TooltipText = o.Description.Length > 0 ? o.Description : o.Name,
+                        FocusMode = FocusModeEnum.All,
+                    };
+                    box.MouseEntered += () => Preview(option);
+                    box.FocusEntered += () => Preview(option);
+                    box.Pressed += () =>
+                    {
+                        if (!s.Toggle(group, option))
+                        {
+                            App.Toast($"{group.Name}: {FomodSession.Rule(group)}.");
+                        }
+                        Preview(option);
+                        Callable.From(Fill).CallDeferred();
+                    };
+                    groups.AddChild(box);
+                }
+            }
+            back.Disabled = s.StepIndex == 0;
+            next.Text = s.IsLast ? "Install" : "Next";
+            next.Disabled = !s.StepValid;
+            if (step?.Groups.FirstOrDefault()?.Options.FirstOrDefault() is { } first && title.Text.Length == 0)
+            {
+                Preview(first);
+            }
+        }
+        d.AddButton("Cancel", () =>
+        {
+            s.Cleanup();
+            App.Close(page);
+        });
+        back = d.AddButton("Back", () =>
+        {
+            s.StepIndex--;
+            title.Text = "";
+            Fill();
+        });
+        next = d.AddButton("Next", () =>
+        {
+            if (s.IsLast)
+            {
+                s.Finish(page);
+                return;
+            }
+            s.StepIndex++;
+            title.Text = "";
+            Fill();
+        }, primary: true);
+        Fill();
+        return ShowDialog(d, page, next);
+    }
+
     /// <summary>The plugin load order with a checkbox per plugin (MO2's Plugins list).</summary>
     private Window PluginsDialog(PluginsPage page)
     {
@@ -510,11 +619,7 @@ public partial class DesktopShell
         {
             picked = true;
             App.Close(page);
-            App.Busy($"Installing {Path.GetFileName(path)}…", (_, _) => Task.Run(() => AddFilePage.InstallFile(Host, game, path)), mod =>
-            {
-                App.Success(mod.Site == "loader" ? $"{mod.Name} is installed. The game starts through it from now on." : $"Installed {mod.Name}.");
-                Host.Mods.NotifyChanged(game);
-            }, cancellable: false);
+            FomodSession.InstallFile(game, path);
         };
         f.Canceled += () =>
         {

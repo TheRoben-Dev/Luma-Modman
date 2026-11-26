@@ -113,7 +113,11 @@ public partial class DownloadsScreen : Screen
                 }
                 break;
             case DownloadState.Done when item.Path != null:
-                if (!item.Installed)
+                if (item.NeedsOptions && !item.Installed)
+                {
+                    options.Add(("Choose install options", () => FomodSession.ForDownload(item)));
+                }
+                else if (!item.Installed)
                 {
                     options.Add(("Install it", () =>
                     {
