@@ -81,7 +81,9 @@ public static class GamePaths
             if (exists)
             {
                 var exact = Path.Combine(cur, part);
-                if (Directory.Exists(exact) || File.Exists(exact))
+                // On Windows Exists ignores case, so it would keep the mod's spelling ("Shared.txt"), not the
+                // disk's ("shared.txt"): look the real name up, so restoring a backed-up file keeps its name.
+                if (!Platform.IsWindows && (Directory.Exists(exact) || File.Exists(exact)))
                 {
                     cur = exact;
                     continue;
