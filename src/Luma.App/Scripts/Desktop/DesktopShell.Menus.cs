@@ -13,6 +13,7 @@ public partial class DesktopShell
     private Button _deployButton = null!;
     private Button _steamButton = null!;
     private Button _pluginsButton = null!;
+    private Button _conflictsButton = null!;
     private Button _updatesButton = null!;
     private Button _addFileButton = null!;
     private OptionButton _profiles = null!;
@@ -155,6 +156,7 @@ public partial class DesktopShell
         yield return Separator;
         yield return new MenuItem("Move selected mod up", () => _mods.MoveSelected(-1), "Ctrl+Up", _mods.HasSelection);
         yield return new MenuItem("Move selected mod down", () => _mods.MoveSelected(+1), "Ctrl+Down", _mods.HasSelection);
+        yield return new MenuItem("Conflicts…", ShowConflicts, "Ctrl+K");
         if (game.Profile.Plugins != null)
         {
             yield return new MenuItem("Plugins…", ShowPlugins, "Ctrl+P");
@@ -238,6 +240,8 @@ public partial class DesktopShell
         row.AddChild(DesktopTheme.Button("Browse mods", () => SelectTab("Browse"), "Search the mod sites that carry this game (Ctrl+2).", "ToolButton"));
         _pluginsButton = DesktopTheme.Button("Plugins…", ShowPlugins, "The plugin load order Luma writes to plugins.txt, with each plugin on or off (Ctrl+P).", "ToolButton");
         row.AddChild(_pluginsButton);
+        _conflictsButton = DesktopTheme.Button("Conflicts…", ShowConflicts, "Files that more than one mod has, and which mod's copy goes in (Ctrl+K).", "ToolButton");
+        row.AddChild(_conflictsButton);
         row.AddChild(new VSeparator());
         row.AddChild(DesktopTheme.Label("Profile", DesktopTheme.Dim, DesktopTheme.SmallSize));
         _profiles = new OptionButton { CustomMinimumSize = new Vector2(170, 0), TooltipText = "Profiles are separate sets of mods and orders for the same game." };
@@ -272,7 +276,7 @@ public partial class DesktopShell
     {
         var game = Host.ActiveGame;
         var moddable = game?.Profile.Moddable == true;
-        foreach (var b in new[] { _deployButton, _steamButton, _updatesButton, _addFileButton, _newProfile, _deleteProfile })
+        foreach (var b in new[] { _deployButton, _steamButton, _updatesButton, _addFileButton, _newProfile, _deleteProfile, _conflictsButton })
         {
             b.Disabled = !moddable;
         }
@@ -300,6 +304,14 @@ public partial class DesktopShell
             _deleteProfile.Disabled = state.Active == GameMods.DefaultProfile;
         }
         _fillingProfiles = false;
+    }
+
+    internal void ShowConflicts()
+    {
+        if (Host.ActiveGame is { Profile.Moddable: true } game)
+        {
+            App.Push(new ConflictsPage(game));
+        }
     }
 
     internal void ShowPlugins()

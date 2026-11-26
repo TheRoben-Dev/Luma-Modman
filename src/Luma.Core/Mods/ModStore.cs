@@ -64,6 +64,13 @@ public sealed record GameMods
 
     public bool IsPluginOn(string plugin) =>
         !(PluginsOff.TryGetValue(Active, out var off) && off.Contains(plugin, StringComparer.OrdinalIgnoreCase));
+
+    /// <summary>Conflict winners picked by hand, per profile: file key ("mods/meshes/a.nif") → mod id.</summary>
+    public Dictionary<string, Dictionary<string, string>> Winners { get; init; } = new();
+
+    /// <summary>The mod picked to win <paramref name="key"/> in the active profile, if any.</summary>
+    public string? WinnerOf(string key) =>
+        Winners.TryGetValue(Active, out var w) && w.FirstOrDefault(p => string.Equals(p.Key, key, StringComparison.OrdinalIgnoreCase)) is { Value: { } id } ? id : null;
 }
 
 /// <summary>
@@ -303,6 +310,32 @@ public sealed class ModStore
             off.Add(plugin);
         }
         Save(State with { PluginsOff = all });
+    }
+
+    /// <summary>
+    /// Picks <paramref name="modId"/> to win the files <paramref name="keys"/> in the active profile,
+    /// whatever the load order says; null goes back to the load order for them.
+    /// </summary>
+    public void SetWinner(IEnumerable<string> keys, string? modId)
+    {
+        var all = State.Winners.ToDictionary(p => p.Key, p => new Dictionary<string, string>(p.Value, StringComparer.OrdinalIgnoreCase));
+        var w = all.TryGetValue(State.Active, out var d) ? d : all[State.Active] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var key in keys)
+        {
+            if (modId == null)
+            {
+                w.Remove(key);
+            }
+            else
+            {
+                w[key] = modId;
+            }
+        }
+        if (w.Count == 0)
+        {
+            all.Remove(State.Active);
+        }
+        Save(State with { Winners = all });
     }
 
     /// <summary>Takes entries whose mod isn't installed (a modpack's that never arrived) out of the active profile.</summary>

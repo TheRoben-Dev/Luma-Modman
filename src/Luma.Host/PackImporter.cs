@@ -97,6 +97,14 @@ public static class PackImporter
         var name = FreeProfileName(store, profile ?? pack.Name);
         // The profile first, in the pack's order: mods installed or downloaded below take their place in it.
         store.SetProfile(name, pack.Mods.Select(m => new ProfileEntry(m.Id, m.Enabled)));
+        foreach (var g in pack.Winners.GroupBy(w => w.Value, w => w.Key))
+        {
+            store.SetWinner(g, g.Key);
+        }
+        foreach (var plugin in pack.PluginsOff)
+        {
+            store.SetPluginEnabled(plugin, false);
+        }
         var results = new List<PackModResult>();
         var unpack = Path.Combine(host.Paths.DownloadsDir, "modpacks", ModStore.Safe(Path.GetFileNameWithoutExtension(file)));
         for (var i = 0; i < pack.Mods.Count; i++)

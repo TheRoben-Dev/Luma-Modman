@@ -3,6 +3,11 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.12.0
+
+- Conflicts: see every file that more than one of your mods has, which mod's copy goes in, and pick another winner per file, MO2-style. The pick is kept per profile and beats the load order. Both layouts: Mods → Conflicts in controller mode, Mods → Conflicts… (Ctrl+K) or a mod's right-click menu on the desktop, where several rows can be picked at once. A mod's own page has "Make it win all of these".
+- Modpacks carry your picked winners and the plugins you turned off.
+
 ## 0.11.0
 
 - FOMOD installers. Mods that come with install options (body types, textures, patches for other mods) now show their steps: pick the options with pictures and descriptions, step by step, and only the files you chose are installed. Options that need a plugin you don't have are marked, and recommended ones are picked for you. Works from Downloads, "Add a mod from a file" and modpacks, in both layouts.

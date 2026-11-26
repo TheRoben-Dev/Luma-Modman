@@ -130,6 +130,14 @@ public partial class ModsScreen : Screen
                         Host.Mods.NotifyChanged(game);
                     }), "Goes back to the Default profile.")));
             }
+            var plan = Try<DeployPlan?>(() => mods.Plan(game), null, "the load order", scrollCol);
+            if (plan is { Conflicts.Count: > 0 })
+            {
+                var n = plan.Conflicts.Count;
+                var picked = plan.Conflicts.Count(c => c.Picked);
+                items.Add(Add(scrollCol, new ActionButton($"Conflicts ({n} file{(n == 1 ? "" : "s")})", () => App.Push(new ConflictsPage(game)),
+                    $"Files in more than one mod, and which mod's copy goes in{(picked > 0 ? $" ({picked} picked by you)" : "")}.")));
+            }
             if (game.Profile.Plugins != null)
             {
                 items.Add(Add(scrollCol, new ActionButton("Plugins", () => App.Push(new PluginsPage(game)),
@@ -161,7 +169,6 @@ public partial class ModsScreen : Screen
                 scrollCol.AddChild(fix);
                 items.Add(fix);
             }
-            var plan = Try<DeployPlan?>(() => mods.Plan(game), null, "the load order", scrollCol);
             var losers = plan?.Conflicts.SelectMany(c => c.Losers).GroupBy(x => x).ToDictionary(g => g.Key, g => g.Count()) ?? new();
 
             scrollCol.AddChild(Section($"Load order  ·  {state.Active}"));
@@ -173,7 +180,7 @@ public partial class ModsScreen : Screen
                     continue;
                 }
                 var detail = string.Join("  ·  ", new[] { mod.Version, SiteName(mod.Site), mod.UpdateVersion != null ? $"update {mod.UpdateVersion}" : "",
-                    losers.TryGetValue(mod.Id, out var n) ? $"{n} file{(n == 1 ? "" : "s")} replaced by later mods" : "" }.Where(x => x.Length > 0));
+                    losers.TryGetValue(mod.Id, out var n) ? $"{n} file{(n == 1 ? "" : "s")} replaced by other mods" : "" }.Where(x => x.Length > 0));
                 var id = mod.Id;
                 var row = new ListRow(mod.Name, detail, entry.Enabled ? "On" : "Off", entry.Enabled ? UiTheme.Good : UiTheme.Dim, null,
                     () =>

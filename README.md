@@ -74,7 +74,8 @@ Select), and every tab works on that game. Games still start from Steam or their
   checks and rollback. Loaders (BepInEx, MelonLoader, UE4SS) install from their official releases.
   Bethesda games get their plugin list (plugins.txt, masters first, in mod order, single plugins
   on or off under Plugins) and archive invalidation written while mods are in, and put back after.
-  Mods with FOMOD installers show their install options step by step, with pictures.
+  Mods with FOMOD installers show their install options step by step, with pictures. Conflicts
+  lists files that several mods have and lets you pick which copy goes in, per file.
 - **Browse**: Thunderstore, mod.io, CurseForge and Nexus Mods, showing only the sites that carry
   the game, with guided setup for sites that need an account or API key.
 - **Downloads**: progress, retry, and "Mod Manager Download" links from Nexus Mods. Finished
