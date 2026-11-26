@@ -85,13 +85,16 @@ public partial class DownloadsScreen : Screen
         DownloadState.Queued => ("Waiting", UiTheme.Dim),
         DownloadState.Downloading when i.Progress >= 0 => ($"{i.Progress * 100:0}%  ·  {ModDetailsPage.Bytes(i.Bytes)} of {ModDetailsPage.Bytes(i.Total)}", UiTheme.AccentText),
         DownloadState.Downloading => (i.Bytes > 0 ? ModDetailsPage.Bytes(i.Bytes) : "Starting…", UiTheme.AccentText),
-        DownloadState.Done => ("Downloaded" + (i.Total > 0 ? "  ·  " + ModDetailsPage.Bytes(i.Total) : ""), UiTheme.Good),
+        DownloadState.Done when i.Installed => ("Installed", UiTheme.Good),
+        DownloadState.Done when i.InstallError != null => ("Not installed", UiTheme.Warn),
+        DownloadState.Done => ("Installing…", UiTheme.AccentText),
         DownloadState.Failed => ("Failed", UiTheme.Bad),
         DownloadState.Cancelled => ("Cancelled", UiTheme.Dim),
         _ => ("", UiTheme.Dim),
     };
 
-    private static string Help(DownloadItem i) => i.State == DownloadState.Failed && i.Error != null ? i.Error : $"{i.ModName} from {SiteName(i.Site)}.";
+    private static string Help(DownloadItem i) =>
+        i.State == DownloadState.Failed && i.Error != null ? i.Error : i.InstallError ?? $"{i.ModName} from {SiteName(i.Site)}.";
 
     private void Open(DownloadItem item)
     {
@@ -109,6 +112,14 @@ public partial class DownloadsScreen : Screen
                 }
                 break;
             case DownloadState.Done when item.Path != null:
+                if (!item.Installed)
+                {
+                    options.Add(("Install it", () =>
+                    {
+                        item.InstallError = null;
+                        Task.Run(() => Host.InstallDownload(item));
+                    }));
+                }
                 options.Add(("Show the file", () => OS.ShellOpen(Path.GetDirectoryName(item.Path)!)));
                 break;
         }
@@ -128,7 +139,8 @@ public partial class DownloadsScreen : Screen
             }
         }));
         options.Add(("Back", () => { }));
-        var message = item.State == DownloadState.Failed && item.Error != null ? $"{item.ModName}\n\n{item.Error}" : item.ModName;
+        var problem = item.State == DownloadState.Failed ? item.Error : item.InstallError;
+        var message = problem != null ? $"{item.ModName}\n\n{problem}" : item.ModName;
         App.Push(new ChoicePage(message, options.ToArray()));
     }
 

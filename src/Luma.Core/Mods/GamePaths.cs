@@ -10,9 +10,12 @@ public static class GamePaths
     /// game's Proton prefix; null when the game needs a prefix that doesn't exist yet (start the
     /// game once). Relative paths are under the game folder, matched case-insensitively.
     /// </summary>
-    public static string? ModsDir(DetectedGame game, string home)
+    public static string? ModsDir(DetectedGame game, string home) => ResolvePath(game, game.Profile.ModsPath, home);
+
+    /// <summary>A profile path (relative to the game folder, or starting with a token like {localappdata}) on this device.</summary>
+    public static string? ResolvePath(DetectedGame game, string path, string home)
     {
-        var p = game.Profile.ModsPath.Replace('\\', '/');
+        var p = path.Replace('\\', '/');
         string root;
         string rest;
         if (p.StartsWith('{'))

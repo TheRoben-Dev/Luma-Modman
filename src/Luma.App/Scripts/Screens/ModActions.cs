@@ -12,7 +12,7 @@ public static class ModActions
     private static AppHost Host => Main.Instance.Host!;
 
     /// <summary>Queues one file of a mod, or explains what the site needs first.</summary>
-    public static void Download(IModSource site, DetectedGame game, ModSummary mod, ModFile file)
+    public static void Download(IModSource site, DetectedGame game, ModSummary mod, ModFile file, IReadOnlyList<ModDependency>? needs = null)
     {
         if (site is NexusSource nexus && !(nexus.HasKey && Host.Keys.Current.NexusPremium))
         {
@@ -31,10 +31,12 @@ public static class ModActions
             Game = game.Key,
             ModId = mod.Id,
             ModName = mod.Name,
+            Author = mod.Author,
             FileId = file.Id,
             Version = file.Version,
             FileName = file.FileName,
             PageUrl = mod.PageUrl,
+            Dependencies = (file.Dependencies.Count > 0 ? file.Dependencies : needs ?? []).ToList(),
         }, ct => site.DownloadAsync(game.Profile, mod.Id, file, ct));
     }
 
@@ -147,5 +149,59 @@ public static class ModActions
         }
         var err = OS.ShellOpen(url);
         App.Toast(err == Error.Ok ? "Opened in your browser." : $"Couldn't open the browser. The address is {url}");
+    }
+
+    /// <summary>Downloads the newest main file of a mod (dependencies, updates).</summary>
+    public static async void DownloadLatest(IModSource site, DetectedGame game, string modId, string name)
+    {
+        try
+        {
+            var d = await site.DetailsAsync(game.Profile, modId);
+            var file = d.Files.FirstOrDefault(f => f.Kind is "" or "Main") ?? d.Files.FirstOrDefault()
+                ?? throw new InvalidOperationException($"{site.Name} has no file to download for {name}.");
+            Download(site, game, d.Mod, file, d.Dependencies);
+        }
+        catch (Exception e) when (Main.IsUserFacing(e))
+        {
+            App.Error(e.Message);
+        }
+    }
+
+    /// <summary>Asks each mod's site for its newest version and marks the mods that have one.</summary>
+    public static async void CheckUpdates(DetectedGame game)
+    {
+        var store = Host.Mods.Store(game);
+        var found = 0;
+        var failed = 0;
+        App.Toast("Checking for updates…");
+        foreach (var mod in store.State.Mods.Where(m => m.ModId.Length > 0).ToList())
+        {
+            var site = Host.Sites.All.FirstOrDefault(s => s.Id == mod.Site);
+            if (site == null || !site.Ready || !site.Carries(game.Profile))
+            {
+                continue;
+            }
+            try
+            {
+                var d = await site.DetailsAsync(game.Profile, mod.ModId);
+                var latest = d.Files.FirstOrDefault(f => f.Kind is "" or "Main") ?? d.Files.FirstOrDefault();
+                var newer = latest != null && latest.Id != mod.FileId && latest.Version != mod.Version ? latest.Version : null;
+                if (newer != null)
+                {
+                    found++;
+                }
+                var current = store.State.Find(mod.Id);
+                if (current != null && current.UpdateVersion != newer)
+                {
+                    store.Save(store.State with { Mods = store.State.Mods.Select(m => m.Id == mod.Id ? m with { UpdateVersion = newer } : m).ToList() });
+                }
+            }
+            catch (Exception e) when (Main.IsUserFacing(e))
+            {
+                failed++;
+            }
+        }
+        Host.Mods.NotifyChanged(game);
+        App.Toast(found > 0 ? $"{found} update{(found == 1 ? "" : "s")} available." : failed > 0 ? $"Everything checked is up to date ({failed} couldn't be checked)." : "Everything is up to date.");
     }
 }
