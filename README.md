@@ -128,6 +128,10 @@ templates installed); CI also builds and tests on a Windows runner and checks th
 Platform differences live behind `Luma.Core.Platform` and the `Windows*` classes; Linux code paths
 are unchanged.
 
+Releases sign `Luma.exe` and `luma-cli.exe` when the repository has code-signing secrets (Azure
+Trusted Signing, or a `.pfx` certificate): see `tools/release/sign-windows.ps1` for the secret
+names. Without them the Windows build ships unsigned and SmartScreen asks before the first start.
+
 ## Layout
 
 ```

@@ -1,3 +1,4 @@
+using Luma.Core.Mods;
 using Luma.Core.Detection;
 using Luma.Core.Games;
 using Luma.Core.Sources;
@@ -209,6 +210,78 @@ public static class ModActions
         }
         Host.Mods.NotifyChanged(game);
         App.Toast(found > 0 ? $"{found} update{(found == 1 ? "" : "s")} available." : failed > 0 ? $"Everything checked is up to date ({failed} couldn't be checked)." : "Everything is up to date.");
+    }
+
+    /// <summary>Mods that have a newer version waiting (found by Check for updates).</summary>
+    public static List<InstalledMod> Updatable(DetectedGame game) =>
+        Host.Mods.Store(game).State.Mods.Where(m => m.UpdateVersion != null && m.ModId.Length > 0).ToList();
+
+    /// <summary>
+    /// Queues the newest version of every mod that has an update. Mods a site lets download only
+    /// from its website (free Nexus accounts, some CurseForge authors) are counted and left for
+    /// the player to update one by one.
+    /// </summary>
+    public static async void UpdateAll(DetectedGame game)
+    {
+        var mods = Updatable(game);
+        if (mods.Count == 0)
+        {
+            App.Toast("No updates waiting. Check for updates first.");
+            return;
+        }
+        int queued = 0, manual = 0, failed = 0;
+        App.Toast($"Updating {mods.Count} mod{(mods.Count == 1 ? "" : "s")}…");
+        foreach (var mod in mods)
+        {
+            var site = Host.Sites.All.FirstOrDefault(s => s.Id == mod.Site);
+            if (site == null || !site.Ready || !site.Carries(game.Profile))
+            {
+                failed++;
+                continue;
+            }
+            if (site is NexusSource && !Host.Keys.Current.NexusPremium)
+            {
+                manual++;
+                continue;
+            }
+            try
+            {
+                var d = await site.DetailsAsync(game.Profile, mod.ModId);
+                var file = d.Files.FirstOrDefault(f => f.Kind is "" or "Main") ?? d.Files.FirstOrDefault();
+                if (file == null)
+                {
+                    failed++;
+                }
+                else if (file.DownloadUrl == null && site.Id == "curseforge")
+                {
+                    manual++;
+                }
+                else
+                {
+                    Download(site, game, d.Mod, file, d.Dependencies);
+                    queued++;
+                }
+            }
+            catch (Exception e) when (Main.IsUserFacing(e))
+            {
+                AppLog.Warn($"update all: {mod.Name}: {e.Message}");
+                failed++;
+            }
+        }
+        var parts = new List<string>();
+        if (queued > 0)
+        {
+            parts.Add($"{queued} update{(queued == 1 ? "" : "s")} downloading");
+        }
+        if (manual > 0)
+        {
+            parts.Add($"{manual} only from {(manual == 1 ? "its" : "their")} website (use Update on {(manual == 1 ? "it" : "each")})");
+        }
+        if (failed > 0)
+        {
+            parts.Add($"{failed} couldn't be fetched");
+        }
+        App.Toast(string.Join("; ", parts) + ".");
     }
 
     /// <summary>The game's loader when it isn't installed yet and Luma can fetch it.</summary>

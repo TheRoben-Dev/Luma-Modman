@@ -207,7 +207,7 @@ public partial class DesktopSettings : HSplitContainer
         Act($"Supported games ({lib.Catalog.Games.Count})…", () => App.Push(new SupportedGamesPage()), "Every game Luma can mod, and the ones it can't.");
         Heading("Your own game profiles");
         var dir = Path.Combine(Host.Paths.Config, "games");
-        Text($"Add or fix a game without waiting for an update: put a profile (.json, same format as Luma's own) in {dir}. Yours win over the built-in ones.");
+        Text($"Add or fix a game without waiting for an update: put a profile (.json, same format as Luma's own) in {Host.Paths.Short(dir)}. Yours win over the built-in ones.");
         Act("Open the folder", () => DesktopShell.OpenFolder(dir));
         foreach (var p in lib.Catalog.Problems)
         {
@@ -384,7 +384,7 @@ public partial class DesktopSettings : HSplitContainer
             var l = DesktopTheme.Label(label);
             l.CustomMinimumSize = new Vector2(170, 0);
             row.AddChild(l);
-            var p = new LineEdit { Text = path, Editable = false, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            var p = new LineEdit { Text = Host.Paths.Short(path), Editable = false, SizeFlagsHorizontal = SizeFlags.ExpandFill, TooltipText = path };
             row.AddChild(p);
             var target = label == "App log" ? Path.GetDirectoryName(path) : path;
             row.AddChild(DesktopTheme.Button("Open", () => DesktopShell.OpenFolder(target)));

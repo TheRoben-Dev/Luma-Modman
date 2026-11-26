@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Godot;
 
 namespace Luma.App.Ui;
@@ -8,10 +9,39 @@ namespace Luma.App.Ui;
 /// - a finger that moves more than a few pixels in any direction is a swipe, never a press: the
 ///   press on whatever is under it is cancelled, and over a list the list scrolls (with momentum);
 /// - touching a list while it is still flinging only stops it, like on a phone;
-/// - the mouse cursor is never drawn (clicks and taps still work).
+/// - the mouse cursor is never drawn (clicks and taps still work);
+/// - holding a finger still on a row that allows it (<see cref="AllowReorder"/>) picks the row up,
+///   and moving it then drags it to a new place in its list instead of scrolling.
 /// </summary>
 public static class TouchScroll
 {
+    /// <summary>A list whose rows can be dragged to a new place by touch.</summary>
+    public interface IReorder
+    {
+        /// <summary>The row was picked up (held still long enough).</summary>
+        void BeginReorder(Control row);
+
+        /// <summary>The finger moved to <paramref name="at"/> (viewport coordinates).</summary>
+        void MoveReorder(Control row, Vector2 at);
+
+        /// <summary>The finger lifted: put the row where it is now.</summary>
+        void DropReorder(Control row);
+    }
+
+    /// <summary>How long a finger has to rest on a row before it's picked up.</summary>
+    public const double HoldSeconds = 0.45;
+
+    private static readonly ConditionalWeakTable<Control, IReorder> Reorderable = new();
+    private static Control? _holdRow;
+    private static Viewport? _vp;
+    private static ulong _pressUs;
+    private static bool _reordering;
+
+    /// <summary>Lets <paramref name="row"/> be picked up by a held finger and dragged; <paramref name="owner"/> moves it.</summary>
+    public static void AllowReorder(Control row, IReorder owner) => Reorderable.AddOrUpdate(row, owner);
+
+    /// <summary>A row is being dragged right now.</summary>
+    public static bool Reordering => _reordering;
     /// <summary>Movement (in UI pixels, any direction) after which a press becomes a swipe.</summary>
     public const float Deadzone = 10;
 
@@ -56,7 +86,9 @@ public static class TouchScroll
             _start = _last = mb.Position;
             _target = ScrollerAt(vp, mb.Position);
             _focusBeforePress = vp.GuiGetFocusOwner();
-            _lastMoveUs = Time.GetTicksUsec();
+            _lastMoveUs = _pressUs = Time.GetTicksUsec();
+            _vp = vp;
+            _holdRow = flinging ? null : ReorderRowAt(mb.Position);
             // A touch on a moving list just stops it; it doesn't press the row that slid under the finger.
             _swallowRelease = flinging;
             return flinging;
@@ -66,6 +98,19 @@ public static class TouchScroll
             return false;
         }
         _down = false;
+        _holdRow = null;
+        if (_reordering)
+        {
+            _reordering = false;
+            if (_reorderRow != null && GodotObject.IsInstanceValid(_reorderRow) && Reorderable.TryGetValue(_reorderRow, out var owner))
+            {
+                owner.DropReorder(_reorderRow);
+            }
+            _reorderRow = null;
+            _dragging = false;
+            _swallowRelease = false;
+            return true;
+        }
         if (_dragging || _swallowRelease)
         {
             if (_dragging && !_swallowRelease)
@@ -84,6 +129,15 @@ public static class TouchScroll
         if (!_down)
         {
             return false;  // hover: nothing to do, the cursor is hidden anyway
+        }
+        if (_reordering)
+        {
+            _last = mm.Position;
+            if (_reorderRow != null && GodotObject.IsInstanceValid(_reorderRow) && Reorderable.TryGetValue(_reorderRow, out var owner))
+            {
+                owner.MoveReorder(_reorderRow, mm.Position);
+            }
+            return true;
         }
         if (_swallowRelease && !_dragging)
         {
@@ -161,9 +215,21 @@ public static class TouchScroll
         }
     }
 
-    /// <summary>Momentum after the finger lifts. Call every frame.</summary>
+    private static Control? _reorderRow;
+
+    /// <summary>Momentum after the finger lifts, and picking rows up. Call every frame.</summary>
     public static void Process(double delta)
     {
+        if (_down && !_dragging && !_reordering && _holdRow != null && _vp != null
+            && (Time.GetTicksUsec() - _pressUs) / 1_000_000.0 >= HoldSeconds)
+        {
+            StartReorder();
+        }
+        if (_reordering)
+        {
+            EdgeScroll(delta);
+            return;
+        }
         if (_down || Math.Abs(_velocity) < 20 || _target == null || !GodotObject.IsInstanceValid(_target))
         {
             if (!_down)
@@ -174,6 +240,53 @@ public static class TouchScroll
         }
         _target.ScrollVertical += (int)Math.Round(_velocity * delta);
         _velocity *= (float)Math.Pow(0.05, delta);  // ~95% of the speed gone after a second
+    }
+
+    private static void StartReorder()
+    {
+        var row = _holdRow!;
+        _holdRow = null;
+        if (!GodotObject.IsInstanceValid(row) || !row.IsVisibleInTree() || !Reorderable.TryGetValue(row, out var owner))
+        {
+            return;
+        }
+        CancelPress(_vp!);  // the row mustn't fire when the finger lifts
+        _reordering = true;
+        _reorderRow = row;
+        _velocity = 0;
+        owner.BeginReorder(row);
+    }
+
+    // While dragging a row near the top or bottom of its list, the list scrolls to bring more rows in.
+    private static void EdgeScroll(double delta)
+    {
+        if (_target == null || !GodotObject.IsInstanceValid(_target) || _reorderRow == null || !GodotObject.IsInstanceValid(_reorderRow))
+        {
+            return;
+        }
+        var r = _target.GetGlobalRect();
+        const float edge = 70;
+        var speed = _last.Y < r.Position.Y + edge ? -600 : _last.Y > r.End.Y - edge ? 600 : 0;
+        if (speed != 0)
+        {
+            _target.ScrollVertical += (int)Math.Round(speed * delta);
+            if (Reorderable.TryGetValue(_reorderRow, out var owner))
+            {
+                owner.MoveReorder(_reorderRow, _last);
+            }
+        }
+    }
+
+    private static Control? ReorderRowAt(Vector2 pos)
+    {
+        foreach (var (row, _) in Reorderable)
+        {
+            if (GodotObject.IsInstanceValid(row) && row.IsVisibleInTree() && row.GetGlobalRect().HasPoint(pos))
+            {
+                return row;
+            }
+        }
+        return null;
     }
 
     private static void HideCursor()

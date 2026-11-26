@@ -47,7 +47,7 @@ public partial class ModPackPage : Screen
         var state = Host.Mods.Store(game).State;
         col.AddChild(UiTheme.Label($"Export {state.Active} as a modpack", UiTheme.TitleSize));
         col.AddChild(UiTheme.Label(
-            $"A .lumapack file with {game.Title}'s mods in this profile's order. It imports on Linux, SteamOS and Windows. It's saved to {PackActions.Folder.Replace(Host.Paths.Home, "~")}.",
+            $"A .lumapack file with {game.Title}'s mods in this profile's order. It imports on Linux, SteamOS and Windows. It's saved to {Host.Paths.Short(PackActions.Folder)}.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         var items = new List<Control>();
         var list = Column(6);

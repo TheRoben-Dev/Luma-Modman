@@ -122,7 +122,7 @@ public partial class DesktopDownloads : VBoxContainer
         {
             _selected = null;
         }
-        _info.Text = $"{items.Count} download{(items.Count == 1 ? "" : "s")}  ·  finished downloads are kept so a mod can be reinstalled or rolled back offline  ·  {Host.Paths.DownloadsDir.Replace(Host.Paths.Home, "~")}";
+        _info.Text = $"{items.Count} download{(items.Count == 1 ? "" : "s")}  ·  finished downloads are kept so a mod can be reinstalled or rolled back offline  ·  {Host.Paths.Short(Host.Paths.DownloadsDir)}";
         FillActions();
     }
 

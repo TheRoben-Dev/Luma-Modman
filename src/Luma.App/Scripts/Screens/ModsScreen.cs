@@ -10,7 +10,7 @@ namespace Luma.App.Screens;
 /// where mods go) and its mods on the right. Luma doesn't start games: mods are linked in when the
 /// game starts from Steam or the launcher, and taken out when it closes.
 /// </summary>
-public partial class ModsScreen : Screen
+public partial class ModsScreen : Screen, TouchScroll.IReorder
 {
     private Control? _first;
 
@@ -187,8 +187,9 @@ public partial class ModsScreen : Screen
                     {
                         _focusMod = id;
                         App.Push(new InstalledModPage(game, id));
-                    }, $"{mod.Name}: A for options, Y turns it {(entry.Enabled ? "off" : "on")}.");
+                    }, $"{mod.Name}: A for options, Y turns it {(entry.Enabled ? "off" : "on")}. On the touchscreen, hold it to drag it.");
                 row.SetMeta("mod", id);
+                TouchScroll.AllowReorder(row, this);
                 if (id == _focusMod)
                 {
                     _modRow = row;
@@ -200,6 +201,11 @@ public partial class ModsScreen : Screen
         if (state.Mods.Any(m => m.Site is "thunderstore" or "nexus" or "modio" or "curseforge"))
         {
             items.Add(Add(scrollCol, new ActionButton("Check for updates", () => ModActions.CheckUpdates(game), "Asks the mod sites for newer versions.")));
+            if (ModActions.Updatable(game).Count is > 0 and var updates)
+            {
+                items.Add(Add(scrollCol, new ActionButton($"Update all ({updates})", () => ModActions.UpdateAll(game),
+                    "Downloads the newest version of every mod that has one; the old versions stay for rollback.")));
+            }
         }
         items.Add(Add(scrollCol, new ActionButton("Add a mod from a file", () => App.Push(new AddFilePage(game)),
             "Install a mod you downloaded yourself, such as a script extender.")));
@@ -287,6 +293,68 @@ public partial class ModsScreen : Screen
         var store = Host.Mods.Store(game);
         App.Guard(() => store.SetEnabled(id, !store.State.IsEnabled(id)));
         _focusMod = id;
+        Rebuild();
+        _modRow?.GrabFocus();
+    }
+
+    // Touch: hold a mod row still to pick it up, drag it up or down, lift to drop it there.
+    public void BeginReorder(Control row)
+    {
+        row.Modulate = new Color(1.25f, 1.2f, 1.45f);
+        row.GrabFocus();
+        Feedback.Play(Cue.Confirm);
+    }
+
+    public void MoveReorder(Control row, Vector2 at)
+    {
+        var parent = row.GetParent();
+        foreach (var other in parent.GetChildren().OfType<Control>())
+        {
+            if (other != row && other.HasMeta("mod") && other.GetGlobalRect().HasPoint(new Vector2(other.GetGlobalRect().GetCenter().X, at.Y)))
+            {
+                parent.MoveChild(row, other.GetIndex());
+                Feedback.Play(Cue.Move);
+                return;
+            }
+        }
+    }
+
+    public void DropReorder(Control row)
+    {
+        row.Modulate = Colors.White;
+        if (Host.ActiveGame is not { } game || !row.HasMeta("mod"))
+        {
+            return;
+        }
+        var id = (string)row.GetMeta("mod");
+        var shown = row.GetParent().GetChildren().OfType<Control>().Where(c => c.HasMeta("mod")).Select(c => (string)c.GetMeta("mod")).ToList();
+        var store = Host.Mods.Store(game);
+        var order = store.State.Order;
+        var from = order.FindIndex(e => e.Id == id);
+        var p = shown.IndexOf(id);
+        if (from < 0 || p < 0 || shown.Count < 2)
+        {
+            return;
+        }
+        // Right after the row now above it, or (at the top) where the row now below it was.
+        int to;
+        if (p > 0)
+        {
+            var prev = order.FindIndex(e => e.Id == shown[p - 1]);
+            to = prev < from ? prev + 1 : prev;
+        }
+        else
+        {
+            var next = order.FindIndex(e => e.Id == shown[1]);
+            to = next < from ? next : next - 1;
+        }
+        _focusMod = id;
+        if (to != from)
+        {
+            App.Guard(() => store.Move(id, to - from));
+            Host.Mods.NotifyChanged(game);
+            Feedback.Play(Cue.Toggle);
+        }
         Rebuild();
         _modRow?.GrabFocus();
     }
