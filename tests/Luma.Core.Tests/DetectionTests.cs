@@ -227,7 +227,7 @@ public class WindowsPlatformTests : IDisposable
         Assert.Equal(@"D:\Games", p.Short(@"D:\Games"));
     }
 
-    [Fact]
+    [LinuxFact]
     public void ShortPathsUseTildeForHomeOnly()
     {
         var p = new AppPaths(v => v switch { "HOME" => "/home/deck", _ => null }, windows: false);
