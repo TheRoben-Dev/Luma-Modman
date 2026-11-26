@@ -198,6 +198,7 @@ public partial class Main : Control
         }
         // The cached list shows at once; a fresh scan replaces it in the background.
         ScanGames(quiet: true);
+        StartNxmInbox();
 
         var args = OS.GetCmdlineUserArgs();
         var smoke = Array.IndexOf(args, "--smoke");
@@ -504,6 +505,16 @@ public partial class Main : Control
     /// </summary>
     public override void _ExitTree()
     {
+        try
+        {
+            if (Host != null && File.Exists(Host.PidFile))
+            {
+                File.Delete(Host.PidFile);
+            }
+        }
+        catch (IOException)
+        {
+        }
         Theme = null;
         Luma.App.Ui.Poly.Ps1.ReleaseShared();
         CoverArt.ReleaseShared();
@@ -586,6 +597,7 @@ public partial class Main : Control
 
     public override void _Process(double delta)
     {
+        PollNxmInbox(delta);
         if (!GameRunning && _appFocused)
         {
             TouchScroll.Process(delta);
@@ -950,5 +962,49 @@ public partial class Main : Control
                 Error(e.Message);
             }
         }
+    }
+
+    // ---- Nexus download links and the downloads badge ----
+
+    private double _inboxClock;
+
+    /// <summary>Writes the pid file `luma nxm` checks, and picks up links waiting from before the app started.</summary>
+    private void StartNxmInbox()
+    {
+        if (Host == null)
+        {
+            return;
+        }
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(Host.PidFile)!);
+            File.WriteAllText(Host.PidFile, OS.GetProcessId().ToString());
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            AppLog.Warn("pid file: " + e.Message);
+        }
+        Host.Downloads.Changed += _ => Callable.From(UpdateDownloadsBadge).CallDeferred();
+        UpdateDownloadsBadge();
+    }
+
+    private void UpdateDownloadsBadge()
+    {
+        if (Host != null)
+        {
+            SetTabBadge("Downloads", Host.Downloads.Busy);
+        }
+    }
+
+    /// <summary>Called every frame; checks the inbox about once a second.</summary>
+    private void PollNxmInbox(double delta)
+    {
+        _inboxClock += delta;
+        if (_inboxClock < 1 || Host == null || GameRunning)
+        {
+            return;
+        }
+        _inboxClock = 0;
+        ModActions.TakeNxmLinks();
     }
 }

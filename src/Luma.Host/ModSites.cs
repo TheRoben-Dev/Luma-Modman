@@ -21,10 +21,14 @@ public sealed class ModSites
         var version = AppUpdater.DisplayVersion(AppUpdater.CurrentAppVersion());
         HttpGate.UserAgent = $"Luma/{version} (+https://github.com/TheRoben-Dev/Luma-Modman)";
         Http = http ?? new HttpGate();
-        Thunderstore = new ThunderstoreSource(Http);
+        // Test hook: the UI smoke test points the sites at a local stand-in (tools/smoke/fake_sites.py).
+        var fake = Environment.GetEnvironmentVariable("LUMA_FAKE_SITES");
+        Thunderstore = fake == null ? new ThunderstoreSource(Http) : new ThunderstoreSource(Http, fake);
         Modio = new ModioSource(Http, () => keys.Current.Modio);
         CurseForge = new CurseForgeSource(Http, () => keys.Current.CurseForge);
-        Nexus = new NexusSource(Http, () => keys.Current.Nexus, version);
+        Nexus = fake == null
+            ? new NexusSource(Http, () => keys.Current.Nexus, version)
+            : new NexusSource(Http, () => keys.Current.Nexus, version, fake + "/nexus/graphql", fake + "/nexus/v1");
         All = [Thunderstore, Modio, CurseForge, Nexus];
     }
 

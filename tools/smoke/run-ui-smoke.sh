@@ -40,6 +40,13 @@ if [ -n "${SMOKE_THEME:-}" ]; then  # e.g. SMOKE_THEME=nightgrid for theme scree
   printf '{"Theme":"%s"}\n' "$SMOKE_THEME" > "$XDG_CONFIG_HOME/luma/settings.json"
 fi
 
+# Offline stand-in for the mod sites (Thunderstore results, icons, a download).
+PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')
+python3 "$ROOT/tools/smoke/fake_sites.py" "$PORT" &
+SITES_PID=$!
+trap 'kill $SITES_PID 2>/dev/null; rm -rf "$WORK"' EXIT
+export LUMA_FAKE_SITES="http://127.0.0.1:$PORT"
+
 cd "$ROOT/src/Luma.App"
 PROJECT=(--path .)
 [ "$(basename "$GODOT")" = "Luma.x86_64" ] && PROJECT=()  # exported build: project is embedded

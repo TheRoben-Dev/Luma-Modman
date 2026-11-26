@@ -62,7 +62,9 @@ public partial class SmokeTest : Node
         Step("touch-pick", () => TouchTap(FindFocusable(GetTree().Root, "The Elder Scrolls V")), wait: 1.4, expect: "Browse mods", tab: "Mods");
         // Bumpers switch tabs; Browse lists the sites that carry the game.
         Step("joy-rb-browse", () => Tap(JoyButton.RightShoulder), expect: "Nexus Mods", tab: "Browse");
-        Step("joy-a-site", () => Tap(JoyButton.A), expect: "Nexus Mods");
+        // Nexus search answers with an error from the stand-in site: the page says so and keeps the search box.
+        Step("joy-a-site", () => Tap(JoyButton.A), wait: 1.5, expect: "Search");
+        Step("site-back", () => Tap(JoyButton.B), expect: "Nexus Mods", tab: "Browse");
         Step("joy-rb-downloads", () => Tap(JoyButton.RightShoulder), expect: "Browse mods", tab: "Downloads");
         Step("joy-rb-settings", () => Tap(JoyButton.RightShoulder), expect: "Games", tab: "Settings");
         Step("key-tab-wraps", () => Key(Godot.Key.Tab), expect: "Browse mods", tab: "Mods");
@@ -166,6 +168,44 @@ public partial class SmokeTest : Node
             Press(Pad.Accept);
         });
         Step("changelog-back", () => Press(Pad.Back), expect: "Changelog");
+        // Thunderstore through the stand-in site: results with icons, search with the on-screen
+        // keyboard (typed with a real keyboard here), a mod's page and a download.
+        Step("pick-lethal", () =>
+        {
+            Key(Godot.Key.G);
+            FindFocusable(GetTree().Root, "Lethal Company")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.2, expect: "Browse mods", tab: "Mods");
+        Step("ts-sites", () => Tap(JoyButton.RightShoulder), expect: "Thunderstore", tab: "Browse");
+        Step("ts-results", () => Tap(JoyButton.A), wait: 2.0, expect: "A stable lobby");
+        Step("ts-search", () => Press(Pad.Secondary), expect: "q");
+        Step("ts-type", () => TypeText("more"), expect: "q");
+        Step("ts-search-done", () => Key(Godot.Key.Enter), wait: 2.0, expect: "A stable lobby");
+        Step("ts-details", () => Tap(JoyButton.A), wait: 2.0, expect: "Download 1.14.0");
+        Step("ts-download", () => Tap(JoyButton.A), wait: 2.0, expect: "Download 1.14.0");
+        Step("ts-downloads-tab", () =>
+        {
+            if (Main.Instance.Host!.Downloads.Items.FirstOrDefault() is not { State: Luma.Host.DownloadState.Done, Path: { } path } || !File.Exists(path))
+            {
+                throw new InvalidOperationException("the download didn't finish: " + Main.Instance.Host.Downloads.Items.FirstOrDefault()?.Error);
+            }
+            Tap(JoyButton.B);
+            Tap(JoyButton.B);
+            Tap(JoyButton.RightShoulder);
+        }, wait: 1.2, expect: "MoreCompany from Thunderstore", tab: "Downloads");
+        Step("download-options", () => Tap(JoyButton.A), expect: "Show the file");
+        Step("download-options-back", () => Tap(JoyButton.B), expect: "MoreCompany from Thunderstore");
+    }
+
+    private static void TypeText(string text)
+    {
+        foreach (var ch in text)
+        {
+            var k = (Key)char.ToUpperInvariant(ch);
+            Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Unicode = ch, Pressed = true });
+            Input.ParseInputEvent(new InputEventKey { Keycode = k, PhysicalKeycode = k, Unicode = ch, Pressed = false });
+        }
+        Input.FlushBufferedEvents();
     }
 
     private static void SetTheme(string id)
