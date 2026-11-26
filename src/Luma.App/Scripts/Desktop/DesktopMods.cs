@@ -294,7 +294,7 @@ public partial class DesktopMods : VBoxContainer
             {
                 it.SetText(ColConflicts, string.Join(", ", new[] { won > 0 ? $"wins {won}" : "", lost > 0 ? $"loses {lost}" : "" }.Where(s => s.Length > 0)));
                 it.SetCustomColor(ColConflicts, lost > 0 ? DesktopTheme.Warn : DesktopTheme.Good);
-                it.SetTooltipText(ColConflicts, $"{(won > 0 ? $"Replaces {won} file{(won == 1 ? "" : "s")} of mods above it. " : "")}{(lost > 0 ? $"{lost} of its file{(lost == 1 ? " is" : "s are")} replaced by mods below it." : "")}");
+                it.SetTooltipText(ColConflicts, $"{(won > 0 ? $"Its copy wins for {won} file{(won == 1 ? "" : "s")} other mods also have. " : "")}{(lost > 0 ? $"{lost} of its file{(lost == 1 ? " is" : "s are")} replaced by other mods' copies. " : "")}Right-click → Conflicts… to pick winners.");
             }
             if (m.UpdateVersion != null)
             {
@@ -487,6 +487,10 @@ public partial class DesktopMods : VBoxContainer
         {
             list.Add((mod.UpdateVersion != null ? $"Update to {mod.UpdateVersion}" : "Download the newest version",
                 () => ModActions.DownloadLatest(site, game, mod.ModId, mod.Name), "Downloads it and installs it over this version; this one stays for rollback."));
+        }
+        if (ConflictsPage.Load(game, mod.Id).List.Count is > 0 and var conflicts)
+        {
+            list.Add(($"Conflicts ({conflicts} file{(conflicts == 1 ? "" : "s")})…", () => App.Push(new ConflictsPage(game, mod.Id)), "Files this mod shares with other mods, and which copy goes in."));
         }
         if (mod.Fomod != null)
         {

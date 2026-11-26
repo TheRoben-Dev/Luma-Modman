@@ -43,6 +43,12 @@ public sealed record PackManifest
     public string GameName { get; init; } = "";
     public bool Full { get; init; }
     public List<PackMod> Mods { get; init; } = new();
+
+    /// <summary>Conflict winners picked by hand: file key → mod id.</summary>
+    public Dictionary<string, string> Winners { get; init; } = new();
+
+    /// <summary>Plugins turned off by hand.</summary>
+    public List<string> PluginsOff { get; init; } = new();
 }
 
 public sealed record PackExport(string File, int Bundled, int Listed, IReadOnlyList<string> NotBundled);
@@ -113,7 +119,9 @@ public static class ModPack
                     Version = m.Version, PageUrl = m.PageUrl, Enabled = entry.Enabled, Dependencies = m.Dependencies, File = inside, Fomod = m.Fomod,
                 });
             }
-            var manifest = new PackManifest { Name = name, CreatedBy = createdBy, Game = game.Id, GameName = game.Name, Full = full, Mods = mods };
+            var manifest = new PackManifest { Name = name, CreatedBy = createdBy, Game = game.Id, GameName = game.Name, Full = full, Mods = mods,
+                Winners = store.State.Winners.TryGetValue(store.State.Active, out var picks) ? new(picks) : new(),
+                PluginsOff = store.State.PluginsOff.TryGetValue(store.State.Active, out var off) ? off.ToList() : new() };
             using var w = new StreamWriter(zip.CreateEntry(ManifestName).Open());
             w.Write(JsonSerializer.Serialize(manifest, Json));
         }

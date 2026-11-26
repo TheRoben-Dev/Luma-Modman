@@ -86,6 +86,16 @@ public partial class SmokeTest : Node
             FindFocusable(GetTree().Root, "Installs the mod with these options")?.GrabFocus();
             Press(Pad.Accept);
         }, wait: 2.5, tab: "Mods", check: () => FomodInstalled("cbbe", physics: true));
+        // Conflicts: a later mod replaces Smoke Armor's mesh; picking Smoke Armor makes its copy go in instead.
+        Step("conflict-mod", InstallConflictMod, wait: 1.2, tab: "Mods");
+        Step("conflicts-open", () =>
+        {
+            FindFocusable(GetTree().Root, "Files in more than one mod")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0, expect: "meshes/armor.nif: A picks");
+        Step("conflicts-pick", () => Press(Pad.Accept), wait: 0.8, expect: "Smoke Armor");
+        Step("conflicts-choose", () => Press(Pad.Accept), wait: 0.8, expect: "meshes/armor.nif: A picks", check: () => ArmorWinner("Smoke Armor"));
+        Step("conflicts-back", () => Press(Pad.Back), wait: 0.8, tab: "Mods");
         // A game with anti-cheat shows why it can't be modded instead of mod actions.
         Step("pick-not-moddable", () =>
         {
@@ -473,6 +483,21 @@ public partial class SmokeTest : Node
             All(GetTree().Root).OfType<CheckBox>().Any(c => c.Text.StartsWith("Physics", StringComparison.Ordinal) && c.IsVisibleInTree()) ? null : "the second step didn't show");
         Step("desktop-fomod-install", () => FindButton("Install", inDialog: true)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 2.5, check: () =>
             NoDialogs() ?? FomodInstalled("cbbe", physics: false));
+        Step("desktop-conflict-mod", InstallConflictMod, wait: 1.2, tab: "Mods");
+        Tree? ConflictTree() => All(GetTree().Root).OfType<Tree>().FirstOrDefault(t => t.TooltipText == "Conflicts" && t.IsVisibleInTree());
+        Step("desktop-conflicts", () => Key(Godot.Key.K, ctrl: true), wait: 1.2, check: () =>
+            DialogOpen("Conflicts") ?? (ConflictTree()?.GetRoot()?.GetChildCount() == 1 ? null : "the conflict table doesn't list the one shared file"));
+        Step("desktop-conflicts-pick", () =>
+        {
+            // Picks "Smoke Armor" (option 1; 0 is the load order) in the row's drop-down.
+            if (ConflictTree() is { } t && t.GetRoot()?.GetChild(0) is { } it)
+            {
+                it.Select(1);
+                it.SetRange(1, 1);
+                t.EmitSignal(Tree.SignalName.ItemEdited);
+            }
+        }, wait: 0.8, check: () => ArmorWinner("Smoke Armor"));
+        Step("desktop-conflicts-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
         Step("desktop-browse-nexus", () => Key(Godot.Key.Key2, ctrl: true), wait: 2.0, tab: "Browse");
         Step("desktop-not-moddable", () => Shell().PickGame("Marvel Rivals"), wait: 1.5, tab: "Mods", check: NoController);
     }
@@ -534,6 +559,40 @@ public partial class SmokeTest : Node
             return $"the {body} body wasn't installed";
         }
         return File.Exists(Path.Combine(store.ModDir(mod.Id), "mods", "Smoke Physics.esp")) == physics ? null : "the extra was installed wrongly";
+    }
+
+    /// <summary>A mod that replaces Smoke Armor's mesh, installed after it (so it wins by load order).</summary>
+    private static void InstallConflictMod()
+    {
+        var host = Main.Instance.Host!;
+        var game = host.ActiveGame!;
+        var zip = Path.Combine(host.Paths.Data, "smoke-retexture.zip");
+        if (!File.Exists(zip))
+        {
+            using var z = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create);
+            // Two top folders: one alone would be taken for a wrapper folder and dropped.
+            using (var w = new StreamWriter(z.CreateEntry("meshes/armor.nif").Open()))
+            {
+                w.Write("retexture");
+            }
+            z.CreateEntry("textures/armor.dds");
+        }
+        host.Mods.Install(game, zip, new Luma.Core.Mods.InstalledMod { Id = "local:smoke-retexture", Site = "local", Name = "Smoke Retexture" });
+        host.Mods.NotifyChanged(game);
+    }
+
+    /// <summary>Null when the mod named <paramref name="mod"/> is picked to win meshes/armor.nif.</summary>
+    private static string? ArmorWinner(string mod)
+    {
+        var host = Main.Instance.Host!;
+        var game = host.ActiveGame!;
+        var c = host.Mods.Plan(game).Conflicts.FirstOrDefault(x => x.Key == "mods/meshes/armor.nif");
+        if (c == null)
+        {
+            return "no conflict over meshes/armor.nif";
+        }
+        var name = host.Mods.Store(game).State.Find(c.Winner)?.Name;
+        return c.Picked && name == mod ? null : $"{name} wins armor.nif (picked: {c.Picked}), not {mod}";
     }
 
     /// <summary>Installs a small mod with a master and a plugin for the active (Bethesda) game.</summary>

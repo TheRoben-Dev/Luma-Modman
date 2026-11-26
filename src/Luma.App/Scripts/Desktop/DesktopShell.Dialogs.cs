@@ -39,6 +39,7 @@ public partial class DesktopShell
             AddFilePage a => AddFileDialog(a),
             ModPackPage m => m.Export ? ExportPackDialog(m) : ImportPackDialog(m),
             PluginsPage p => PluginsDialog(p),
+            ConflictsPage c => ConflictsDialog(c),
             FomodPage f => FomodDialog(f),
             _ => null,
         };
@@ -459,6 +460,130 @@ public partial class DesktopShell
             Callable.From(Fill).CallDeferred();
         };
         Fill();
+        d.AddButton("Close", () => App.Close(page), primary: true);
+        return ShowDialog(d, page, tree);
+    }
+
+    private Window ConflictsDialog(ConflictsPage page)
+    {
+        var game = page.Game;
+        var modName = page.ModId == null ? null : ConflictsPage.ModName(game, page.ModId);
+        var d = new DesktopDialog(modName == null ? $"Conflicts: {game.Title}" : $"Conflicts: {modName}", new Vector2I(980, 620));
+        var info = d.AddText("", DesktopTheme.Dim);
+        var tree = new Tree { HideRoot = true, Columns = 3, ColumnTitlesVisible = true, SizeFlagsVertical = SizeFlags.ExpandFill, SelectMode = Tree.SelectModeEnum.Multi, TooltipText = "Conflicts" };
+        string[] titles = ["File", "Goes in from", "Also in"];
+        for (var i = 0; i < titles.Length; i++)
+        {
+            tree.SetColumnTitle(i, titles[i]);
+            tree.SetColumnTitleAlignment(i, HorizontalAlignment.Left);
+            tree.SetColumnExpand(i, true);
+        }
+        tree.SetColumnExpandRatio(0, 3);
+        tree.SetColumnExpandRatio(1, 2);
+        tree.SetColumnExpandRatio(2, 2);
+        d.Body.AddChild(tree);
+        var filling = false;
+        var shown = new List<Conflict>();
+        static string Clean(string s) => s.Replace(',', ' ');
+        void Fill()
+        {
+            filling = true;
+            tree.Clear();
+            var root = tree.CreateItem();
+            var (list, problem) = ConflictsPage.Load(game, page.ModId);
+            shown = list;
+            info.Text = problem ?? (list.Count == 0
+                ? "No files are in more than one of the mods that are on."
+                : $"{list.Count} file{(list.Count == 1 ? " is" : "s are")} in more than one mod. The mod lower in the load order wins unless you pick another under \"Goes in from\" (kept for this profile). Select several rows and right-click to pick for all of them.");
+            info.AddThemeColorOverride("font_color", problem != null ? DesktopTheme.Warn : DesktopTheme.Dim);
+            foreach (var c in list)
+            {
+                var it = tree.CreateItem(root);
+                it.SetText(0, ConflictsPage.Show(c));
+                it.SetTooltipText(0, c.Target);
+                var providers = c.Providers ?? [c.Winner];
+                // Option 0 follows the load order; then every mod that has the file.
+                var options = new List<string> { $"Load order ({Clean(ConflictsPage.ModName(game, ConflictsPage.ByOrder(c)))})" };
+                options.AddRange(providers.Select(id => Clean(ConflictsPage.ModName(game, id))));
+                it.SetCellMode(1, TreeItem.TreeCellMode.Range);
+                it.SetText(1, string.Join(",", options));
+                it.SetRange(1, c.Picked ? providers.ToList().IndexOf(c.Winner) + 1 : 0);
+                it.SetEditable(1, true);
+                it.SetCustomColor(1, c.Picked ? DesktopTheme.Accent : DesktopTheme.Text);
+                it.SetTooltipText(1, c.Picked ? "Picked by you" : "The mod lowest in the load order");
+                it.SetText(2, string.Join(", ", c.Losers.Select(l => ConflictsPage.ModName(game, l))));
+                it.SetCustomColor(2, DesktopTheme.Dim);
+                it.SetMetadata(0, c.Key);
+            }
+            filling = false;
+        }
+        tree.ItemEdited += () =>
+        {
+            if (filling || (tree.GetEdited() ?? tree.GetSelected()) is not { } it)
+            {
+                return;
+            }
+            var key = it.GetMetadata(0).AsString();
+            if (shown.FirstOrDefault(c => c.Key == key) is { } c)
+            {
+                var i = (int)it.GetRange(1);
+                var providers = c.Providers ?? [c.Winner];
+                ConflictsPage.Pick(game, [key], i <= 0 || i > providers.Count ? null : providers[i - 1]);
+            }
+            Callable.From(Fill).CallDeferred();
+        };
+        List<Conflict> Selected()
+        {
+            var keys = new HashSet<string>();
+            for (var it = tree.GetNextSelected(null); it != null; it = tree.GetNextSelected(it))
+            {
+                keys.Add(it.GetMetadata(0).AsString());
+            }
+            return shown.Where(c => keys.Contains(c.Key)).ToList();
+        }
+        var menu = new PopupMenu();
+        d.AddChild(menu);
+        var menuActions = new List<Action>();
+        menu.IdPressed += id => menuActions[(int)id]();
+        tree.ItemMouseSelected += (pos, button) =>
+        {
+            var sel = Selected();
+            if (button != (long)MouseButton.Right || sel.Count == 0)
+            {
+                return;
+            }
+            menu.Clear();
+            menuActions.Clear();
+            var keys = sel.Select(c => c.Key).ToList();
+            foreach (var id in sel.SelectMany(c => c.Providers ?? []).Distinct())
+            {
+                var mod = id;
+                menu.AddItem($"{ConflictsPage.ModName(game, id)} wins", menuActions.Count);
+                menuActions.Add(() =>
+                {
+                    ConflictsPage.Pick(game, sel.Where(c => c.Providers?.Contains(mod) == true).Select(c => c.Key), mod);
+                    Fill();
+                });
+            }
+            menu.AddSeparator();
+            menu.AddItem("Follow the load order", menuActions.Count);
+            menuActions.Add(() =>
+            {
+                ConflictsPage.Pick(game, keys, null);
+                Fill();
+            });
+            menu.Position = (Vector2I)(tree.GetScreenPosition() + pos);
+            menu.Popup();
+        };
+        Fill();
+        if (page.ModId is { } modId)
+        {
+            d.AddButton($"Make {modName} win all", () =>
+            {
+                ConflictsPage.Pick(game, shown.Select(c => c.Key), modId);
+                Fill();
+            });
+        }
         d.AddButton("Close", () => App.Close(page), primary: true);
         return ShowDialog(d, page, tree);
     }

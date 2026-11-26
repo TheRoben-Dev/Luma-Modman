@@ -73,6 +73,12 @@ public partial class InstalledModPage : Screen
             items.Add(Add(col, new ActionButton(mod.UpdateVersion != null ? $"Update to {mod.UpdateVersion}" : "Download the newest version",
                 () => ModActions.DownloadLatest(site, _game, mod.ModId, mod.Name), "Downloads it and installs it over this version; this one stays for rollback.")));
         }
+        var conflicts = ConflictsPage.Load(_game, mod.Id).List.Count;
+        if (conflicts > 0)
+        {
+            items.Add(Add(col, new ActionButton($"Conflicts ({conflicts} file{(conflicts == 1 ? "" : "s")})", () => App.Push(new ConflictsPage(_game, mod.Id)),
+                "Files this mod shares with other mods, and which copy goes in.")));
+        }
         if (mod.Fomod != null)
         {
             items.Add(Add(col, new ActionButton("Change install options", () => FomodSession.Change(_game, mod),

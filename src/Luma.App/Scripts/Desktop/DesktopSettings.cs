@@ -22,6 +22,7 @@ public partial class DesktopSettings : HSplitContainer
         "Ctrl+O: add a mod from a file",
         "Ctrl+I / Ctrl+E: import or export a modpack",
         "Ctrl+P: plugins (Bethesda games)",
+        "Ctrl+K: conflicts: files in more than one mod, and which one wins",
         "Ctrl+U: check for mod updates",
         "Ctrl+R: scan for games",
         "Ctrl+Up / Ctrl+Down: move the selected mod in the load order",

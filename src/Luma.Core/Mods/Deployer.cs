@@ -2,8 +2,12 @@ using System.Text.Json;
 
 namespace Luma.Core.Mods;
 
-/// <summary>Two or more enabled mods provide the same file; the one later in the load order wins.</summary>
-public sealed record Conflict(string Target, string Winner, IReadOnlyList<string> Losers);
+/// <summary>
+/// Two or more enabled mods provide the same file. The one later in the load order wins, unless the
+/// player picked a winner for this file (<see cref="Picked"/>). <see cref="Key"/> names the file
+/// inside a mod ("mods/meshes/a.nif"), <see cref="Providers"/> lists every mod that has it, in load order.
+/// </summary>
+public sealed record Conflict(string Target, string Winner, IReadOnlyList<string> Losers, string Key = "", IReadOnlyList<string>? Providers = null, bool Picked = false);
 
 public sealed record DeployPlan(IReadOnlyDictionary<string, (string ModId, string Source)> Files, IReadOnlyList<Conflict> Conflicts);
 
@@ -39,8 +43,8 @@ public static class Deployer
     public static DeployPlan Plan(ModStore store, string gameDir, string? modsDir)
     {
         // Keyed without case: on a case-sensitive disk "Data/x.esp" and "data/x.esp" are the same file to the game.
-        var files = new Dictionary<string, (string Target, string ModId, string Source)>(StringComparer.OrdinalIgnoreCase);
-        var providers = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var spelling = new Dictionary<string, (string Target, string Key)>(StringComparer.OrdinalIgnoreCase);
+        var providers = new Dictionary<string, List<(string ModId, string Source)>>(StringComparer.OrdinalIgnoreCase);
         foreach (var mod in store.State.Enabled())
         {
             var dir = store.ModDir(mod.Id);
@@ -57,22 +61,37 @@ public static class Deployer
                 }
                 foreach (var f in Directory.EnumerateFiles(src, "*", SearchOption.AllDirectories))
                 {
-                    var target = GamePaths.Resolve(root, Path.GetRelativePath(src, f));
+                    var rel = Path.GetRelativePath(src, f);
+                    var target = GamePaths.Resolve(root, rel);
                     if (!providers.TryGetValue(target, out var list))
                     {
-                        providers[target] = list = new List<string>();
+                        providers[target] = list = new();
+                        spelling[target] = (target, FileKey(sub, rel));
                     }
-                    list.Add(mod.Id);
-                    var spelling = files.TryGetValue(target, out var prev) ? prev.Target : target;
-                    files[target] = (spelling, mod.Id, f);  // later mods win
+                    list.Add((mod.Id, f));
                 }
             }
         }
-        var conflicts = providers.Where(p => p.Value.Distinct().Count() > 1)
-            .Select(p => new Conflict(files[p.Key].Target, p.Value[^1], p.Value.Where(id => id != p.Value[^1]).Distinct().ToList()))
-            .ToList();
-        return new DeployPlan(files.Values.ToDictionary(v => v.Target, v => (v.ModId, v.Source), StringComparer.Ordinal), conflicts);
+        var files = new Dictionary<string, (string ModId, string Source)>(StringComparer.Ordinal);
+        var conflicts = new List<Conflict>();
+        foreach (var (target, list) in providers)
+        {
+            var (shown, key) = spelling[target];
+            var picked = store.State.WinnerOf(key) is { } w && list.Any(p => p.ModId == w) ? w : null;
+            // Later mods win; a picked winner's last copy wins instead.
+            var win = picked != null ? list.Last(p => p.ModId == picked) : list[^1];
+            files[shown] = win;
+            var ids = list.Select(p => p.ModId).Distinct().ToList();
+            if (ids.Count > 1)
+            {
+                conflicts.Add(new Conflict(shown, win.ModId, ids.Where(id => id != win.ModId).ToList(), key, ids, picked != null));
+            }
+        }
+        return new DeployPlan(files, conflicts.OrderBy(c => c.Key, StringComparer.OrdinalIgnoreCase).ToList());
     }
+
+    /// <summary>A file's name inside a mod, the same for every mod and device: "mods/meshes/a.nif".</summary>
+    public static string FileKey(string sub, string rel) => sub + "/" + rel.Replace('\\', '/');
 
     public static DeployManifest? ReadManifest(string manifestFile)
     {
