@@ -15,6 +15,9 @@ public partial class ChangelogPage : Screen
     private readonly bool _whatsNew;
     private Control? _first;
 
+    internal string Title => _title;
+    internal IReadOnlyList<ChangelogEntry> Entries => _entries;
+
     public ChangelogPage(string title, IReadOnlyList<ChangelogEntry> entries, bool whatsNew = false)
     {
         _title = title;

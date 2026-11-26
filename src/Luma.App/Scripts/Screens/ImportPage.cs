@@ -16,13 +16,16 @@ public partial class ImportPage : Screen
     private readonly GameLink _link;
     private Control? _first;
 
+    internal DetectedGame Game => _game;
+    internal GameLink Link => _link;
+
     public ImportPage(DetectedGame game, GameLink link)
     {
         _game = game;
         _link = link;
     }
 
-    private string? Target => GamePaths.ResolvePath(_game, _link.ImportTo!, Host.Paths.Home);
+    internal string? Target => GamePaths.ResolvePath(_game, _link.ImportTo!, Host.Paths.Home);
 
     private IEnumerable<string> Candidates()
     {
@@ -84,7 +87,7 @@ public partial class ImportPage : Screen
     }, cancellable: false);
 
     /// <summary>Unpacks into a temp folder, unwraps single wrapper folders, then moves the item in as one folder.</summary>
-    private static string Unpack(string file, string target)
+    internal static string Unpack(string file, string target)
     {
         var tmp = Path.Combine(Path.GetTempPath(), "luma-import-" + Guid.NewGuid().ToString("N")[..8]);
         try

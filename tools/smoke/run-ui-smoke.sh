@@ -3,6 +3,8 @@
 # touch input (--smoke) under Xvfb and saves a screenshot per step.
 #
 #   tools/smoke/run-ui-smoke.sh <godot-mono-editor | exported Luma.x86_64> <out-dir>
+#
+# SMOKE_DESKTOP=1 runs the desktop layout's scenario instead, on a 1920x1080 display.
 set -euo pipefail
 GODOT=$(realpath "$1")
 OUT=$(realpath -m "$2")
@@ -50,9 +52,15 @@ export LUMA_FAKE_SITES="http://127.0.0.1:$PORT"
 cd "$ROOT/src/Luma.App"
 PROJECT=(--path .)
 [ "$(basename "$GODOT")" = "Luma.x86_64" ] && PROJECT=()  # exported build: project is embedded
+SCREEN="1280x800x24"
+LAYOUT=()
+if [ -n "${SMOKE_DESKTOP:-}" ]; then
+  SCREEN="1920x1080x24"
+  LAYOUT=(--desktop)
+fi
 set +e
-timeout 300 xvfb-run -a -s "-screen 0 1280x800x24" "$GODOT" "${PROJECT[@]}" --rendering-driver opengl3 \
-  -- --windowed --smoke "$OUT" 2>&1 | tee "$OUT/godot.log"
+timeout 300 xvfb-run -a -s "-screen 0 $SCREEN" "$GODOT" "${PROJECT[@]}" --rendering-driver opengl3 \
+  -- --windowed "${LAYOUT[@]}" --smoke "$OUT" 2>&1 | tee "$OUT/godot.log"
 code=${PIPESTATUS[0]}
 set -e
 cp "$XDG_DATA_HOME"/luma/logs/app.log "$OUT/app.log" 2>/dev/null || true

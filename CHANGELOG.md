@@ -3,6 +3,13 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.8.0
+
+- A real desktop layout. Outside Game Mode, Luma is now a traditional mod manager window: menu bar and toolbar, your games on the left, the load order as a table with on/off checkboxes, sortable columns, drag-and-drop reordering and right-click menus, a details pane for the selected mod, and the app log at the bottom. Browse, Downloads and Settings are desktop views too, and questions and setup open as ordinary dialog windows. No controller button prompts anywhere.
+- The controller layout is unchanged, and both layouts have the same features. Switching between them in Settings → Layout restarts Luma.
+- Profiles can be deleted (in both layouts).
+- Settings → Mod sites: set up your Nexus Mods, CurseForge and mod.io keys in one place.
+
 ## 0.7.0
 
 - A desktop layout: a resizable window with more on screen, right-click for a row's options, and keyboard shortcuts (Ctrl+1–4 tabs, Ctrl+F search, Ctrl+Up/Down to reorder mods). It's on automatically outside Game Mode; change it in Settings → Layout.

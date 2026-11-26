@@ -110,6 +110,16 @@ public partial class ModsScreen : Screen
                 CallDeferred(MethodName.Rebuild);
             };
             items.Add(Add(scrollCol, profile));
+            if (state.Active != GameMods.DefaultProfile)
+            {
+                var name = state.Active;
+                items.Add(Add(scrollCol, new ActionButton($"Delete the {name} profile", () => App.Confirm(
+                    $"Delete the {name} profile? Its mods stay installed; only this set and order goes.", "Delete", () =>
+                    {
+                        App.Guard(() => store.DeleteProfile(name));
+                        Host.Mods.NotifyChanged(game);
+                    }), "Goes back to the Default profile.")));
+            }
             if (deployed)
             {
                 items.Add(Add(scrollCol, new ActionButton("Take the mods out of the game", () => Run(() => mods.Undeploy(game), "Mods taken out."),
@@ -213,7 +223,7 @@ public partial class ModsScreen : Screen
     }
 
     /// <summary>Downloads missing dependencies from Thunderstore; other sites open the mod's page.</summary>
-    private void GetMissing(DetectedGame game, List<Luma.Core.Sources.ModDependency> missing)
+    internal static void GetMissing(DetectedGame game, List<Luma.Core.Sources.ModDependency> missing)
     {
         var ts = missing.Where(d => d.Site == "thunderstore").ToList();
         foreach (var d in ts)

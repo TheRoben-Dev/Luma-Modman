@@ -102,6 +102,9 @@ jobs:
       - name: UI smoke test (exported build)
         run: tools/smoke/run-ui-smoke.sh build/godot/Luma.x86_64 "${{ runner.temp }}/shots"
 
+      - name: UI smoke test, desktop layout (exported build, 1920x1080)
+        run: SMOKE_DESKTOP=1 tools/smoke/run-ui-smoke.sh build/godot/Luma.x86_64 "${{ runner.temp }}/shots-desktop"
+
       - name: Export Windows build
         working-directory: src/Luma.App
         run: |
@@ -124,6 +127,14 @@ jobs:
         with:
           name: ui-screenshots
           path: ${{ runner.temp }}/shots
+          if-no-files-found: ignore
+
+      - name: Upload desktop layout screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots-desktop
+          path: ${{ runner.temp }}/shots-desktop
           if-no-files-found: ignore
 
       - name: Upload Linux build

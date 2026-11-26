@@ -23,6 +23,12 @@ public partial class TextEntryPage : Screen
     private readonly List<Button> _letters = new();
     private Control? _first;
 
+    internal string Title => _title;
+    internal string Help => _help;
+    internal bool Secret => _secret;
+    internal string Current => _text;
+    internal Action<string> Done => _done;
+
     public TextEntryPage(string title, string current, Action<string> done, string help = "", bool secret = false)
     {
         _title = title;
