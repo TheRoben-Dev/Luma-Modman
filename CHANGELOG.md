@@ -3,6 +3,11 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.11.0
+
+- FOMOD installers. Mods that come with install options (body types, textures, patches for other mods) now show their steps: pick the options with pictures and descriptions, step by step, and only the files you chose are installed. Options that need a plugin you don't have are marked, and recommended ones are picked for you. Works from Downloads, "Add a mod from a file" and modpacks, in both layouts.
+- "Change install options" on an installed mod runs its installer again with your earlier choices filled in. Modpacks keep each mod's choices, so the people you share them with get the same setup.
+
 ## 0.10.0
 
 - Plugins for Bethesda games. Skyrim (both editions), Enderal, Fallout 3, New Vegas, Fallout 4, Starfield and Oblivion: while mods are in the game, Luma writes plugins.txt (and loadorder.txt for Skyrim 2011, or file dates for the older games) so the plugins of your enabled mods load, masters first, in your mod order. Plugins you didn't install through Luma keep their place and state, and the game's own file is put back when the mods come out.

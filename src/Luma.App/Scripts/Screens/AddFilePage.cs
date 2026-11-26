@@ -62,21 +62,34 @@ public partial class AddFilePage : Screen
         _first = items.FirstOrDefault();
     }
 
-    private void Install(string file) => App.Busy($"Installing {Path.GetFileName(file)}…", (_, _) => Task.Run(() => InstallFile(Host, _game, file)), mod =>
+    private void Install(string file)
     {
-        App.Success(mod.Site == "loader" ? $"{mod.Name} is installed. The game starts through it from now on." : $"Installed {mod.Name}.");
         App.Pop();
-    }, cancellable: false);
+        FomodSession.InstallFile(_game, file);
+    }
 
-    /// <summary>Copies the archive into Luma's downloads (for reinstall and rollback) and installs it.</summary>
-    public static InstalledMod InstallFile(Luma.Host.AppHost host, DetectedGame game, string file)
+    /// <summary>Copies the archive into Luma's downloads (for reinstall and rollback).</summary>
+    public static string Keep(Luma.Host.AppHost host, DetectedGame game, string file)
     {
-        var name = Path.GetFileNameWithoutExtension(file);
         var kept = Path.Combine(host.Paths.DownloadsDir, "local", ModStore.Safe(game.Key), Path.GetFileName(file));
         Directory.CreateDirectory(Path.GetDirectoryName(kept)!);
-        File.Copy(file, kept, overwrite: true);
-        return host.Mods.Install(game, kept, new InstalledMod { Id = "local:" + ModStore.Safe(name), Site = "local", Name = name });
+        if (!string.Equals(Path.GetFullPath(file), Path.GetFullPath(kept), StringComparison.Ordinal))
+        {
+            File.Copy(file, kept, overwrite: true);
+        }
+        return kept;
     }
+
+    /// <summary>What a mod added from a file is called in the load order.</summary>
+    public static InstalledMod LocalMod(string file)
+    {
+        var name = Path.GetFileNameWithoutExtension(file);
+        return new InstalledMod { Id = "local:" + ModStore.Safe(name), Site = "local", Name = name };
+    }
+
+    /// <summary>Copies the archive into Luma's downloads and installs it (throws <see cref="FomodNeededException"/> for installers).</summary>
+    public static InstalledMod InstallFile(Luma.Host.AppHost host, DetectedGame game, string file) =>
+        host.Mods.Install(game, Keep(host, game, file), LocalMod(file));
 
     public override void FocusDefault() => _first?.GrabFocus();
 }

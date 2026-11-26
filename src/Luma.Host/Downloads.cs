@@ -38,6 +38,12 @@ public sealed class DownloadItem
 
     /// <summary>A modpack's profile: the mod joins only this profile (it's already in its order).</summary>
     public string? Profile { get; init; }
+
+    /// <summary>FOMOD options to install with (a modpack's); null asks the player when the mod has an installer.</summary>
+    public List<Luma.Core.Mods.FomodChoice>? Fomod { get; set; }
+
+    /// <summary>The download is a mod with a FOMOD installer whose options haven't been picked yet.</summary>
+    public bool NeedsOptions { get; set; }
     public DateTime Added { get; init; } = DateTime.UtcNow;
     public DownloadState State { get; set; }
     public long Bytes { get; set; }

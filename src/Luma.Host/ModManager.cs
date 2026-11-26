@@ -59,7 +59,14 @@ public sealed class ModManager
             throw new InvalidOperationException($"{game.Title} can't be modded safely: {game.Profile.NotModdable}");
         }
         var loader = Loader(game);
-        var installed = Store(game).Install(archive, mod, game.Profile, gamePrefix ?? (mod.Site == "loader" ? LoaderInstaller.InstallPath(game.Profile, loader) : null), loader, onlyProfile);
+        var store = Store(game);
+        // An update or reinstall uses the FOMOD options picked last time.
+        if (mod.Fomod == null && store.State.Find(mod.Id)?.Fomod is { } earlier)
+        {
+            mod = mod with { Fomod = earlier };
+        }
+        var installed = store.Install(archive, mod, game.Profile, gamePrefix ?? (mod.Site == "loader" ? LoaderInstaller.InstallPath(game.Profile, loader) : null), loader, onlyProfile,
+            f => FileState(game, f));
         AppLog.Info($"installed {mod.Id} {mod.Version} for {game.Key} ({installed.Files} files)");
         Changed?.Invoke(game.Key);
         return installed;
@@ -110,6 +117,17 @@ public sealed class ModManager
         Deployer.Undeploy(Manifest(game));
         AppLog.Info($"mods removed from {game.Key}");
         Changed?.Invoke(game.Key);
+    }
+
+    /// <summary>A plugin's state for FOMOD conditions: from the game's mods, else the game's own files.</summary>
+    public string FileState(DetectedGame game, string file)
+    {
+        var state = Store(game).FileState(file);
+        if (state == "Missing" && ModsDir(game) is { } dir && Fomod.Find(dir, file.Replace('\\', '/')) != null)
+        {
+            return "Active";
+        }
+        return state;
     }
 
     /// <summary>The plugin list the next deploy writes (for showing and toggling plugins), or null for games without one.</summary>

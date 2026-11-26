@@ -66,6 +66,26 @@ public partial class SmokeTest : Node
         Step("plugins-toggle", () => Press(Pad.Accept), wait: 0.8, expect: "Smoke Master.esm", check: () =>
             Main.Instance.Host!.Mods.Store(Main.Instance.Host.ActiveGame!).State.IsPluginOn("Smoke Master.esm") ? "A didn't turn the plugin off" : null);
         Step("plugins-back", () => Press(Pad.Back), wait: 0.8, tab: "Mods");
+        // FOMOD installer: pick CBBE (which shows a second step), pick an extra, install.
+        bool FomodOpen() => All(GetTree().Root).OfType<Luma.App.Screens.FomodPage>().Any(p => p.IsVisibleInTree());
+        Step("fomod-open", () => Luma.App.Screens.FomodSession.InstallFile(Main.Instance.Host!.ActiveGame!, FomodZip()), wait: 2.0,
+            expect: "Vanilla: A to unpick", check: () => FomodOpen() ? null : "the installer didn't open");
+        Step("fomod-pick", () =>
+        {
+            Press("ui_down");
+            Press(Pad.Accept);
+        }, wait: 0.8, expect: "CBBE: A to unpick");
+        Step("fomod-next", () =>
+        {
+            FindFocusable(GetTree().Root, "On to the next step")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 0.8, expect: "Physics: A to pick");
+        Step("fomod-extra", () => Press(Pad.Accept), wait: 0.6, expect: "Physics: A to unpick");
+        Step("fomod-install", () =>
+        {
+            FindFocusable(GetTree().Root, "Installs the mod with these options")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 2.5, tab: "Mods", check: () => FomodInstalled("cbbe", physics: true));
         // A game with anti-cheat shows why it can't be modded instead of mod actions.
         Step("pick-not-moddable", () =>
         {
@@ -445,8 +465,75 @@ public partial class SmokeTest : Node
         Step("desktop-plugins", () => Key(Godot.Key.P, ctrl: true), wait: 1.2, check: () =>
             DialogOpen("Plugins") ?? (All(GetTree().Root).OfType<Tree>().Any(t => t.TooltipText == "Plugins" && t.GetRoot()?.GetChildCount() == 2) ? null : "the plugin table doesn't list the mod's two plugins"));
         Step("desktop-plugins-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-fomod", () => Luma.App.Screens.FomodSession.InstallFile(Host().ActiveGame!, FomodZip()), wait: 2.0, check: () => DialogOpen("Install options"));
+        Step("desktop-fomod-pick", () =>
+            All(GetTree().Root).OfType<CheckBox>().FirstOrDefault(c => c.Text.StartsWith("CBBE", StringComparison.Ordinal) && c.IsVisibleInTree())?.EmitSignal(BaseButton.SignalName.Pressed),
+            wait: 0.8, check: () => FindButton("Next", inDialog: true) != null ? null : "no Next button after picking CBBE");
+        Step("desktop-fomod-next", () => FindButton("Next", inDialog: true)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 0.8, check: () =>
+            All(GetTree().Root).OfType<CheckBox>().Any(c => c.Text.StartsWith("Physics", StringComparison.Ordinal) && c.IsVisibleInTree()) ? null : "the second step didn't show");
+        Step("desktop-fomod-install", () => FindButton("Install", inDialog: true)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 2.5, check: () =>
+            NoDialogs() ?? FomodInstalled("cbbe", physics: false));
         Step("desktop-browse-nexus", () => Key(Godot.Key.Key2, ctrl: true), wait: 2.0, tab: "Browse");
         Step("desktop-not-moddable", () => Shell().PickGame("Marvel Rivals"), wait: 1.5, tab: "Mods", check: NoController);
+    }
+
+    /// <summary>A mod archive with a FOMOD installer: a body choice (CBBE adds a step with an extra) and a patch for CBBE.</summary>
+    private static string FomodZip()
+    {
+        var host = Main.Instance.Host!;
+        var dir = host.Paths.Data;  // not Downloads: the add-file page lists that
+        Directory.CreateDirectory(dir);
+        var zip = Path.Combine(dir, "Smoke Armor.zip");
+        if (File.Exists(zip))
+        {
+            return zip;
+        }
+        const string xml = """
+            <config><moduleName>Smoke Armor</moduleName>
+              <requiredInstallFiles><folder source="Core" destination="" /></requiredInstallFiles>
+              <installSteps order="Explicit">
+                <installStep name="Body"><optionalFileGroups><group name="Body type" type="SelectExactlyOne"><plugins order="Explicit">
+                  <plugin name="Vanilla"><description>Fits the default body.</description><files><folder source="Bodies\Vanilla" destination="meshes" /></files>
+                    <conditionFlags><flag name="body">vanilla</flag></conditionFlags><typeDescriptor><type name="Recommended" /></typeDescriptor></plugin>
+                  <plugin name="CBBE"><description>For CBBE bodies.</description><files><folder source="Bodies\CBBE" destination="meshes" /></files>
+                    <conditionFlags><flag name="body">cbbe</flag></conditionFlags><typeDescriptor><type name="Optional" /></typeDescriptor></plugin>
+                </plugins></group></optionalFileGroups></installStep>
+                <installStep name="CBBE extras"><visible><flagDependency flag="body" value="cbbe" /></visible>
+                  <optionalFileGroups><group name="Extras" type="SelectAny"><plugins>
+                    <plugin name="Physics"><description>Bouncy.</description><files><file source="Extras\physics.esp" destination="Smoke Physics.esp" /></files>
+                      <typeDescriptor><type name="Optional" /></typeDescriptor></plugin>
+                  </plugins></group></optionalFileGroups></installStep>
+              </installSteps>
+            </config>
+            """;
+        using var z = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create);
+        void Add(string name, string text)
+        {
+            using var w = new StreamWriter(z.CreateEntry(name).Open());
+            w.Write(text);
+        }
+        Add("fomod/ModuleConfig.xml", xml);
+        Add("Core/SmokeArmor.esp", "esp");
+        Add("Bodies/Vanilla/armor.nif", "vanilla");
+        Add("Bodies/CBBE/armor.nif", "cbbe");
+        Add("Extras/Physics.esp", "physics");
+        return zip;
+    }
+
+    private static string? FomodInstalled(string body, bool physics)
+    {
+        var host = Main.Instance.Host!;
+        var store = host.Mods.Store(host.ActiveGame!);
+        if (store.State.Mods.FirstOrDefault(m => m.Name == "Smoke Armor") is not { } mod)
+        {
+            return "Smoke Armor wasn't installed";
+        }
+        var nif = Path.Combine(store.ModDir(mod.Id), "mods", "meshes", "armor.nif");
+        if (!File.Exists(nif) || File.ReadAllText(nif) != body)
+        {
+            return $"the {body} body wasn't installed";
+        }
+        return File.Exists(Path.Combine(store.ModDir(mod.Id), "mods", "Smoke Physics.esp")) == physics ? null : "the extra was installed wrongly";
     }
 
     /// <summary>Installs a small mod with a master and a plugin for the active (Bethesda) game.</summary>

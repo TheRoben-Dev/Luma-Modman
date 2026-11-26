@@ -30,6 +30,9 @@ public sealed record InstalledMod
 
     /// <summary>A newer version the last update check found, if any.</summary>
     public string? UpdateVersion { get; init; }
+
+    /// <summary>The options picked in the mod's FOMOD installer; null when it has none (or none were picked yet).</summary>
+    public List<FomodChoice>? Fomod { get; init; }
 }
 
 public sealed record ModVersion(string Version, string FileId, string Archive, DateTime InstalledAt);
@@ -129,7 +132,10 @@ public sealed class ModStore
     /// the archive is installed as that loader: in the launcher's folder, as "loader:&lt;id&gt;".
     /// </remarks>
     /// <param name="onlyProfile">Add a new mod to this profile only (a modpack's), not to every profile.</param>
-    public InstalledMod Install(string archive, InstalledMod mod, GameProfile profile, string? gamePrefix = null, LoaderInfo? loader = null, string? onlyProfile = null)
+    /// <param name="fileState">A plugin file's state for FOMOD conditions: "Active", "Inactive" or "Missing".</param>
+    /// <exception cref="FomodNeededException">The archive has a FOMOD installer and <paramref name="mod"/> carries no choices.</exception>
+    public InstalledMod Install(string archive, InstalledMod mod, GameProfile profile, string? gamePrefix = null, LoaderInfo? loader = null, string? onlyProfile = null,
+        Func<string, string>? fileState = null)
     {
         Directory.CreateDirectory(Root);
         var tmp = Path.Combine(Root, ".unpack-" + Guid.NewGuid().ToString("N")[..8]);
@@ -143,6 +149,20 @@ public sealed class ModStore
                 root = Path.GetDirectoryName(found)!;
                 gamePrefix = loader.LauncherDir;
                 mod = mod with { Id = "loader:" + loader.Id, Site = "loader", ModId = loader.Id, Name = loader.Name };
+            }
+            if (mod.Site != "loader" && Fomod.FindRoot(root) is { } fomodRoot)
+            {
+                if (mod.Fomod == null)
+                {
+                    throw new FomodNeededException(mod.Name);
+                }
+                var config = Fomod.Load(fomodRoot);
+                var (_, _, files) = Fomod.Run(config, mod.Fomod, fileState ?? FileState);
+                root = Path.Combine(tmp, ".fomod-out");
+                if (Fomod.Assemble(fomodRoot, files, root) == 0)
+                {
+                    throw new InvalidDataException($"The options picked for {mod.Name} install no files.");
+                }
             }
             var stage = staged = ModDir(mod.Id) + ".new";
             var plan = ModLayout.Plan(root, profile, mod.ModId.Length > 0 ? mod.ModId : mod.Name, gamePrefix);
@@ -261,6 +281,15 @@ public sealed class ModStore
         var profiles = State.Profiles.ToDictionary(p => p.Key, p => p.Value.ToList());
         profiles[name] = entries.ToList();
         Save(State with { Profiles = profiles, Active = name });
+    }
+
+    /// <summary>A plugin's state among this game's mods: Active (in an enabled mod), Inactive (in a disabled one) or Missing.</summary>
+    public string FileState(string plugin)
+    {
+        var name = Path.GetFileName(plugin.Replace('\\', '/'));
+        var holders = State.Mods.Where(m => Directory.Exists(Path.Combine(ModDir(m.Id), "mods"))
+            && Directory.EnumerateFiles(Path.Combine(ModDir(m.Id), "mods")).Any(f => Path.GetFileName(f).Equals(name, StringComparison.OrdinalIgnoreCase))).ToList();
+        return holders.Count == 0 ? "Missing" : holders.Any(m => State.IsEnabled(m.Id)) ? "Active" : "Inactive";
     }
 
     /// <summary>Turns one plugin of an enabled mod on or off in the active profile.</summary>

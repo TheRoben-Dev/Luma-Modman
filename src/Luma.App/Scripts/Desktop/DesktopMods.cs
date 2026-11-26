@@ -488,6 +488,10 @@ public partial class DesktopMods : VBoxContainer
             list.Add((mod.UpdateVersion != null ? $"Update to {mod.UpdateVersion}" : "Download the newest version",
                 () => ModActions.DownloadLatest(site, game, mod.ModId, mod.Name), "Downloads it and installs it over this version; this one stays for rollback."));
         }
+        if (mod.Fomod != null)
+        {
+            list.Add(("Change install options…", () => FomodSession.Change(game, mod), "Opens the mod's installer again and reinstalls it with what you pick."));
+        }
         foreach (var h in mod.History.Where(h => File.Exists(h.Archive)))
         {
             var v = h;

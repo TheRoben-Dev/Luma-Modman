@@ -21,6 +21,9 @@ public sealed record PackMod
     public bool Enabled { get; init; } = true;
     public List<ModDependency> Dependencies { get; init; } = new();
 
+    /// <summary>The options picked in the mod's FOMOD installer, so the pack installs it the same way.</summary>
+    public List<FomodChoice>? Fomod { get; init; }
+
     /// <summary>The mod's archive inside the pack ("mods/…"), or null when it's downloaded from its site.</summary>
     public string? File { get; init; }
 }
@@ -107,7 +110,7 @@ public static class ModPack
                 mods.Add(new PackMod
                 {
                     Id = m.Id, Site = m.Site, ModId = m.ModId, FileId = m.FileId, Name = m.Name, Author = m.Author,
-                    Version = m.Version, PageUrl = m.PageUrl, Enabled = entry.Enabled, Dependencies = m.Dependencies, File = inside,
+                    Version = m.Version, PageUrl = m.PageUrl, Enabled = entry.Enabled, Dependencies = m.Dependencies, File = inside, Fomod = m.Fomod,
                 });
             }
             var manifest = new PackManifest { Name = name, CreatedBy = createdBy, Game = game.Id, GameName = game.Name, Full = full, Mods = mods };

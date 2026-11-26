@@ -193,6 +193,7 @@ public partial class DesktopDownloads : VBoxContainer
         DownloadState.Queued => ("Waiting", DesktopTheme.Dim),
         DownloadState.Downloading => ("Downloading", DesktopTheme.Accent),
         DownloadState.Done when i.Installed => ("Installed", DesktopTheme.Good),
+        DownloadState.Done when i.NeedsOptions => ("Needs options", DesktopTheme.Warn),
         DownloadState.Done when i.InstallError != null => ("Not installed", DesktopTheme.Warn),
         DownloadState.Done => ("Installing…", DesktopTheme.Accent),
         DownloadState.Failed => ("Failed", DesktopTheme.Bad),
@@ -222,7 +223,11 @@ public partial class DesktopDownloads : VBoxContainer
                 }
                 break;
             case DownloadState.Done when item.Path != null:
-                if (!item.Installed)
+                if (item.NeedsOptions && !item.Installed)
+                {
+                    options.Add(("Choose install options…", () => FomodSession.ForDownload(item)));
+                }
+                else if (!item.Installed)
                 {
                     options.Add(("Install", () =>
                     {
