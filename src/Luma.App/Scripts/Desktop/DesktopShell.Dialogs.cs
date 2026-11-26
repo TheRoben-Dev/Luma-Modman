@@ -37,6 +37,7 @@ public partial class DesktopShell
             SteamLaunchPage s => SteamDialog(s),
             ImportPage i => ImportDialog(i),
             AddFilePage a => AddFileDialog(a),
+            ModPackPage m => m.Export ? ExportPackDialog(m) : ImportPackDialog(m),
             _ => null,
         };
         if (w == null)
@@ -447,6 +448,79 @@ public partial class DesktopShell
                 App.Success(mod.Site == "loader" ? $"{mod.Name} is installed. The game starts through it from now on." : $"Installed {mod.Name}.");
                 Host.Mods.NotifyChanged(game);
             }, cancellable: false);
+        };
+        f.Canceled += () =>
+        {
+            if (!picked)
+            {
+                App.Close(page);
+            }
+        };
+        return ShowDialog(f, page);
+    }
+
+    /// <summary>Export: a save dialog with the pack's contents as an option (download list or full).</summary>
+    private Window ExportPackDialog(ModPackPage page)
+    {
+        var game = page.Game!;
+        var f = new FileDialog
+        {
+            FileMode = FileDialog.FileModeEnum.SaveFile,
+            ModeOverridesTitle = false,
+            Title = $"Export {Host.Mods.Store(game).State.Active} as a modpack",
+            Access = FileDialog.AccessEnum.Filesystem,
+            Filters = ["*" + ModPack.Extension + " ; Luma modpacks"],
+            UseNativeDialog = NativeFileDialogs,
+            Transient = true,
+            Exclusive = true,
+        };
+        f.AddOption("Contents", ["Download list (others download each mod)", "Full (mods that may be passed on go inside)"], 0);
+        Directory.CreateDirectory(PackActions.Folder);
+        f.CurrentDir = PackActions.Folder;
+        f.CurrentFile = Path.GetFileName(PackActions.DefaultFile(game, false));
+        var picked = false;
+        void Save(string path, bool full)
+        {
+            picked = true;
+            App.Close(page);
+            if (!path.EndsWith(ModPack.Extension, StringComparison.OrdinalIgnoreCase))
+            {
+                path += ModPack.Extension;
+            }
+            PackActions.Export(game, full, path);
+        }
+        f.FileSelected += path => Save(path, f.GetSelectedOptions().TryGetValue("Contents", out var v) && v.AsInt32() == 1);
+        f.Canceled += () =>
+        {
+            if (!picked)
+            {
+                App.Close(page);
+            }
+        };
+        return ShowDialog(f, page);
+    }
+
+    private Window ImportPackDialog(ModPackPage page)
+    {
+        var f = new FileDialog
+        {
+            FileMode = FileDialog.FileModeEnum.OpenFile,
+            ModeOverridesTitle = false,
+            Title = "Import a modpack",
+            Access = FileDialog.AccessEnum.Filesystem,
+            Filters = ["*" + ModPack.Extension + " ; Luma modpacks"],
+            UseNativeDialog = NativeFileDialogs,
+            Transient = true,
+            Exclusive = true,
+        };
+        var downloads = Path.Combine(Host.Paths.Home, "Downloads");
+        f.CurrentDir = PackActions.Candidates().Select(Path.GetDirectoryName).FirstOrDefault() ?? (Directory.Exists(downloads) ? downloads : Host.Paths.Home);
+        var picked = false;
+        f.FileSelected += path =>
+        {
+            picked = true;
+            App.Close(page);
+            PackActions.Import(path);
         };
         f.Canceled += () =>
         {

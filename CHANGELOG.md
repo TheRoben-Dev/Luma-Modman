@@ -3,6 +3,12 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.9.0
+
+- Modpacks. Export a game's profile as a .lumapack file and share it: as a download list (everyone gets each mod from its site), or full, with the mods that may be passed on inside. Importing makes a new profile in the pack's load order on Linux, SteamOS and Windows alike: mods inside install straight away, the others download from their sites, and anything that has to be fetched by hand (free Nexus accounts, for example) is listed with a link. Both layouts have it: Mods → Import/Export in controller mode, File → Import/Export modpack (Ctrl+I, Ctrl+E) on the desktop.
+- Mods of a profile that haven't arrived yet are shown with a way to forget them.
+- Command line: `luma pack export` and `luma pack import`.
+
 ## 0.8.0
 
 - A real desktop layout. Outside Game Mode, Luma is now a traditional mod manager window: menu bar and toolbar, your games on the left, the load order as a table with on/off checkboxes, sortable columns, drag-and-drop reordering and right-click menus, a details pane for the selected mod, and the app log at the bottom. Browse, Downloads and Settings are desktop views too, and questions and setup open as ordinary dialog windows. No controller button prompts anywhere.

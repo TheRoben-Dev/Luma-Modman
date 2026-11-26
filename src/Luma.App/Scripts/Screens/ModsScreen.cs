@@ -79,6 +79,14 @@ public partial class ModsScreen : Screen
         var scrollCol = Column(8);
         right.AddChild(Scroller(scrollCol));
         items.Add(Add(scrollCol, new ActionButton("Browse mods", () => App.SwitchTab("Browse"), $"Search mod sites for {game.Title} mods.")));
+        var pending = state.Order.Count(e => state.Find(e.Id) == null);
+        if (pending > 0)
+        {
+            var row = new ListRow($"{pending} mod{(pending == 1 ? "" : "s")} of this profile not installed yet", "From a modpack: downloading, or to get by hand. They take their place in the order when they arrive.",
+                "Forget them", UiTheme.Warn, null, () => ForgetPending(game), "Takes the mods that never arrived out of this profile.");
+            scrollCol.AddChild(row);
+            items.Add(row);
+        }
         // A Thunderstore mod that needs BepInExPack gets the loader through "needed mods" instead.
         var packNeeded = store.MissingDependencies().Any(m => m.Missing.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase));
         if (!packNeeded && ModActions.MissingLoader(game) is { } loader)
@@ -88,6 +96,8 @@ public partial class ModsScreen : Screen
             scrollCol.AddChild(row);
             items.Add(row);
         }
+        items.Add(Add(scrollCol, new ActionButton("Import a modpack", () => App.Push(new ModPackPage(game, export: false)),
+            "Installs a .lumapack into a new profile.")));
         if (state.Mods.Count > 0)
         {
             var profiles = state.Profiles.Keys.OrderBy(k => k == GameMods.DefaultProfile ? "" : k).Select(k => (k, k)).Append(("+", "New profile…"));
@@ -120,6 +130,8 @@ public partial class ModsScreen : Screen
                         Host.Mods.NotifyChanged(game);
                     }), "Goes back to the Default profile.")));
             }
+            items.Add(Add(scrollCol, new ActionButton("Export this profile as a modpack", () => App.Push(new ModPackPage(game, export: true)),
+                "A file others can import on Linux, SteamOS or Windows: a download list, or with the mods inside.")));
             if (deployed)
             {
                 items.Add(Add(scrollCol, new ActionButton("Take the mods out of the game", () => Run(() => mods.Undeploy(game), "Mods taken out."),
@@ -342,4 +354,15 @@ public partial class ModsScreen : Screen
     }
 
     public override void FocusDefault() => _first?.GrabFocus();
+
+    /// <summary>Takes profile entries whose mod never arrived (a modpack's) out of the active profile.</summary>
+    internal static void ForgetPending(DetectedGame game)
+    {
+        var store = Main.Instance.Host!.Mods.Store(game);
+        Main.Instance.Confirm("Take the mods that aren't installed out of this profile? If one is still downloading, it joins every profile when it arrives.", "Forget them", () =>
+        {
+            Main.Instance.Guard(store.ForgetMissing);
+            Main.Instance.Host!.Mods.NotifyChanged(game);
+        });
+    }
 }

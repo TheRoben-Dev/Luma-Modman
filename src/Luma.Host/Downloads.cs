@@ -35,6 +35,9 @@ public sealed class DownloadItem
     public string Version { get; init; } = "";
     public string FileName { get; set; } = "";
     public string? PageUrl { get; init; }
+
+    /// <summary>A modpack's profile: the mod joins only this profile (it's already in its order).</summary>
+    public string? Profile { get; init; }
     public DateTime Added { get; init; } = DateTime.UtcNow;
     public DownloadState State { get; set; }
     public long Bytes { get; set; }

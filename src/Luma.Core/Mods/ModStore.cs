@@ -122,7 +122,8 @@ public sealed class ModStore
     /// When <paramref name="loader"/> has a launcher and the archive holds it (SKSE64 added by hand),
     /// the archive is installed as that loader: in the launcher's folder, as "loader:&lt;id&gt;".
     /// </remarks>
-    public InstalledMod Install(string archive, InstalledMod mod, GameProfile profile, string? gamePrefix = null, LoaderInfo? loader = null)
+    /// <param name="onlyProfile">Add a new mod to this profile only (a modpack's), not to every profile.</param>
+    public InstalledMod Install(string archive, InstalledMod mod, GameProfile profile, string? gamePrefix = null, LoaderInfo? loader = null, string? onlyProfile = null)
     {
         Directory.CreateDirectory(Root);
         var tmp = Path.Combine(Root, ".unpack-" + Guid.NewGuid().ToString("N")[..8]);
@@ -176,7 +177,8 @@ public sealed class ModStore
             history.RemoveAll(h => h.Archive == archive || !File.Exists(h.Archive));
             var installed = mod with { Archive = archive, Files = plan.Count, InstalledAt = DateTime.UtcNow, History = history.Take(5).ToList(), UpdateVersion = null };
             var mods = State.Mods.Where(m => m.Id != mod.Id).Append(installed).ToList();
-            var profiles = State.Profiles.ToDictionary(p => p.Key, p => p.Value.Any(e => e.Id == mod.Id) ? p.Value : p.Value.Append(new ProfileEntry(mod.Id)).ToList());
+            var profiles = State.Profiles.ToDictionary(p => p.Key, p => p.Value.Any(e => e.Id == mod.Id) || (onlyProfile != null && p.Key != onlyProfile)
+                ? p.Value : p.Value.Append(new ProfileEntry(mod.Id)).ToList());
             Save(State with { Mods = mods, Profiles = profiles });
             return installed;
         }
@@ -246,6 +248,17 @@ public sealed class ModStore
         }
         Save(State with { Profiles = profiles, Active = name });
     }
+
+    /// <summary>Creates (or replaces) a profile with this order and makes it the active one.</summary>
+    public void SetProfile(string name, IEnumerable<ProfileEntry> entries)
+    {
+        var profiles = State.Profiles.ToDictionary(p => p.Key, p => p.Value.ToList());
+        profiles[name] = entries.ToList();
+        Save(State with { Profiles = profiles, Active = name });
+    }
+
+    /// <summary>Takes entries whose mod isn't installed (a modpack's that never arrived) out of the active profile.</summary>
+    public void ForgetMissing() => UpdateOrder(o => o.Where(e => State.Find(e.Id) != null).ToList());
 
     public void DeleteProfile(string name)
     {
