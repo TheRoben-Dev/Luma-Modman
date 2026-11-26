@@ -76,6 +76,14 @@ Select), and every tab works on that game. Games still start from Steam or their
   the game, with guided setup for sites that need an account or API key.
 - **Downloads**: progress, retry, and "Mod Manager Download" links from Nexus Mods. Finished
   downloads install themselves for their game.
+- **Modpacks**: export a profile as a `.lumapack` (Mods → "Export this profile as a modpack", or
+  File → Export modpack… / Ctrl+E on the desktop). A *download list* is a small file: whoever
+  imports it downloads each mod from its own site. A *full* pack also carries the mod files that
+  may be passed on (Thunderstore packages, the open-source loaders, files you added yourself);
+  Nexus Mods, CurseForge and mod.io files and script extenders always stay download entries, as
+  those sites and authors require. Importing (Ctrl+I on the desktop, or `luma pack import FILE`)
+  makes a new profile in the pack's order on Linux, SteamOS or Windows alike, and lists anything
+  that has to be fetched by hand.
 - **Clean games**: mods live in Luma's own folder and are linked into the game only while it runs,
   so game files stay untouched and everything can be undone.
 

@@ -359,6 +359,12 @@ public partial class DesktopMods : VBoxContainer
             Banner($"{loader.Name} isn't installed. {loader.About}", game.Profile.LoaderOptional ? DesktopTheme.Dim : DesktopTheme.Warn,
                 loader.AutoInstall ? $"Install {loader.Name}" : "Get it…", () => ModActions.InstallLoader(game, loader));
         }
+        var pending = store.State.Order.Count(e => store.State.Find(e.Id) == null);
+        if (pending > 0)
+        {
+            Banner($"{pending} mod{(pending == 1 ? "" : "s")} of this profile {(pending == 1 ? "isn't" : "aren't")} installed yet (from a modpack: downloading, or to get by hand). They take their place in the order when they arrive.",
+                DesktopTheme.Warn, "Forget them", () => ModsScreen.ForgetPending(game));
+        }
         var missing = store.MissingDependencies().GroupBy(m => m.Missing.Id).Select(g => g.First()).ToList();
         if (missing.Count > 0)
         {

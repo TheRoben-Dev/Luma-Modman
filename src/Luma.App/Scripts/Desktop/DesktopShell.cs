@@ -569,6 +569,12 @@ public partial class DesktopShell : Screen
             case Key.Q:
                 GetTree().Quit();
                 return true;
+            case Key.I:
+                App.Push(new ModPackPage(Host.ActiveGame, export: false));
+                return true;
+            case Key.E:
+                ExportModpack();
+                return true;
             case Key.R:
                 App.ScanGames();
                 return true;
@@ -580,6 +586,18 @@ public partial class DesktopShell : Screen
                 return true;
         }
         return false;
+    }
+
+    internal void ExportModpack()
+    {
+        if (Host.ActiveGame is { Profile.Moddable: true } game && Host.Mods.Store(game).State.Order.Count > 0)
+        {
+            App.Push(new ModPackPage(game, export: true));
+        }
+        else
+        {
+            App.Error("Install some mods for this game first: a modpack holds a profile's mods.");
+        }
     }
 
     internal void AddModFromFile()

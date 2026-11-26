@@ -175,7 +175,7 @@ public sealed class AppHost
                     FileId = item.FileId,
                     PageUrl = item.PageUrl,
                     Dependencies = item.Dependencies,
-                });
+                }, onlyProfile: item.Profile);
                 item.Installed = true;
                 item.InstallError = null;
             }

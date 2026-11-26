@@ -20,6 +20,7 @@ public partial class DesktopSettings : HSplitContainer
         "Ctrl+1 … Ctrl+4: Mods, Browse, Downloads, Settings",
         "Ctrl+F: search mods (Browse)",
         "Ctrl+O: add a mod from a file",
+        "Ctrl+I / Ctrl+E: import or export a modpack",
         "Ctrl+U: check for mod updates",
         "Ctrl+R: scan for games",
         "Ctrl+Up / Ctrl+Down: move the selected mod in the load order",

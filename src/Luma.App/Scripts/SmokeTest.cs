@@ -242,6 +242,40 @@ public partial class SmokeTest : Node
             Press(Pad.Accept);
         }, expect: "Back");
         Step("add-file-back", () => Press(Pad.Back), expect: "Add a mod from a file");
+        // Modpacks: export this profile (full), then import it again into a new profile.
+        bool PackPage() => All(GetTree().Root).OfType<Luma.App.Screens.ModPackPage>().Any(p => p.IsVisibleInTree());
+        string Packs() => Luma.App.Screens.PackActions.Folder;
+        Step("modpack-export", () =>
+        {
+            FindFocusable(GetTree().Root, "A file others can import")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0, check: () => PackPage() ? null : "the export page didn't open");
+        Step("modpack-export-full", () => Press("ui_right"), check: () =>
+            All(GetTree().Root).OfType<Label>().Any(l => l.Text == "Inside the pack" && l.IsVisibleInTree()) ? null : "no mod marked as inside the pack");
+        Step("modpack-export-run", () =>
+        {
+            FindFocusable(GetTree().Root, "Saves the modpack file")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 2.0, expect: "Open the folder", check: () =>
+            Directory.Exists(Packs()) && Directory.EnumerateFiles(Packs(), "*.lumapack").Any() ? null : "no modpack file was written");
+        Step("modpack-export-done", () =>
+        {
+            Press(Pad.Back);
+            Press(Pad.Back);
+        }, wait: 0.8, expect: "Export this profile", tab: "Mods");
+        Step("modpack-import", () =>
+        {
+            FindFocusable(GetTree().Root, "Installs a .lumapack")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0, expect: "Import Lethal Company - Default (full).lumapack");
+        Step("modpack-import-confirm", () => Press(Pad.Accept), wait: 0.8, expect: "Cancel");
+        Step("modpack-import-run", () =>
+        {
+            FindButton("Import")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 2.5, check: () =>
+            Main.Instance.Host!.Mods.Store(Main.Instance.Host.ActiveGame!).State.Active == "Default (2)" ? null : "the pack's profile isn't active");
+        Step("modpack-import-done", () => Press(Pad.Back), wait: 1.0, tab: "Mods");
         // Layout setting: switching to the desktop layout asks before restarting; Cancel keeps this one.
         Step("settings-tab", () => Key(Godot.Key.Key4, ctrl: true), tab: "Settings");
         Step("settings-layout", () =>
@@ -360,6 +394,21 @@ public partial class SmokeTest : Node
         Step("desktop-file-menu-close", () => Key(Godot.Key.Escape), wait: 0.6);
         Step("desktop-add-file", () => Key(Godot.Key.O, ctrl: true), wait: 1.2, check: () => DialogOpen("Add a mod from a file"));
         Step("desktop-add-file-cancel", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        var pack = "";
+        void PickFile(string path)
+        {
+            pack = path;
+            All(GetTree().Root).OfType<FileDialog>().LastOrDefault(f => f.Visible)?.EmitSignal(FileDialog.SignalName.FileSelected, path);
+        }
+        Step("desktop-export-pack", () => Key(Godot.Key.E, ctrl: true), wait: 1.2, check: () => DialogOpen("Export Default as a modpack"));
+        Step("desktop-export-pack-save", () => PickFile(Path.Combine(Luma.App.Screens.PackActions.Folder, "Smoke pack.lumapack")), wait: 2.0, check: () =>
+            File.Exists(pack) ? DialogOpen("") : "no modpack file was written");
+        Step("desktop-export-pack-done", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-import-pack", () => Key(Godot.Key.I, ctrl: true), wait: 1.2, check: () => DialogOpen("Import a modpack"));
+        Step("desktop-import-pack-pick", () => PickFile(pack), wait: 1.0, check: () => DialogOpen("Please confirm"));
+        Step("desktop-import-pack-yes", () => FindButton("Import", inDialog: true)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 2.5, check: () =>
+            Mod(s => s.Active == "Default (2)" ? null : $"active profile is {s.Active}"));
+        Step("desktop-import-pack-done", () => Key(Godot.Key.Escape), wait: 1.0, check: NoDialogs);
         Step("desktop-steam", () => Main.Instance.Push(new Luma.App.Screens.SteamLaunchPage(Host().ActiveGame!)), wait: 1.0, check: () => DialogOpen("Start with mods from Steam"));
         Step("desktop-steam-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
         Step("desktop-settings", () => Key(Godot.Key.Key4, ctrl: true), wait: 1.0, tab: "Settings");

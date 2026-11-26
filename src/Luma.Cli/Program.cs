@@ -21,6 +21,11 @@ internal static class Cli
           luma deploy KEY              link a game's enabled mods in and leave them there
           luma undeploy KEY            take a game's mods out again
           luma mods KEY                list a game's mods in load order
+          luma pack export KEY FILE [--full]
+                                       save the active profile as a modpack (.lumapack): a
+                                       download list, or --full with the mods that may be
+                                       passed on inside
+          luma pack import FILE        import a modpack into a new profile (downloads the rest)
           luma steam-add [--restart]   add Luma to Steam with its art (--restart closes and
                                        restarts Steam around it)
 
@@ -154,15 +159,53 @@ internal static class Cli
                     }
                     return 0;
                 }
+                case "pack" when args.Length > 3 && args[1] == "export":
+                {
+                    var g = FindGame(host, args[2]);
+                    var file = args[3].EndsWith(Luma.Core.Mods.ModPack.Extension, StringComparison.OrdinalIgnoreCase) ? args[3] : args[3] + Luma.Core.Mods.ModPack.Extension;
+                    var r = PackImporter.Export(host, g, host.Mods.Store(g).State.Active, args.Contains("--full"), file);
+                    Console.WriteLine($"Saved {r.File}: {r.Bundled} mods inside, {r.Listed} to download.");
+                    foreach (var n in r.NotBundled)
+                    {
+                        Console.WriteLine($"  not inside (its site doesn't allow passing it on): {n}");
+                    }
+                    return 0;
+                }
+                case "pack" when args.Length > 2 && args[1] == "import":
+                    return ImportPack(host, args[2]);
                 default:
                     Console.Error.WriteLine(Usage);
                     return 2;
             }
         }
-        catch (Exception e) when (e is InvalidOperationException or IOException or ArgumentException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
+        catch (Exception e) when (e is InvalidOperationException or IOException or InvalidDataException or ArgumentException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
         {
             Console.Error.WriteLine($"error: {e.Message}");
             return 1;
         }
+    }
+
+    private static int ImportPack(AppHost host, string file)
+    {
+        var pack = Luma.Core.Mods.ModPack.Read(file);
+        var g = FindGame(host, pack.Game);
+        host.StartAutoInstall();
+        var r = PackImporter.Import(host, g, file);
+        Console.WriteLine($"Profile \"{r.Profile}\" for {g.Title}: {r.Summary}.");
+        // Wait for the queued downloads and their installs.
+        var queued = host.Downloads.Items.Where(i => i.Profile == r.Profile).ToList();
+        while (queued.Any(i => i.State is DownloadState.Queued or DownloadState.Downloading || (i.State == DownloadState.Done && !i.Installed && i.InstallError == null)))
+        {
+            Thread.Sleep(250);
+        }
+        foreach (var i in queued)
+        {
+            Console.WriteLine($"  {i.ModName}: {(i.Installed ? "installed" : i.InstallError ?? i.Error ?? i.State.ToString())}");
+        }
+        foreach (var m in r.Mods.Where(m => m.Outcome is PackModOutcome.Manual or PackModOutcome.Failed))
+        {
+            Console.WriteLine($"  {m.Mod.Name}: {m.Note}{(m.Mod.PageUrl != null ? $" ({m.Mod.PageUrl})" : "")}");
+        }
+        return r.Mods.Any(m => m.Outcome == PackModOutcome.Failed) || queued.Any(i => !i.Installed) ? 1 : 0;
     }
 }
