@@ -6,7 +6,8 @@
     "dllOverrides": [
       "winhttp=n,b"
     ],
-    "about": "Plugin framework for Unity games (Mono)."
+    "about": "Plugin framework for Unity games (Mono).",
+    "asset": "^BepInEx_win_x64_5[\\d.]+\\.zip$"
   },
   {
     "id": "bepinex-il2cpp",
@@ -24,7 +25,8 @@
     "dllOverrides": [
       "version=n,b"
     ],
-    "about": "Mod loader for Unity games (Mono and IL2CPP)."
+    "about": "Mod loader for Unity games (Mono and IL2CPP).",
+    "asset": "^MelonLoader\\.x64\\.zip$"
   },
   {
     "id": "umm",
@@ -138,7 +140,8 @@
     "dllOverrides": [
       "dwmapi=n,b"
     ],
-    "about": "Lua and C++ mod loader for Unreal Engine 4/5 games."
+    "about": "Lua and C++ mod loader for Unreal Engine 4/5 games.",
+    "asset": "^UE4SS_v[\\d.]+\\.zip$"
   },
   {
     "id": "modengine2",

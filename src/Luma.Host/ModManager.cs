@@ -42,13 +42,13 @@ public sealed class ModManager
 
     public DeployManifest? Deployed(DetectedGame game) => Deployer.ReadManifest(Manifest(game));
 
-    public InstalledMod Install(DetectedGame game, string archive, InstalledMod mod)
+    public InstalledMod Install(DetectedGame game, string archive, InstalledMod mod, string? gamePrefix = null)
     {
         if (!game.Profile.Moddable)
         {
             throw new InvalidOperationException($"{game.Title} can't be modded safely: {game.Profile.NotModdable}");
         }
-        var installed = Store(game).Install(archive, mod, game.Profile);
+        var installed = Store(game).Install(archive, mod, game.Profile, gamePrefix ?? (mod.Site == "loader" ? LoaderInstaller.InstallPath(game.Profile) : null));
         AppLog.Info($"installed {mod.Id} {mod.Version} for {game.Key} ({installed.Files} files)");
         Changed?.Invoke(game.Key);
         return installed;

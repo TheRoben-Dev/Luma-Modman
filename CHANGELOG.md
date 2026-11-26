@@ -3,6 +3,18 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.4.0
+
+- Downloads install themselves for their game. Mods are kept in Luma's folder, never mixed into the game's.
+- The Mods tab shows the load order: turn mods on and off (Y), move them up and down, and see which files later mods replace.
+- Profiles: separate sets of mods for the same game, switched in one step.
+- Start with mods from Steam: one launch option links the mods in at every start (Game Mode too) and takes them out when the game closes. Or put them in now and take them out later.
+- Loaders (BepInEx, MelonLoader, UE4SS) install from their official releases with the first mod.
+- Missing required mods are flagged and fetched from Thunderstore in one go.
+- Check for updates, update in place, and roll back to the previous version you downloaded.
+- Dead as Disco: add maps downloaded from DiscoMaps straight into the game's song folder.
+- Command line: `luma run`, `luma deploy`, `luma undeploy` and `luma mods`.
+
 ## 0.3.0
 
 - Browse and search Thunderstore, Nexus Mods, mod.io and CurseForge for the game you're modding: sort by popular, updated or new, filter by category, and load more as you scroll.

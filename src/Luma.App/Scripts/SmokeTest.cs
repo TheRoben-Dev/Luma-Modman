@@ -25,7 +25,7 @@ public partial class SmokeTest : Node
         // The first scan runs in the background; the run script sets up a fake Steam library.
         Step("mods-after-scan", () => SetAnimatedBackground(false), wait: 2.5, expect: "Browse mods", tab: "Mods");
         // Real joypad and keyboard events (not actions), through Pad's translation layer.
-        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "Switch game");
+        Step("joy-dpad-down", () => { Joy(JoyButton.DpadDown, true); Joy(JoyButton.DpadDown, false); }, expect: "BepInEx 5");
         Step("joy-dpad-up", () => { Joy(JoyButton.DpadUp, true); Joy(JoyButton.DpadUp, false); }, expect: "Browse mods");
         // View / Select opens the game switcher, focused on the game being worked on.
         Step("joy-view-switcher", () => Tap(JoyButton.Back), expect: "Lethal Company");

@@ -1,4 +1,5 @@
 using Luma.Core.Detection;
+using Luma.Core.Games;
 using Luma.Core.Sources;
 using Luma.Host;
 using Godot;
@@ -14,6 +15,11 @@ public static class ModActions
     /// <summary>Queues one file of a mod, or explains what the site needs first.</summary>
     public static void Download(IModSource site, DetectedGame game, ModSummary mod, ModFile file, IReadOnlyList<ModDependency>? needs = null)
     {
+        // The game's loader comes first (once), unless the mod brings its own (a Thunderstore BepInExPack dependency).
+        if (MissingLoader(game) is { AutoInstall: true, } loader && !game.Profile.LoaderOptional && !(needs ?? file.Dependencies).Any(d => d.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase)))
+        {
+            InstallLoader(game, loader);
+        }
         if (site is NexusSource nexus && !(nexus.HasKey && Host.Keys.Current.NexusPremium))
         {
             NexusManual(nexus, game, mod, file);
@@ -203,5 +209,48 @@ public static class ModActions
         }
         Host.Mods.NotifyChanged(game);
         App.Toast(found > 0 ? $"{found} update{(found == 1 ? "" : "s")} available." : failed > 0 ? $"Everything checked is up to date ({failed} couldn't be checked)." : "Everything is up to date.");
+    }
+
+    /// <summary>The game's loader when it isn't installed yet and Luma can fetch it.</summary>
+    public static LoaderInfo? MissingLoader(DetectedGame game)
+    {
+        var p = game.Profile;
+        return p.Loader != null && Host.Games.Catalog.Loaders.TryGetValue(p.Loader, out var l) && !LoaderInstaller.Installed(game, l, Host.Mods.Store(game).State) ? l : null;
+    }
+
+    /// <summary>Queues the loader's newest official release; it installs like a mod.</summary>
+    public static void InstallLoader(DetectedGame game, LoaderInfo l)
+    {
+        if (!l.AutoInstall)
+        {
+            App.Push(new ChoicePage($"{l.Name} is installed from its own website. Download it there, then add it like any mod file.",
+                ("Open the website", () => OpenUrl(LoaderPage(l))), ("Cancel", () => { })));
+            return;
+        }
+        if (Host.Downloads.Items.Any(i => i.Site == "loader" && i.ModId == l.Id && i.Game == game.Key && i.State is DownloadState.Queued or DownloadState.Downloading))
+        {
+            return;
+        }
+        Queue(new DownloadItem
+        {
+            Site = "loader",
+            Game = game.Key,
+            ModId = l.Id,
+            ModName = l.Name,
+            PageUrl = "https://github.com/" + l.Source["github:".Length..],
+        }, async ct => (await LoaderInstaller.LatestAsync(Host.Sites.Http, l, ct)).Ticket);
+    }
+
+    /// <summary>A loader's download page: GitHub releases, its Nexus page or its homepage.</summary>
+    public static string? LoaderPage(LoaderInfo l)
+    {
+        var (kind, rest) = l.Source.IndexOf(':') is var i and > 0 && !l.Source.StartsWith("http") ? (l.Source[..i], l.Source[(i + 1)..]) : ("url", l.Source);
+        return kind switch
+        {
+            "github" => $"https://github.com/{rest}/releases/latest",
+            "nexus" when rest.Split('/') is [var domain, var id] => $"https://www.nexusmods.com/{domain}/mods/{id}",
+            "thunderstore" => $"https://thunderstore.io/package/{rest}/",
+            _ => l.Source.StartsWith("http") ? l.Source : null,
+        };
     }
 }

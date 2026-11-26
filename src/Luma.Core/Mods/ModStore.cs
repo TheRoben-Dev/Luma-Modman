@@ -118,7 +118,7 @@ public sealed class ModStore
     /// Unpacks <paramref name="archive"/> and stores it as <paramref name="mod"/>, replacing an
     /// earlier version (kept in its history for rollback). New mods are enabled at the end of every profile.
     /// </summary>
-    public InstalledMod Install(string archive, InstalledMod mod, GameProfile profile)
+    public InstalledMod Install(string archive, InstalledMod mod, GameProfile profile, string? gamePrefix = null)
     {
         Directory.CreateDirectory(Root);
         var tmp = Path.Combine(Root, ".unpack-" + Guid.NewGuid().ToString("N")[..8]);
@@ -126,7 +126,7 @@ public sealed class ModStore
         try
         {
             Archive.Extract(archive, tmp);
-            var plan = ModLayout.Plan(tmp, profile, mod.ModId.Length > 0 ? mod.ModId : mod.Name);
+            var plan = ModLayout.Plan(tmp, profile, mod.ModId.Length > 0 ? mod.ModId : mod.Name, gamePrefix);
             if (plan.Count == 0)
             {
                 throw new InvalidDataException($"{Path.GetFileName(archive)} has no files to install.");

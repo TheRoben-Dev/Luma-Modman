@@ -35,7 +35,8 @@ public static class ModLayout
 
     /// <param name="dir">The unpacked archive.</param>
     /// <param name="modFolder">A folder name for the mod, used where mods sit in folders of their own (BepInEx plugins).</param>
-    public static List<LayoutEntry> Plan(string dir, GameProfile profile, string modFolder)
+    /// <param name="gamePrefix">Put everything under this folder of the game (loaders), skipping detection.</param>
+    public static List<LayoutEntry> Plan(string dir, GameProfile profile, string modFolder, string? gamePrefix = null)
     {
         var root = dir;
         var segs = profile.ModsPath.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
@@ -65,7 +66,12 @@ public static class ModLayout
 
         DeployRoot target;
         var prefix = "";
-        if (lower.Any(t => RootFiles.Contains(t) || t.EndsWith(".exe")))
+        if (gamePrefix != null)
+        {
+            target = DeployRoot.Game;
+            prefix = gamePrefix.Trim('/');
+        }
+        else if (lower.Any(t => RootFiles.Contains(t) || t.EndsWith(".exe")))
         {
             target = DeployRoot.Game;  // loader or game files: laid out from the game folder
         }

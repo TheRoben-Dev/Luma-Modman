@@ -77,6 +77,7 @@ public partial class DownloadsScreen : Screen
         "nexus" => "Nexus Mods",
         "modio" => "mod.io",
         "curseforge" => "CurseForge",
+        "loader" => "GitHub",
         _ => id,
     };
 

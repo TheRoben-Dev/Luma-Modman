@@ -162,4 +162,17 @@ public sealed class ModsTests : IDisposable
         Assert.Equal("/pfx/drive_c/users/steamuser/AppData/Local/Pagoda/Saved", GamePaths.ModsDir(game, "/home/x"));
         Assert.Null(GamePaths.ModsDir(game with { Install = install with { Prefix = null } }, "/home/x"));
     }
+
+    [Fact]
+    public void LoaderGoesToItsFolder()
+    {
+        var p = Profile("Pagoda/Content/Paks/~mods", "ue4ss") with { Detect = ["Pagoda/Binaries/Win64/Pagoda-Win64-Shipping.exe"] };
+        var prefix = Luma.Host.LoaderInstaller.InstallPath(p);
+        Assert.Equal("Pagoda/Binaries/Win64", prefix);
+        var dest = Path.Combine(_dir, "ue4ss");
+        Archive.Extract(Zip("UE4SS_v4.0.0.zip", "dwmapi.dll", "ue4ss/UE4SS.dll", "ue4ss/Mods/mods.txt"), dest);
+        Assert.Equal(["Game:Pagoda/Binaries/Win64/dwmapi.dll", "Game:Pagoda/Binaries/Win64/ue4ss/Mods/mods.txt", "Game:Pagoda/Binaries/Win64/ue4ss/UE4SS.dll"],
+            ModLayout.Plan(dest, p, "ue4ss", prefix).Select(e => $"{e.Root}:{e.Target}").Order(StringComparer.Ordinal).ToList());
+        Assert.Equal("", Luma.Host.LoaderInstaller.InstallPath(Profile("BepInEx/plugins", "bepinex")));
+    }
 }

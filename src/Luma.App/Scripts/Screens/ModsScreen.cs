@@ -79,6 +79,15 @@ public partial class ModsScreen : Screen
         var scrollCol = Column(8);
         right.AddChild(Scroller(scrollCol));
         items.Add(Add(scrollCol, new ActionButton("Browse mods", () => App.SwitchTab("Browse"), $"Search mod sites for {game.Title} mods.")));
+        // A Thunderstore mod that needs BepInExPack gets the loader through "needed mods" instead.
+        var packNeeded = store.MissingDependencies().Any(m => m.Missing.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase));
+        if (!packNeeded && ModActions.MissingLoader(game) is { } loader)
+        {
+            var row = new ListRow($"Install {loader.Name}", loader.About, loader.AutoInstall ? "Get it" : "Website", game.Profile.LoaderOptional ? UiTheme.Dim : UiTheme.Warn, null,
+                () => ModActions.InstallLoader(game, loader), $"{loader.Name}: {(game.Profile.LoaderOptional ? "some mods need it." : "mods for this game need it.")}");
+            scrollCol.AddChild(row);
+            items.Add(row);
+        }
         if (state.Mods.Count > 0)
         {
             var profiles = state.Profiles.Keys.OrderBy(k => k == GameMods.DefaultProfile ? "" : k).Select(k => (k, k)).Append(("+", "New profile…"));
@@ -182,12 +191,13 @@ public partial class ModsScreen : Screen
         "modio" => "mod.io",
         "curseforge" => "CurseForge",
         "local" => "Added by hand",
+        "loader" => "Mod loader",
         _ => id,
     };
 
     private void Deploy(DetectedGame game) => App.Busy("Putting mods in the game…", (_, _) => Task.FromResult(Host.Mods.Deploy(game)), m =>
     {
-        App.Success($"{m.Files.Count} mod files are in the game.");
+        App.Success(m.Files.Count == 1 ? "1 mod file is in the game." : $"{m.Files.Count} mod files are in the game.");
         Rebuild();
     }, cancellable: false);
 
