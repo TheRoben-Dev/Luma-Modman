@@ -1,0 +1,32 @@
+{
+  "id": "deadasdisco",
+  "name": "Dead as Disco",
+  "steam": [
+    3404260,
+    3763830
+  ],
+  "detect": [
+    "Pagoda/Binaries/Win64"
+  ],
+  "runtime": "proton",
+  "modsPath": "Pagoda/Content/Paks/~mods",
+  "loader": "ue4ss",
+  "loaderOptional": true,
+  "sites": {
+    "nexus": "deadasdisco"
+  },
+  "links": [
+    {
+      "name": "DiscoMaps",
+      "url": "https://discomaps.com",
+      "about": "Community beatmaps, leaderboards and tournaments. Download maps there with your DiscoMaps account, then import them here.",
+      "importTo": "{localappdata}/Pagoda/Saved/ImportedSongs",
+      "item": "map"
+    }
+  ],
+  "quirks": [
+    "Pak mods (characters, arenas) go to Pagoda/Content/Paks/~mods; UE4SS script mods need UE4SS, installed with the first one.",
+    "Custom beatmaps live in the Proton prefix under AppData/Local/Pagoda/Saved/ImportedSongs, one folder per map with Audio.ogg and Meta.json.",
+    "DiscoMapsLB (on Nexus Mods) adds DiscoMaps leaderboards in the game. The demo and the full game are both supported."
+  ]
+}

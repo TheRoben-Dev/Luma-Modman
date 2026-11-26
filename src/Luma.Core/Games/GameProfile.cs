@@ -83,6 +83,12 @@ public sealed record GameProfile
     /// <summary>Things worth knowing, shown on the game's page.</summary>
     public List<string> Quirks { get; init; } = new();
 
+    /// <summary>
+    /// Community sites without an API Luma may use (custom maps, songs): opened in the browser, and
+    /// what the player downloads there can be imported into <see cref="GameLink.ImportTo"/>.
+    /// </summary>
+    public List<GameLink> Links { get; init; } = new();
+
     [JsonIgnore]
     public bool Moddable => NotModdable == null;
 
@@ -138,6 +144,20 @@ public sealed record GameProfile
     }
 
     public static readonly string[] ModsTokens = ["{documents}", "{appdata}", "{localappdata}", "{mygames}", "{xdgdata}", "{xdgconfig}"];
+}
+
+/// <summary>A community site for a game, used through the browser (see <see cref="GameProfile.Links"/>).</summary>
+public sealed record GameLink
+{
+    public string Name { get; init; } = "";
+    public string Url { get; init; } = "";
+    public string About { get; init; } = "";
+
+    /// <summary>Where imported files go (same tokens as modsPath); null when the site is only a link.</summary>
+    public string? ImportTo { get; init; }
+
+    /// <summary>What one item is called ("map").</summary>
+    public string Item { get; init; } = "item";
 }
 
 /// <summary>A mod loader or script extender Luma can install (data/loaders.json).</summary>
