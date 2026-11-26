@@ -284,13 +284,13 @@ public partial class ModsScreen : Screen
         col.AddChild(Section("Setup"));
         if (!p.Moddable)
         {
-            Fact(col, "Runs", p.Runtime == "native" ? "Native Linux version" : "Proton");
+            Fact(col, "Runs", GameText.Runs(game));
             return col;
         }
         Fact(col, "Loader", GameText.Loader(p, Host.Games.Catalog));
-        Fact(col, "Mods go to", p.ModsPath.Length == 0 ? "The game folder" : p.ModsPath.Replace("{documents}", "Documents").Replace("{appdata}", "AppData/Roaming")
+        Fact(col, "Mods go to", p.ModsPathHere.Length == 0 ? "The game folder" : p.ModsPathHere.Replace("{documents}", "Documents").Replace("{appdata}", "AppData/Roaming")
             .Replace("{localappdata}", "AppData/Local").Replace("{mygames}", "Documents/My Games").Replace("{xdgdata}", "~/.local/share").Replace("{xdgconfig}", "~/.config"));
-        Fact(col, "Runs", p.Runtime == "native" ? "Native Linux version" : game.Install.Prefix == null ? "Proton (prefix created on first start)" : "Proton" + (game.Install.CompatTool is { } t ? $" ({t})" : ""));
+        Fact(col, "Runs", GameText.Runs(game));
         Fact(col, "Mod sites", string.Join(", ", p.Sites.Names()));
         return col;
     }

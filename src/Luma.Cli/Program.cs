@@ -30,11 +30,11 @@ internal static class Cli
     /// <summary>Starts Luma (next to this binary) unless it's already running; it picks up the link from its inbox.</summary>
     private static void StartAppIfNeeded(AppHost host)
     {
-        if (File.Exists(host.PidFile) && int.TryParse(File.ReadAllText(host.PidFile).Trim(), out var pid) && Directory.Exists($"/proc/{pid}"))
+        if (File.Exists(host.PidFile) && int.TryParse(File.ReadAllText(host.PidFile).Trim(), out var pid) && Luma.Core.Platform.ProcessAlive(pid))
         {
             return;
         }
-        var app = Path.Combine(AppContext.BaseDirectory, "Luma.x86_64");
+        var app = Path.Combine(AppContext.BaseDirectory, Luma.Core.Platform.AppBinary);
         if (File.Exists(app))
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(app) { UseShellExecute = false });
@@ -73,6 +73,7 @@ internal static class Cli
                     Console.WriteLine(File.Exists(host.Paths.SettingsFile) ? File.ReadAllText(host.Paths.SettingsFile) : "(defaults)");
                     return 0;
                 case "nxm" when args.Length > 1:
+                    GameProcess.HideOwnConsole();
                     if (!NxmHandler.Drop(host.Paths, args[1]))
                     {
                         Console.Error.WriteLine("error: not a Nexus Mods download link");
@@ -97,7 +98,10 @@ internal static class Cli
                     {
                         Console.WriteLine($"{g.Key,-24} {g.Title}");
                         Console.WriteLine($"    folder  {g.GameDir}");
-                        Console.WriteLine($"    prefix  {g.Install.Prefix ?? (g.Profile.Runtime == "native" ? "(native Linux build)" : "(not created yet: start the game once)")}");
+                        if (!Luma.Core.Platform.IsWindows)
+                        {
+                            Console.WriteLine($"    prefix  {g.Install.Prefix ?? (g.Profile.Runtime == "native" ? "(native Linux build)" : "(not created yet: start the game once)")}");
+                        }
                         if (!g.Profile.Moddable)
                         {
                             Console.WriteLine($"    not moddable: {g.Profile.NotModdable}");
@@ -106,7 +110,7 @@ internal static class Cli
                     return 0;
                 case "steam-add":
                 {
-                    var dir = AppContext.BaseDirectory.TrimEnd('/');
+                    var dir = AppContext.BaseDirectory.TrimEnd('/', '\\');
                     var restart = args.Contains("--restart") && Luma.Core.Steam.SteamShortcuts.SteamRunning(host.Paths.Home);
                     if (restart && !SteamSetup.CloseSteam(host.Paths.Home, TimeSpan.FromSeconds(30)))
                     {
@@ -122,6 +126,7 @@ internal static class Cli
                     return 0;
                 }
                 case "run":
+                    GameProcess.HideOwnConsole();
                     return Launch.Run(host, args[1..]);
                 case "deploy" when args.Length > 1:
                 {

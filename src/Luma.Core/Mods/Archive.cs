@@ -5,7 +5,7 @@ namespace Luma.Core.Mods;
 
 /// <summary>
 /// Unpacks mod archives. Zip is built in; 7z, rar and tar archives use bsdtar (libarchive, part
-/// of SteamOS and Bazzite) or 7-Zip when installed. Entries that would land outside the target
+/// of SteamOS and Bazzite) or 7-Zip when installed; on Windows 7-Zip or Windows' own tar.exe. Entries that would land outside the target
 /// folder are refused.
 /// </summary>
 public static class Archive
@@ -66,17 +66,25 @@ public static class Archive
 
     private static void RunTool(string archive, string dest)
     {
-        var tools = new List<(string Exe, string[] Args)>
-        {
-            ("bsdtar", ["-xf", archive, "-C", dest]),
-            ("7z", ["x", "-y", "-o" + dest, archive]),
-            ("7za", ["x", "-y", "-o" + dest, archive]),
-            ("7zz", ["x", "-y", "-o" + dest, archive]),
-        };
+        var tools = OperatingSystem.IsWindows()
+            ? new List<(string Exe, string[] Args)>
+            {
+                // 7-Zip where installed, then the tar.exe built into Windows (libarchive: zip, and 7z/rar on Windows 11).
+                (Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "7-Zip", "7z.exe"), ["x", "-y", "-o" + dest, archive]),
+                ("7z", ["x", "-y", "-o" + dest, archive]),
+                (Path.Combine(Environment.SystemDirectory, "tar.exe"), ["-xf", archive, "-C", dest]),
+            }
+            : new List<(string Exe, string[] Args)>
+            {
+                ("bsdtar", ["-xf", archive, "-C", dest]),
+                ("7z", ["x", "-y", "-o" + dest, archive]),
+                ("7za", ["x", "-y", "-o" + dest, archive]),
+                ("7zz", ["x", "-y", "-o" + dest, archive]),
+            };
         string? lastError = null;
         foreach (var (exe, args) in tools)
         {
-            var psi = new ProcessStartInfo(exe) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+            var psi = new ProcessStartInfo(exe) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
             foreach (var a in args)
             {
                 psi.ArgumentList.Add(a);
@@ -100,6 +108,8 @@ public static class Archive
         }
         throw new InvalidDataException(lastError != null
             ? $"Couldn't unpack {Path.GetFileName(archive)}: {lastError}"
-            : $"Couldn't unpack {Path.GetFileName(archive)}: it needs bsdtar or 7-Zip, and neither is installed.");
+            : OperatingSystem.IsWindows()
+                ? $"Couldn't unpack {Path.GetFileName(archive)}: install 7-Zip (7-zip.org) and try again."
+                : $"Couldn't unpack {Path.GetFileName(archive)}: it needs bsdtar or 7-Zip, and neither is installed.");
     }
 }

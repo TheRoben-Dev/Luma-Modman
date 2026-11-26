@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Luma.Core;
 using Luma.Core.Steam;
 
 namespace Luma.Host;
@@ -18,7 +19,7 @@ public static class SteamSetup
     public static SteamShortcut Shortcut(string installDir) => new()
     {
         AppName = AppName,
-        Exe = Path.Combine(installDir, "Luma.x86_64"),
+        Exe = Path.Combine(installDir, Platform.AppBinary),
         StartDir = installDir,
         Icon = File.Exists(Path.Combine(ArtDir(installDir), "icon.png")) ? Path.Combine(ArtDir(installDir), "icon.png") : "",
         Tags = ["Tools"],
@@ -34,13 +35,13 @@ public static class SteamSetup
 
     /// <summary>True in Game Mode (gamescope session), where Steam can't be closed from an app.</summary>
     public static bool InGameMode =>
-        Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP")?.Contains("gamescope", StringComparison.OrdinalIgnoreCase) == true ||
-        Environment.GetEnvironmentVariable("SteamGamepadUI") == "1";
+        !Platform.IsWindows && (Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP")?.Contains("gamescope", StringComparison.OrdinalIgnoreCase) == true ||
+        Environment.GetEnvironmentVariable("SteamGamepadUI") == "1");
 
     /// <summary>Adds (or updates) the shortcut and its art. Returns the number of accounts changed.</summary>
     public static int Add(string home, string installDir)
     {
-        if (!File.Exists(Path.Combine(installDir, "Luma.x86_64")))
+        if (!File.Exists(Path.Combine(installDir, Platform.AppBinary)))
         {
             throw new InvalidOperationException("Luma isn't installed from a release here, so there's no app for Steam to start.");
         }
@@ -72,7 +73,7 @@ public static class SteamSetup
     {
         try
         {
-            using var p = Process.Start(new ProcessStartInfo("steam", "-shutdown") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true });
+            using var p = Process.Start(new ProcessStartInfo(SteamCommand() ?? "steam", "-shutdown") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true });
         }
         catch (System.ComponentModel.Win32Exception)
         {
@@ -90,11 +91,14 @@ public static class SteamSetup
         return false;
     }
 
+    /// <summary>steam.exe on Windows (from the registry); "steam" from PATH on Linux.</summary>
+    private static string? SteamCommand() => OperatingSystem.IsWindows() ? Luma.Core.WindowsSteam.Exe() : "steam";
+
     public static void StartSteam()
     {
         try
         {
-            Process.Start(new ProcessStartInfo("steam") { UseShellExecute = false });
+            Process.Start(new ProcessStartInfo(SteamCommand() ?? "steam") { UseShellExecute = false });
         }
         catch (System.ComponentModel.Win32Exception)
         {

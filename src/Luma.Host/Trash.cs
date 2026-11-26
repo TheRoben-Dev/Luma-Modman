@@ -2,15 +2,25 @@ using System.Diagnostics;
 
 namespace Luma.Host;
 
-/// <summary>Moves files to the desktop trash (gio trash), so a removal can still be undone.</summary>
+/// <summary>Moves files to the desktop trash (gio trash; the Recycle Bin on Windows), so a removal can still be undone.</summary>
 public static class Trash
 {
     /// <summary>True when files can go to the trash on this system (otherwise removal is permanent).</summary>
-    public static bool Available => Find("gio") != null;
+    public static bool Available => OperatingSystem.IsWindows() || Find("gio") != null;
 
     /// <summary>Moves each file to the trash, or deletes it when there is no trash. Returns true if trashed.</summary>
     public static bool Remove(IReadOnlyList<string> files)
     {
+        if (OperatingSystem.IsWindows())
+        {
+            foreach (var f in files.Where(File.Exists))
+            {
+                Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(f, Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                    Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                AppLog.Info($"recycled {f}");
+            }
+            return true;
+        }
         var gio = Find("gio");
         foreach (var f in files.Where(File.Exists))
         {

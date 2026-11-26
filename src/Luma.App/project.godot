@@ -13,6 +13,7 @@ run/low_processor_mode=true
 boot_splash/bg_color=Color(0.051, 0.059, 0.078, 1)
 boot_splash/show_image=false
 config/icon="res://icon.svg"
+config/windows_native_icon="res://icon.ico"
 
 [display]
 

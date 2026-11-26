@@ -4,7 +4,7 @@ namespace Luma.Core.Detection;
 
 /// <summary>
 /// Heroic Games Launcher installs (Epic through Legendary, GOG, Amazon through Nile), from Heroic's
-/// own JSON files, native or Flatpak. The Wine prefix comes from each game's Heroic settings.
+/// own JSON files, native or Flatpak (or %APPDATA%\heroic on Windows). The Wine prefix comes from each game's Heroic settings.
 /// </summary>
 public sealed class HeroicScanner
 {
@@ -14,6 +14,15 @@ public sealed class HeroicScanner
 
     public IEnumerable<(string Dir, string Packaging)> ConfigDirs()
     {
+        if (Platform.IsWindows)
+        {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "heroic");
+            if (Directory.Exists(dir))
+            {
+                yield return (dir, "native");
+            }
+            yield break;
+        }
         foreach (var (dir, kind) in new[]
         {
             (Path.Combine(_home, ".config/heroic"), "native"),
@@ -175,7 +184,7 @@ public sealed class HeroicScanner
     /// <summary>winePrefix from GamesConfig/&lt;app&gt;.json; null for native Linux builds or when not set.</summary>
     private static string? PrefixFor(string heroic, string appName, string? platform)
     {
-        if (platform is "linux")
+        if (platform is "linux" || Platform.IsWindows)
         {
             return null;
         }

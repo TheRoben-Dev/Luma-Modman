@@ -10,7 +10,8 @@ public static class PathUtil
         var full = Path.GetFullPath(path);
         if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
         {
-            return full;
+            // Windows: "D:\SteamLibrary\" and "D:\SteamLibrary" are the same folder.
+            return full.Length > 3 ? full.TrimEnd('\\', '/') : full;
         }
         try
         {

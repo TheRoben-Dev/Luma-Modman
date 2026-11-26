@@ -9,6 +9,7 @@
   ],
   "runtime": "native",
   "modsPath": "{xdgdata}/Terraria/ResourcePacks",
+  "windowsModsPath": "{mygames}/Terraria/ResourcePacks",
   "sites": {
     "curseforge": "terraria"
   },

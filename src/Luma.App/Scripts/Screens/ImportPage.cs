@@ -48,7 +48,9 @@ public partial class ImportPage : Screen
         };
         if (target == null)
         {
-            col.AddChild(UiTheme.Label($"Start {_game.Title} once from Steam first: its {_link.Item}s go inside the folder Proton creates then.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
+            col.AddChild(UiTheme.Label(Luma.Core.Platform.IsWindows
+                ? $"Luma doesn't know where {_game.Title} keeps its {_link.Item}s on Windows."
+                : $"Start {_game.Title} once from Steam first: its {_link.Item}s go inside the folder Proton creates then.", UiTheme.SmallSize + 1, UiTheme.Warn, wrap: true));
         }
         else
         {
