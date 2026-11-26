@@ -11,6 +11,12 @@ public partial class BusyPage : Screen
     private ProgressBar? _bar;
     private Button? _cancel;
 
+    internal string Title => _title;
+    internal CancellationTokenSource? Cts => _cts;
+
+    /// <summary>Progress reports, for the desktop layout's progress dialog.</summary>
+    public event Action<double>? ProgressChanged;
+
     public BusyPage(string title, CancellationTokenSource? cts)
     {
         _title = title;
@@ -38,6 +44,7 @@ public partial class BusyPage : Screen
 
     public void SetProgress(double p)
     {
+        ProgressChanged?.Invoke(p);
         if (_bar == null)
         {
             return;

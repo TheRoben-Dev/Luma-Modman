@@ -19,6 +19,10 @@ public partial class ModDetailsPage : Screen
     private bool _requested;
     private Control? _first;
 
+    internal IModSource Site => _site;
+    internal DetectedGame Game => _game;
+    internal ModSummary Mod => _mod;
+
     public ModDetailsPage(IModSource site, DetectedGame game, ModSummary mod)
     {
         _site = site;

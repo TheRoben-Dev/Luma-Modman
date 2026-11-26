@@ -1,3 +1,4 @@
+using Luma.App.Desktop;
 using Luma.App.Ui;
 using Godot;
 
@@ -11,7 +12,7 @@ namespace Luma.App;
 public partial class SmokeTest : Node
 {
     private readonly string _outDir;
-    private readonly Queue<(string Name, Action Act, double Wait, string? Expect, string? Tab)> _steps = new();
+    private readonly Queue<(string Name, Action Act, double Wait, string? Expect, string? Tab, Func<string?>? Check)> _steps = new();
     private double _wait = 1.0;
     private int _shot;
     private int _failures;
@@ -20,6 +21,11 @@ public partial class SmokeTest : Node
     {
         _outDir = outDir;
         Directory.CreateDirectory(outDir);
+        if (UiLayout.Desktop)
+        {
+            DesktopSteps();
+            return;
+        }
         // The animated background costs a lot under software rendering (CI); it would skew the
         // hold-to-repeat timing. It is switched on for the theme screenshots further down.
         // The first scan runs in the background; the run script sets up a fake Steam library.
@@ -80,6 +86,9 @@ public partial class SmokeTest : Node
         Step("games-pane", () => Press(Pad.Accept), expect: "Scan again");
         Step("games-rescan", () => Press(Pad.Accept), wait: 1.5, expect: "Scan again");
         Step("games-back", () => Press(Pad.Back), expect: "Games");
+        Step("settings-sites", () => Press("ui_down"), expect: "Mod sites");
+        Step("sites-pane", () => Press(Pad.Accept), expect: "Not set up yet");
+        Step("sites-back", () => Press(Pad.Back), expect: "Mod sites");
         Step("settings-appearance", () => Press("ui_down"), expect: "Appearance");
         Step("settings-sound", () => Press("ui_down"), expect: "Sound & feel");
         Step("sound-pane", () => Press(Pad.Accept), expect: "Short sounds when you move");
@@ -233,23 +242,185 @@ public partial class SmokeTest : Node
             Press(Pad.Accept);
         }, expect: "Back");
         Step("add-file-back", () => Press(Pad.Back), expect: "Add a mod from a file");
-        // Desktop layout: a denser window, right-click for a row's options, Ctrl shortcuts.
-        Step("desktop-layout", () =>
-        {
-            Main.Instance.ApplyLayout("desktop");
-            FindFocusable(GetTree().Root, "MoreCompany:")?.GrabFocus();
-        }, wait: 1.2, expect: "MoreCompany:", tab: "Mods");
-        Step("desktop-right-click", () => RightClick(FindFocusable(GetTree().Root, "MoreCompany:")), expect: "Turn off");
-        Step("desktop-right-click-back", () => Press(Pad.Back), expect: "MoreCompany:");
-        Step("desktop-ctrl-down", () => Key(Godot.Key.Down, ctrl: true), expect: "MoreCompany:");
-        Step("desktop-ctrl-2", () => Key(Godot.Key.Key2, ctrl: true), tab: "Browse");
-        Step("desktop-ctrl-4", () => Key(Godot.Key.Key4, ctrl: true), tab: "Settings");
-        Step("desktop-settings-layout", () =>
+        // Layout setting: switching to the desktop layout asks before restarting; Cancel keeps this one.
+        Step("settings-tab", () => Key(Godot.Key.Key4, ctrl: true), tab: "Settings");
+        Step("settings-layout", () =>
         {
             FindFocusable(GetTree().Root, "Controller or desktop layout")?.GrabFocus();
             Press(Pad.Accept);
         }, expect: "Controller: full screen");
-        Step("controller-layout", () => Main.Instance.ApplyLayout("auto"), wait: 1.2, expect: "Controller: full screen");
+        Step("settings-layout-desktop", () =>
+        {
+            Press("ui_right");  // Automatic -> Controller: no restart needed
+            Press("ui_right");  // -> Desktop: asks first
+        }, expect: "Cancel");
+        Step("settings-layout-cancel", () => Press(Pad.Accept), expect: "Controller: full screen", check: () =>
+            Main.Instance.Host!.Settings.Layout == "desktop" ? null : "the layout setting wasn't saved");
+    }
+
+    /// <summary>
+    /// The desktop layout (`--desktop`): its own window with menus, tables and dialogs, driven with
+    /// the mouse and keyboard, through the same flows as the controller run: pick a game, search
+    /// and download a mod, turn it off and on, reorder, profiles, deploy, settings and dialogs.
+    /// </summary>
+    private void DesktopSteps()
+    {
+        static DesktopShell Shell() => Main.Instance.GetChildren().OfType<DesktopShell>().First();
+        static Luma.Host.AppHost Host() => Main.Instance.Host!;
+        string? NoController()
+        {
+            var bad = All(GetTree().Root).FirstOrDefault(n => n is ButtonGlyph or HintBar or Header or FocusHighlight);
+            return bad == null ? null : $"controller chrome in the desktop layout: {bad.GetType().Name} at {bad.GetPath()}";
+        }
+        string? DialogOpen(string title) => All(GetTree().Root).OfType<Window>().Any(w => w != GetTree().Root && w.Visible && w.Title.StartsWith(title, StringComparison.Ordinal))
+            ? null : $"no '{title}' dialog open";
+        string? NoDialogs() => All(GetTree().Root).OfType<Window>().FirstOrDefault(w => w != GetTree().Root && w is not PopupMenu && w.Visible) is { } w ? $"dialog still open: {w.Title}" : null;
+        static string? Mod(Func<Luma.Core.Mods.GameMods, string?> check) =>
+            Host().ActiveGame is { } g ? check(Host().Mods.Store(g).State) : "no active game";
+        static string? MoreCompany(Luma.Core.Mods.GameMods s) => s.Mods.FirstOrDefault(m => m.Name.StartsWith("MoreCompany", StringComparison.Ordinal))?.Id;
+
+        Step("desktop-start", () => { }, wait: 3.0, tab: "Mods", check: () =>
+            NoController() ?? (Shell().GameCount >= 4 ? null : $"only {Shell().GameCount} games listed"));
+        Step("desktop-pick-lethal", () => Shell().PickGame("Lethal Company"), wait: 1.5, tab: "Mods", check: () =>
+            Host().ActiveGame?.Title == "Lethal Company" ? null : "Lethal Company isn't the active game");
+        Step("desktop-browse", () => Key(Godot.Key.Key2, ctrl: true), wait: 3.0, tab: "Browse", check: () =>
+            Shell().BrowseView.ResultCount > 0 ? null : "no search results");
+        Step("desktop-search", () =>
+        {
+            Key(Godot.Key.F, ctrl: true);
+            TypeText("more");
+            Key(Godot.Key.Enter);
+        }, wait: 2.5, tab: "Browse", check: () => Shell().BrowseView.ResultCount > 0 ? null : "no results for 'more'");
+        Step("desktop-mod-page", () => Shell().BrowseView.SelectResult(0), wait: 2.5, check: () =>
+            Shell().BrowseView.DownloadButton != null ? null : "the mod page has no Download button");
+        Step("desktop-download", () => Shell().BrowseView.DownloadButton?.EmitSignal(BaseButton.SignalName.Pressed), wait: 3.5, check: () =>
+            Host().Downloads.Items.FirstOrDefault() is { State: Luma.Host.DownloadState.Done, Installed: true } ? null
+                : "the download didn't finish and install: " + Host().Downloads.Items.FirstOrDefault()?.Error);
+        Step("desktop-downloads", () =>
+        {
+            Key(Godot.Key.Key3, ctrl: true);
+            Shell().DownloadsView.SelectFirst();
+        }, wait: 1.2, tab: "Downloads");
+        Step("desktop-download-menu", () => Shell().DownloadsView.OpenMenu(), wait: 0.8, check: () => Shell().DownloadsView.MenuOpen ? null : "no download menu");
+        Step("desktop-download-menu-close", () => Key(Godot.Key.Escape), wait: 0.6, check: () => Shell().DownloadsView.MenuOpen ? "the menu stayed open" : null);
+        Step("desktop-mods", () =>
+        {
+            Key(Godot.Key.Key1, ctrl: true);
+            Shell().ModsView.SelectByName("MoreCompany");
+        }, wait: 1.5, tab: "Mods", check: () => Shell().ModsView.RowCount >= 1 ? null : "the mod table is empty");
+        Step("desktop-right-click", () =>
+        {
+            if (Shell().ModsView.RowCenter("MoreCompany") is { } at)
+            {
+                RightClickAt(at);
+            }
+        }, wait: 0.8, check: () => Shell().ModsView.MenuOpen ? null : "right-click didn't open the mod's menu");
+        Step("desktop-right-click-close", () => Key(Godot.Key.Escape), wait: 0.6);
+        Step("desktop-toggle-off", () =>
+        {
+            Shell().ModsView.SelectByName("MoreCompany");
+            Key(Godot.Key.Space);
+        }, wait: 1.0, check: () => Mod(s => MoreCompany(s) is { } id && !s.IsEnabled(id) ? null : "Space didn't turn MoreCompany off"));
+        Step("desktop-toggle-on", () =>
+        {
+            Shell().ModsView.SelectByName("MoreCompany");
+            Key(Godot.Key.Space);
+        }, wait: 1.0, check: () => Mod(s => MoreCompany(s) is { } id && s.IsEnabled(id) ? null : "Space didn't turn MoreCompany on"));
+        var before = -1;
+        Step("desktop-ctrl-down", () =>
+        {
+            Shell().ModsView.SelectByName("MoreCompany");
+            before = Host().Mods.Store(Host().ActiveGame!).State.Order.FindIndex(e => e.Id.Contains("MoreCompany", StringComparison.Ordinal));
+            Key(Godot.Key.Up, ctrl: true);
+        }, wait: 1.0, check: () => Mod(s =>
+        {
+            var now = s.Order.FindIndex(e => e.Id.Contains("MoreCompany", StringComparison.Ordinal));
+            return before <= 0 || now == before - 1 ? null : $"Ctrl+Up moved it from {before} to {now}";
+        }));
+        Step("desktop-deploy", () => FindButton("Put mods in game")?.EmitSignal(BaseButton.SignalName.Pressed), wait: 2.0, check: () =>
+        {
+            var game = Host().ActiveGame!;
+            var plugin = Directory.Exists(Path.Combine(game.GameDir, "BepInEx", "plugins"))
+                ? Directory.EnumerateFiles(Path.Combine(game.GameDir, "BepInEx", "plugins"), "*.dll", SearchOption.AllDirectories).FirstOrDefault() : null;
+            return plugin != null && new FileInfo(plugin).LinkTarget != null ? null : "the mod wasn't linked into the game folder";
+        });
+        Step("desktop-undeploy", () => FindButton("Take mods out of game")?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.5, check: () =>
+            Directory.Exists(Path.Combine(Host().ActiveGame!.GameDir, "BepInEx")) ? "mod files were left in the game folder" : null);
+        Step("desktop-new-profile", () => FindButton("New…")?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0, check: () => DialogOpen("New profile"));
+        Step("desktop-new-profile-typed", () =>
+        {
+            TypeText("Testing");
+            Key(Godot.Key.Enter);
+        }, wait: 1.2, check: () => NoDialogs() ?? Mod(s => s.Active == "Testing" ? null : $"active profile is {s.Active}"));
+        Step("desktop-delete-profile", () => FindButton("Delete")?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0, check: () => DialogOpen("Please confirm"));
+        Step("desktop-delete-profile-yes", () => FindButton("Delete", inDialog: true)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.2, check: () =>
+            NoDialogs() ?? Mod(s => s.Profiles.ContainsKey("Testing") ? "the profile is still there" : null));
+        Step("desktop-file-menu", () => ClickAt(new Vector2(22, 14)), wait: 0.8, check: () =>
+            All(GetTree().Root).OfType<PopupMenu>().Any(p => p.Visible && p.Name == "File") ? null : "the File menu didn't open");
+        Step("desktop-file-menu-close", () => Key(Godot.Key.Escape), wait: 0.6);
+        Step("desktop-add-file", () => Key(Godot.Key.O, ctrl: true), wait: 1.2, check: () => DialogOpen("Add a mod from a file"));
+        Step("desktop-add-file-cancel", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-steam", () => Main.Instance.Push(new Luma.App.Screens.SteamLaunchPage(Host().ActiveGame!)), wait: 1.0, check: () => DialogOpen("Start with mods from Steam"));
+        Step("desktop-steam-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-settings", () => Key(Godot.Key.Key4, ctrl: true), wait: 1.0, tab: "Settings");
+        foreach (var cat in new[] { "Mod sites", "Appearance", "Sound & feel", "Layout", "Updates", "About" })
+        {
+            var c = cat;
+            Step("desktop-settings-" + c.Split(' ')[0].ToLowerInvariant(), () => Shell().SettingsView.Open(c), wait: 0.8, tab: "Settings",
+                check: () => Shell().SettingsView.Current == c ? null : $"settings show {Shell().SettingsView.Current}");
+        }
+        Step("desktop-site-setup", () => Main.Instance.Push(new Luma.App.Screens.SiteSetupPage(Host().Sites.Nexus)), wait: 1.0, check: () => DialogOpen("Set up Nexus Mods"));
+        Step("desktop-site-setup-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-changelog", () => Main.Instance.ShowChangelog(), wait: 1.0, check: () => DialogOpen("Changelog"));
+        Step("desktop-changelog-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-supported-games", () => Main.Instance.Push(new Luma.App.Screens.SupportedGamesPage()), wait: 1.2, check: () => DialogOpen("Supported games"));
+        Step("desktop-supported-games-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-layout-switch", () => Main.Instance.ApplyLayout("controller"), wait: 1.0, check: () => DialogOpen("Please confirm"));
+        Step("desktop-layout-switch-cancel", () => FindButton("Cancel", inDialog: true)?.EmitSignal(BaseButton.SignalName.Pressed), wait: 0.8, check: NoDialogs);
+        Step("desktop-skyrim", () =>
+        {
+            Main.Instance.Host!.SaveSettings(Main.Instance.Host.Settings with { Layout = "auto" });
+            Shell().PickGame("The Elder Scrolls V");
+        }, wait: 1.5, tab: "Mods", check: () => Host().ActiveGame?.Title.StartsWith("The Elder Scrolls V", StringComparison.Ordinal) == true ? null : "Skyrim isn't active");
+        Step("desktop-browse-nexus", () => Key(Godot.Key.Key2, ctrl: true), wait: 2.0, tab: "Browse");
+        Step("desktop-not-moddable", () => Shell().PickGame("Marvel Rivals"), wait: 1.5, tab: "Mods", check: NoController);
+    }
+
+    private static IEnumerable<Node> All(Node root)
+    {
+        foreach (var c in root.GetChildren(true))
+        {
+            yield return c;
+            foreach (var d in All(c))
+            {
+                yield return d;
+            }
+        }
+    }
+
+    /// <summary>A visible, enabled button by its text: in the open dialog, or in the main window.</summary>
+    private Button? FindButton(string text, bool inDialog = false)
+    {
+        var root = inDialog ? All(GetTree().Root).OfType<Window>().LastOrDefault(w => w != GetTree().Root && w.Visible && w is not PopupMenu) as Node : GetTree().Root;
+        return root == null ? null : All(root).OfType<Button>().FirstOrDefault(b => b.Text == text && b.IsVisibleInTree() && !b.Disabled);
+    }
+
+    private static void ClickAt(Vector2 at)
+    {
+        Input.ParseInputEvent(new InputEventMouseMotion { Position = at, GlobalPosition = at });
+        Input.FlushBufferedEvents();
+        Mouse(at, true);
+        Mouse(at, false);
+        Input.FlushBufferedEvents();
+    }
+
+    private static void RightClickAt(Vector2 at)
+    {
+        Input.ParseInputEvent(new InputEventMouseMotion { Position = at, GlobalPosition = at });
+        Input.FlushBufferedEvents();
+        Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Right, Pressed = true, Position = at, GlobalPosition = at });
+        Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Right, Pressed = false, Position = at, GlobalPosition = at });
+        Input.FlushBufferedEvents();
     }
 
     private static void TypeText(string text)
@@ -281,7 +452,8 @@ public partial class SmokeTest : Node
         }
     }
 
-    private void Step(string name, Action act, double wait = 1.0, string? expect = null, string? tab = null) => _steps.Enqueue((name, act, wait, expect, tab));
+    private void Step(string name, Action act, double wait = 1.0, string? expect = null, string? tab = null, Func<string?>? check = null) =>
+        _steps.Enqueue((name, act, wait, expect, tab, check));
 
     private static Control? FindFocusable(Node root, string tooltip)
     {
@@ -304,20 +476,6 @@ public partial class SmokeTest : Node
 
     private static void Mouse(Vector2 at, bool pressed) =>
         Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Left, Pressed = pressed, Position = at, GlobalPosition = at });
-
-    private static void RightClick(Control? c)
-    {
-        if (c == null)
-        {
-            return;
-        }
-        var at = c.GetViewport().GetFinalTransform() * c.GetGlobalRect().GetCenter();
-        Input.ParseInputEvent(new InputEventMouseMotion { Position = at, GlobalPosition = at });
-        Input.FlushBufferedEvents();
-        Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Right, Pressed = true, Position = at, GlobalPosition = at });
-        Input.ParseInputEvent(new InputEventMouseButton { ButtonIndex = MouseButton.Right, Pressed = false, Position = at, GlobalPosition = at });
-        Input.FlushBufferedEvents();
-    }
 
     private static void TouchTap(Control? c)
     {
@@ -371,7 +529,7 @@ public partial class SmokeTest : Node
             GetTree().Quit(_failures == 0 ? 0 : 1);
             return;
         }
-        var (name, act, wait, expect, tab) = _steps.Dequeue();
+        var (name, act, wait, expect, tab, check) = _steps.Dequeue();
         try
         {
             act();
@@ -383,11 +541,25 @@ public partial class SmokeTest : Node
         }
         // Give layout and focus a few frames to settle, then capture.
         _wait = wait;
-        GetTree().CreateTimer(wait - 0.15).Timeout += () => Capture(name, expect, tab);
+        GetTree().CreateTimer(wait - 0.15).Timeout += () => Capture(name, expect, tab, check);
     }
 
-    private void Capture(string name, string? expect, string? tab)
+    private void Capture(string name, string? expect, string? tab, Func<string?>? check)
     {
+        string? problem;
+        try
+        {
+            problem = check?.Invoke();
+        }
+        catch (Exception e)
+        {
+            problem = e.ToString();
+        }
+        if (problem != null)
+        {
+            _failures++;
+            GD.PushError($"smoke: step {name} failed: {problem}");
+        }
         if (tab != null && Main.Instance.CurrentTab != tab)
         {
             _failures++;

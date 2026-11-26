@@ -11,6 +11,10 @@ public partial class ConfirmPage : Screen
     private readonly Action _onYes;
     private Button? _no;
 
+    internal string Message => _message;
+    internal string Yes => _yes;
+    internal Action OnYes => _onYes;
+
     public ConfirmPage(string message, string yes, Action onYes)
     {
         _message = message;

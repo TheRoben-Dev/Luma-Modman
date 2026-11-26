@@ -12,6 +12,9 @@ public partial class InstalledModPage : Screen
     private readonly string _id;
     private Control? _first;
 
+    internal DetectedGame Game => _game;
+    internal string Id => _id;
+
     public InstalledModPage(DetectedGame game, string id)
     {
         _game = game;

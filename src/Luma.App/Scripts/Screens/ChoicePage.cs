@@ -10,6 +10,9 @@ public partial class ChoicePage : Screen
     private readonly (string Label, Action Action)[] _options;
     private Button? _first;
 
+    internal string Message => _message;
+    internal (string Label, Action Action)[] Options => _options;
+
     public ChoicePage(string message, params (string Label, Action Action)[] options)
     {
         _message = message;

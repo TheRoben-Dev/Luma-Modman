@@ -11,6 +11,7 @@ public partial class SettingsScreen : TwoPaneScreen
     private static readonly (string Name, string Summary)[] CategoryList =
     [
         ("Games", "Finding installed games, and the supported list."),
+        ("Mod sites", "Your keys for Nexus Mods, CurseForge and mod.io."),
         ("Appearance", "Theme, accent colour, CRT effect and animations."),
         ("Sound & feel", "Menu sounds and controller rumble."),
         ("Layout", "Controller or desktop layout, and keyboard shortcuts."),
@@ -28,6 +29,9 @@ public partial class SettingsScreen : TwoPaneScreen
         {
             case "Games":
                 BuildGames(col, Add);
+                break;
+            case "Mod sites":
+                BuildSites(col, Add);
                 break;
             case "Appearance":
                 BuildAppearance(col, Add);
@@ -68,25 +72,33 @@ public partial class SettingsScreen : TwoPaneScreen
         }
     }
 
+    private void BuildSites(VBoxContainer col, Action<Control> Add)
+    {
+        col.AddChild(UiTheme.Label("Thunderstore needs no account. The other sites ask each player for their own free key; it stays on this device and is only sent to that site.",
+            UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        foreach (var site in Host.Sites.All.Where(SiteKeys.NeedsKey))
+        {
+            var s = site;
+            var ready = SiteKeys.CurrentKey(s) != null;
+            Add(new ListRow(s.Name, SiteKeys.Status(s), ready ? "Change" : "Set up", ready ? UiTheme.Good : UiTheme.Warn, null,
+                () => App.Push(new SiteSetupPage(s)), $"{s.Name}: {SiteKeys.Status(s)}"));
+        }
+    }
+
     private void BuildLayout(VBoxContainer col, Action<Control> Add)
     {
         var current = Host.Settings.Layout;
         var layout = new Stepper("Layout", UiLayout.Choices.Select(c => (c.Id, c.Label)), UiLayout.Choices.Any(c => c.Id == current) ? current : UiLayout.Auto,
-            "Controller: full screen, big rows. Desktop: a resizable window with more on screen.")
+            "Controller: full screen, big rows. Desktop: a separate mod manager window with menus, tables and right-click. Changing it restarts Luma.")
         {
             Expands = true,
             DetailFor = UiLayout.Describe,
         };
-        layout.Changed += v =>
-        {
-            App.ApplyLayout(v);
-            Callable.From(RefreshPane).CallDeferred();
-        };
+        layout.Changed += App.ApplyLayout;
         Add(layout);
         col.AddChild(Section("Keyboard and mouse"));
         foreach (var line in new[]
         {
-            "Right-click a row (desktop layout): its options, like A or Enter.",
             "Ctrl+1 to Ctrl+4: Mods, Browse, Downloads, Settings.",
             "Ctrl+F: search the mod site you're browsing.",
             "Ctrl+Up / Ctrl+Down: move the selected mod in the load order.",
@@ -254,7 +266,7 @@ public partial class SettingsScreen : TwoPaneScreen
         col.AddChild(UiTheme.Label("Luma installs mods only from the sites you connect, never games, DRM bypasses or pirated content.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
     }
 
-    private void AddToSteam(string dir)
+    internal static void AddToSteam(string dir)
     {
         var home = Host.Paths.Home;
         if (!Luma.Core.Steam.SteamShortcuts.SteamRunning(home))

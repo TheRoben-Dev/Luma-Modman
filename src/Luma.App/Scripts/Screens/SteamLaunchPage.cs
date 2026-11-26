@@ -11,6 +11,8 @@ public partial class SteamLaunchPage : Screen
     private readonly DetectedGame _game;
     private Control? _first;
 
+    internal DetectedGame Game => _game;
+
     public SteamLaunchPage(DetectedGame game) => _game = game;
 
     protected override void Build()

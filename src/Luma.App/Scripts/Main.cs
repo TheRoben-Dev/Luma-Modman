@@ -1,4 +1,5 @@
 using Luma.Host.Updates;
+using Luma.App.Desktop;
 using Luma.App.Screens;
 using Luma.App.Ui;
 using Luma.Host;
@@ -32,6 +33,9 @@ public partial class Main : Control
     private Toast _toast = null!;
     private int _tab;
     private bool _appFocused = true;
+
+    /// <summary>The desktop layout's window, when that layout is in use (null in the controller layout).</summary>
+    private DesktopShell? _desktop;
 
     public static Main Instance { get; private set; } = null!;
 
@@ -80,10 +84,7 @@ public partial class Main : Control
 
     public override void _Ready()
     {
-        Input.MouseMode = Input.MouseModeEnum.Hidden;  // never drawn; clicks and touch still work
         Instance = this;
-        Pad.Setup();
-        Pad.FamilyChanged += UpdateChrome;
         AppHost? host = null;
         Exception? startupError = null;
         try
@@ -115,6 +116,15 @@ public partial class Main : Control
         }
         UiLayout.Apply(GetWindow(), host?.Settings.Layout, windowed);
         AppLog.Info($"layout {(UiLayout.Desktop ? "desktop" : "controller")} ({host?.Settings.Layout ?? "auto"})");
+        if (UiLayout.Desktop && host != null && startupError == null)
+        {
+            Host = host;
+            BuildDesktop();
+            return;
+        }
+        Input.MouseMode = Input.MouseModeEnum.Hidden;  // never drawn; clicks and touch still work
+        Pad.Setup();
+        Pad.FamilyChanged += UpdateChrome;
 
         _bgLayer = new Control { MouseFilter = MouseFilterEnum.Ignore };
         _bgLayer.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -186,11 +196,12 @@ public partial class Main : Control
             _content.AddChild(msg);
             return;
         }
-        if (OS.GetCmdlineUserArgs().Contains("--open=appearance"))
+        var open = OS.GetCmdlineUserArgs().FirstOrDefault(a => a is "--open=appearance" or "--open=layout");
+        if (open != null)
         {
-            // Back from a restart that applied a theme: Settings → Appearance, on the theme row.
+            // Back from a restart that applied a theme or a layout: that Settings category.
             _tab = Array.IndexOf(TabNames, "Settings");
-            var settings = new SettingsScreen { StartIn = "Appearance" };
+            var settings = new SettingsScreen { StartIn = open == "--open=layout" ? "Layout" : "Appearance" };
             _stack.Add(settings);
             _content.AddChild(settings);
             UpdateChrome();
@@ -199,6 +210,27 @@ public partial class Main : Control
         {
             SwitchTab(0);
         }
+        StartServices();
+    }
+
+    /// <summary>
+    /// The desktop layout: a separate, traditional mod manager window (<see cref="DesktopShell"/>)
+    /// instead of the controller layout's header, tabs, hint bar and animated background.
+    /// </summary>
+    private void BuildDesktop()
+    {
+        Theme = DesktopTheme.Build();
+        Input.MouseMode = Input.MouseModeEnum.Visible;
+        var open = OS.GetCmdlineUserArgs().FirstOrDefault(a => a.StartsWith("--open=", StringComparison.Ordinal))?["--open=".Length..];
+        _desktop = new DesktopShell { StartIn = open };
+        _stack.Add(_desktop);
+        AddChild(_desktop);
+        StartServices();
+    }
+
+    /// <summary>Game scan, Nexus links, smoke test or update check: the same in both layouts.</summary>
+    private void StartServices()
+    {
         // The cached list shows at once; a fresh scan replaces it in the background.
         ScanGames(quiet: true);
         StartNxmInbox();
@@ -311,6 +343,12 @@ public partial class Main : Control
     /// </summary>
     public void ApplyTheme(string name)
     {
+        if (_desktop != null)
+        {
+            UiTheme.Use(name, Host?.Settings.Accents.GetValueOrDefault(name));
+            Theme = DesktopTheme.Build();
+            return;
+        }
         AppLog.Info($"theme -> {name} (stack: {StackNames()})");
         TextureRect? snap = null;
         if (Anim.Enabled)
@@ -365,10 +403,24 @@ public partial class Main : Control
     }
 
     /// <summary>Re-applies the background decoration (CRT setting changed).</summary>
-    public void RefreshBackground() => BuildBackground();
+    public void RefreshBackground()
+    {
+        if (_desktop == null)
+        {
+            BuildBackground();
+        }
+    }
 
     /// <summary>Shows or hides the badge dot on a root tab (e.g. Downloads while something downloads).</summary>
-    public void SetTabBadge(string tab, bool on) => _header.SetBadge(Array.IndexOf(TabNames, tab), on);
+    public void SetTabBadge(string tab, bool on)
+    {
+        if (_desktop != null)
+        {
+            _desktop.SetBadge(tab, on);
+            return;
+        }
+        _header.SetBadge(Array.IndexOf(TabNames, tab), on);
+    }
 
     /// <summary>
     /// After an update, shows the changes since the last version the user saw, once. A fresh install
@@ -519,6 +571,7 @@ public partial class Main : Control
         {
         }
         Theme = null;
+        DesktopTheme.ReleaseFonts();
         Luma.App.Ui.Poly.Ps1.ReleaseShared();
         CoverArt.ReleaseShared();
         UiTheme.ReleaseFonts();
@@ -533,14 +586,17 @@ public partial class Main : Control
         {
             _appFocused = false;
             AppLog.Info("window lost focus");
-            Pad.ReleaseAll();
+            if (_desktop == null)
+            {
+                Pad.ReleaseAll();
+            }
             PauseBackground();
         }
         else if (what == NotificationApplicationFocusIn)
         {
             _appFocused = true;
             AppLog.Info("window focused");
-            Input.MouseMode = Input.MouseModeEnum.Hidden;
+            Input.MouseMode = _desktop != null ? Input.MouseModeEnum.Visible : Input.MouseModeEnum.Hidden;
             PauseBackground();
         }
     }
@@ -548,8 +604,10 @@ public partial class Main : Control
     private ulong _navAtMs;
     private Feedback? _feedback;
 
-    /// <summary>Applies the sound and rumble settings right away (Settings → Sound & feel).</summary>
-    /// <summary>Switches between the controller and desktop layouts (Settings).</summary>
+    /// <summary>
+    /// Saves the layout setting (Settings → Layout). The two layouts are separate windows, so
+    /// changing to the other one restarts the app, after asking.
+    /// </summary>
     public void ApplyLayout(string setting)
     {
         if (Host == null)
@@ -557,11 +615,16 @@ public partial class Main : Control
             return;
         }
         Host.SaveSettings(Host.Settings with { Layout = setting });
-        UiLayout.Apply(GetWindow(), setting, OS.GetCmdlineUserArgs().Contains("--windowed"));
-        _header.Relayout();
-        AppLog.Info($"layout -> {(UiLayout.Desktop ? "desktop" : "controller")} ({setting})");
+        var desktop = UiLayout.Resolve(setting);
+        AppLog.Info($"layout setting -> {setting} ({(desktop ? "desktop" : "controller")})");
+        if (desktop != UiLayout.Desktop)
+        {
+            Confirm($"Switch to the {(desktop ? "desktop" : "controller")} layout? Luma restarts and comes back to this page.", "Restart now",
+                () => RestartApp("--open=layout"));
+        }
     }
 
+    /// <summary>Applies the sound and rumble settings right away (Settings → Sound & feel).</summary>
     public void ApplyFeedback(int volume, bool haptics)
     {
         if (_feedback != null)
@@ -573,6 +636,15 @@ public partial class Main : Control
 
     public override void _Input(InputEvent e)
     {
+        if (_desktop != null)
+        {
+            // Desktop layout: ordinary mouse and keyboard; only the Ctrl shortcuts are app-wide.
+            if (e is InputEventKey { Pressed: true, CtrlPressed: true } k && Shortcut(_stack[^1], k))
+            {
+                GetViewport().SetInputAsHandled();
+            }
+            return;
+        }
         if (!GameRunning && e is InputEventAction or InputEventKey && e.IsPressed() && !e.IsEcho())
         {
             if (e.IsAction("ui_up") || e.IsAction("ui_down") || e.IsAction("ui_left") || e.IsAction("ui_right"))
@@ -587,15 +659,6 @@ public partial class Main : Control
         // Ctrl shortcuts run before the menus see the key (Ctrl+Up must not also move the focus).
         if (!GameRunning && _stack.Count > 0 && e is InputEventKey { Pressed: true, CtrlPressed: true } key && Shortcut(_stack[^1], key))
         {
-            GetViewport().SetInputAsHandled();
-            return;
-        }
-        // Desktop layout: right-click opens a row's options, as A / Enter does.
-        if (!GameRunning && UiLayout.Desktop && e is InputEventMouseButton { ButtonIndex: MouseButton.Right, Pressed: true }
-            && ButtonUnder(GetViewport().GuiGetHoveredControl()) is { Disabled: false } target)
-        {
-            target.GrabFocus();
-            target.EmitSignal(BaseButton.SignalName.Pressed);
             GetViewport().SetInputAsHandled();
             return;
         }
@@ -629,6 +692,10 @@ public partial class Main : Control
     public override void _Process(double delta)
     {
         PollNxmInbox(delta);
+        if (_desktop != null)
+        {
+            return;
+        }
         if (!GameRunning && _appFocused)
         {
             TouchScroll.Process(delta);
@@ -638,7 +705,7 @@ public partial class Main : Control
 
     public override void _UnhandledInput(InputEvent e)
     {
-        if (_stack.Count == 0 || GameRunning)
+        if (_stack.Count == 0 || GameRunning || _desktop != null)
         {
             return;
         }
@@ -697,18 +764,6 @@ public partial class Main : Control
             return false;
         }
         return top.OnShortcut(key);
-    }
-
-    private static BaseButton? ButtonUnder(Control? c)
-    {
-        for (var n = (Node?)c; n != null; n = n.GetParent())
-        {
-            if (n is BaseButton b)
-            {
-                return b;
-            }
-        }
-        return null;
     }
 
     // ---- navigation ----
@@ -784,6 +839,10 @@ public partial class Main : Control
             {
                 s.Rebuild();
             }
+            else if (s is DesktopShell d)
+            {
+                d.GamesScanned();
+            }
         }
         var count = Host.Games.Games.Count;
         if (!quiet)
@@ -799,12 +858,17 @@ public partial class Main : Control
     /// <summary>Header shows the game the tabs work on.</summary>
     private void GameChanged()
     {
+        if (_desktop != null)
+        {
+            _desktop.RefreshGame();
+            return;
+        }
         var g = Host?.ActiveGame;
         _header.SetGame(g?.Title, g?.Install.Cover);
     }
 
     /// <summary>The root tab shown now ("Mods", "Browse"...).</summary>
-    public string CurrentTab => TabNames[_tab];
+    public string CurrentTab => _desktop?.CurrentTab ?? TabNames[_tab];
 
     public void SwitchTab(string name)
     {
@@ -817,6 +881,11 @@ public partial class Main : Control
 
     private void SwitchTab(int index)
     {
+        if (_desktop != null)
+        {
+            _desktop.SelectTab(TabNames[index]);
+            return;
+        }
         AppLog.Info($"tab -> {TabNames[index]}");
         if (index != _tab)
         {
@@ -856,6 +925,19 @@ public partial class Main : Control
     public void Push(Screen screen)
     {
         AppLog.Info($"push {screen.GetType().Name} over {StackNames()}");
+        if (_desktop != null)
+        {
+            // Desktop layout: the page opens as a dialog window, or jumps to the place that already shows it.
+            if (_desktop.Present(screen))
+            {
+                _stack.Add(screen);
+            }
+            else if (!screen.IsInsideTree())
+            {
+                screen.Free();
+            }
+            return;
+        }
         var top = _stack.Count > 0 ? _stack[^1] : null;
         top?.Remember();
         if (screen.IsOverlay)
@@ -893,6 +975,11 @@ public partial class Main : Control
         }
         var top = _stack[^1];
         _stack.RemoveAt(_stack.Count - 1);
+        if (_desktop != null)
+        {
+            _desktop.Dismiss(top);
+            return;
+        }
         var prev = _stack[^1];
         if (top.IsOverlay)
         {
@@ -947,8 +1034,37 @@ public partial class Main : Control
 
     public Screen Top => _stack[^1];
 
+    /// <summary>Takes a page off the stack wherever it is (a desktop dialog closed with its own button or Esc).</summary>
+    public void Close(Screen page)
+    {
+        var i = _stack.IndexOf(page);
+        if (i <= 0)
+        {
+            return;
+        }
+        if (i == _stack.Count - 1)
+        {
+            Pop();
+            return;
+        }
+        AppLog.Info($"close {page.GetType().Name} ({StackNames()})");
+        _stack.RemoveAt(i);
+        if (_desktop != null)
+        {
+            _desktop.Dismiss(page);
+        }
+        else
+        {
+            page.QueueFree();
+        }
+    }
+
     public void UpdateChrome()
     {
+        if (_desktop != null)
+        {
+            return;
+        }
         _header.SetTab(_tab, _stack.Count == 1);
         if (_stack.Count == 0)
         {
@@ -966,17 +1082,37 @@ public partial class Main : Control
 
     // ---- feedback ----
 
-    public void Toast(string text) => _toast.Show(text);
+    public void Toast(string text)
+    {
+        if (_desktop != null)
+        {
+            AppLog.Info("shown: " + text);
+            _desktop.Notify(text, DesktopTheme.Text);
+            return;
+        }
+        _toast.Show(text);
+    }
 
     public void Error(string text)
     {
         AppLog.Warn("shown error: " + text);
+        if (_desktop != null)
+        {
+            _desktop.Notify(text, DesktopTheme.Bad);
+            return;
+        }
         Feedback.Play(Cue.Error);
         _toast.Show(text, UiTheme.Bad);
     }
 
     public void Success(string text)
     {
+        if (_desktop != null)
+        {
+            AppLog.Info("shown: " + text);
+            _desktop.Notify(text, DesktopTheme.Good);
+            return;
+        }
         Feedback.Play(Cue.Success);
         _toast.Show(text, UiTheme.Good);
     }

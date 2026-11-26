@@ -15,6 +15,8 @@ public partial class AddFilePage : Screen
     private readonly DetectedGame _game;
     private Control? _first;
 
+    internal DetectedGame Game => _game;
+
     public AddFilePage(DetectedGame game) => _game = game;
 
     private IEnumerable<string> Candidates()

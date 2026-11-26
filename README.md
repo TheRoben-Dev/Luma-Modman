@@ -4,6 +4,14 @@ A controller-first mod manager for SteamOS and Bazzite (Steam Deck), and Windows
 handhelds like the ROG Ally and Legion Go), built with Godot 4 (.NET). It runs in Game Mode,
 Desktop Mode and Big Picture, and works just as well with touch and a mouse.
 
+Luma has two layouts with the same features:
+
+- **Controller layout**: full screen with big rows, for a pad or touch. It's used in Game Mode
+  and Big Picture.
+- **Desktop layout**: a traditional mod manager window with a menu bar, toolbar, games list, a
+  load-order table with checkboxes, sortable columns, drag-and-drop and right-click menus, a mod
+  details pane and a log pane. It's used everywhere else. Change it in Settings → Layout.
+
 ## Install
 
 ### Linux (SteamOS, Bazzite)
