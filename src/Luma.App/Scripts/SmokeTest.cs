@@ -227,6 +227,12 @@ public partial class SmokeTest : Node
                 throw new InvalidOperationException("mod files were left in the game folder");
             }
         });
+        Step("add-file", () =>
+        {
+            FindFocusable(GetTree().Root, "Install a mod you downloaded yourself")?.GrabFocus();
+            Press(Pad.Accept);
+        }, expect: "Back");
+        Step("add-file-back", () => Press(Pad.Back), expect: "Add a mod from a file");
     }
 
     private static void TypeText(string text)

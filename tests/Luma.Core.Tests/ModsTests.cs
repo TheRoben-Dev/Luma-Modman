@@ -175,4 +175,49 @@ public sealed class ModsTests : IDisposable
             ModLayout.Plan(dest, p, "ue4ss", prefix).Select(e => $"{e.Root}:{e.Target}").Order(StringComparer.Ordinal).ToList());
         Assert.Equal("", Luma.Host.LoaderInstaller.InstallPath(Profile("BepInEx/plugins", "bepinex")));
     }
+
+    [Fact]
+    public void ScriptExtenderAddedByHandInstallsAsTheLoader()
+    {
+        var skse = new LoaderInfo { Id = "skse64", Name = "SKSE64", Launcher = "skse64_loader.exe" };
+        var store = new ModStore(Path.Combine(_dir, "store"), "steam:489830");
+        var zip = Zip("skse64_2_02_06.zip", "skse64_2_02_06/skse64_loader.exe", "skse64_2_02_06/skse64_1_6_1170.dll",
+            "skse64_2_02_06/Data/Scripts/Actor.pex", "skse64_2_02_06/src/skse64/main.cpp", "skse64_2_02_06/skse64_readme.txt");
+        var mod = store.Install(zip, new InstalledMod { Id = "local:skse64_2_02_06", Site = "local", Name = "skse64_2_02_06" }, Profile("Data", "skse64"), loader: skse);
+        Assert.Equal("loader:skse64", mod.Id);
+        Assert.Equal("SKSE64", mod.Name);
+        var files = Directory.EnumerateFiles(store.ModDir(mod.Id), "*", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(store.ModDir(mod.Id), f).Replace('\\', '/')).Order(StringComparer.Ordinal).ToList();
+        Assert.Equal(["game/Data/Scripts/Actor.pex", "game/skse64_1_6_1170.dll", "game/skse64_loader.exe"], files);
+
+        // An ordinary mod is left alone.
+        var other = store.Install(Zip("plain.zip", "plain.esp"), new InstalledMod { Id = "local:plain", Site = "local", Name = "plain" }, Profile("Data", "skse64"), loader: skse);
+        Assert.Equal("local:plain", other.Id);
+    }
+
+    [Fact]
+    public void LauncherInASubfolderPutsTheLoaderThere()
+    {
+        var obse = new LoaderInfo { Id = "obse64", Name = "OBSE64", Launcher = "OblivionRemastered/Binaries/Win64/obse64_loader.exe" };
+        var store = new ModStore(Path.Combine(_dir, "store"), "steam:2623190");
+        var mod = store.Install(Zip("obse64.zip", "obse64_loader.exe", "obse64_0_411_140.dll"), new InstalledMod { Id = "local:obse64", Site = "local", Name = "obse64" },
+            Profile("OblivionRemastered/Content/Dev/ObvData/Data", "obse64"), loader: obse);
+        Assert.True(File.Exists(Path.Combine(store.ModDir(mod.Id), "game", "OblivionRemastered", "Binaries", "Win64", "obse64_loader.exe")));
+        Assert.Equal("OblivionRemastered/Binaries/Win64", Luma.Host.LoaderInstaller.InstallPath(Profile("x", "obse64"), obse));
+    }
+
+    [Fact]
+    public void SteamCommandStartsThroughTheLauncher()
+    {
+        var game = "/home/deck/.steam/steam/steamapps/common/Skyrim Special Edition";
+        string[] cmd = ["/home/deck/.steam/steam/ubuntu12_32/reaper", "SteamLaunch", "AppId=489830", "--",
+            "/home/deck/.steam/steam/ubuntu12_32/steam-launch-wrapper", "--",
+            "/home/deck/.steam/steam/steamapps/common/Proton - Experimental/proton", "waitforexitandrun", game + "/SkyrimSELauncher.exe"];
+        var through = Luma.Host.LaunchCommand.ThroughLauncher(cmd, game, "skse64_loader.exe");
+        Assert.Equal(game + "/skse64_loader.exe", through[^1]);
+        Assert.Equal(cmd[..^1], through[..^1]);
+        // Nothing in the game folder to replace: unchanged.
+        string[] other = ["/usr/bin/env", "/opt/other/game.exe"];
+        Assert.Same(other, Luma.Host.LaunchCommand.ThroughLauncher(other, game, "skse64_loader.exe"));
+    }
 }

@@ -1,5 +1,6 @@
 using Luma.Core;
 using Luma.Core.Detection;
+using Luma.Core.Games;
 using Luma.Core.Mods;
 
 namespace Luma.Host;
@@ -13,8 +14,17 @@ public sealed class ModManager
 {
     private readonly AppPaths _paths;
     private readonly Dictionary<string, ModStore> _stores = new();
+    private readonly GameCatalog? _catalog;
 
-    public ModManager(AppPaths paths) => _paths = paths;
+    public ModManager(AppPaths paths, GameCatalog? catalog = null)
+    {
+        _paths = paths;
+        _catalog = catalog;
+    }
+
+    /// <summary>The game's loader, if its profile names one.</summary>
+    public LoaderInfo? Loader(DetectedGame game) =>
+        game.Profile.Loader is { } id && _catalog?.Loaders.TryGetValue(id, out var l) == true ? l : null;
 
     /// <summary>Raised after a game's mods or deploy state change (any thread).</summary>
     public event Action<string>? Changed;
@@ -48,7 +58,8 @@ public sealed class ModManager
         {
             throw new InvalidOperationException($"{game.Title} can't be modded safely: {game.Profile.NotModdable}");
         }
-        var installed = Store(game).Install(archive, mod, game.Profile, gamePrefix ?? (mod.Site == "loader" ? LoaderInstaller.InstallPath(game.Profile) : null));
+        var loader = Loader(game);
+        var installed = Store(game).Install(archive, mod, game.Profile, gamePrefix ?? (mod.Site == "loader" ? LoaderInstaller.InstallPath(game.Profile, loader) : null), loader);
         AppLog.Info($"installed {mod.Id} {mod.Version} for {game.Key} ({installed.Files} files)");
         Changed?.Invoke(game.Key);
         return installed;

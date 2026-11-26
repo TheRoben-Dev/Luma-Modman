@@ -84,7 +84,7 @@ public sealed class AppHost
         Keys = new CredentialStore(Path.Combine(Paths.Config, "credentials.json"));
         _sites = new Lazy<ModSites>(() => new ModSites(Keys));
         _downloads = new Lazy<DownloadQueue>(() => new DownloadQueue(Paths));
-        Mods = new ModManager(Paths);
+        Mods = new ModManager(Paths, Games.Catalog);
     }
 
     /// <summary>The app's pid file, so `luma nxm` knows whether to start the app.</summary>

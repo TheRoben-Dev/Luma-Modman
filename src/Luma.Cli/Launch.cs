@@ -6,8 +6,9 @@ using Luma.Host;
 /// <summary>
 /// `luma run -- %command%`: Steam starts the game through this. Mods are linked in, the game runs
 /// with the loader's DLL overrides added to WINEDLLOVERRIDES, and when it exits the mods are taken
-/// out again, so the game folder is left as Steam installed it. A problem with mods never stops
-/// the game from starting: it then runs without them.
+/// out again, so the game folder is left as Steam installed it. When the game's script extender is
+/// in the game (installed as a mod, or by hand), the game starts through its loader. A problem with
+/// mods never stops the game from starting: it then runs without them.
 /// </summary>
 internal static class Launch
 {
@@ -42,6 +43,20 @@ internal static class Launch
         {
             AppLog.Warn($"run: starting without mods: {e.Message}");
             Console.Error.WriteLine($"luma: starting without mods: {e.Message}");
+        }
+
+        // Script extenders: start the game through their loader (skse64_loader.exe) when it's in the game.
+        if (game is { Profile.Moddable: true } && host.Mods.Loader(game) is { Launcher: { } launcher } ext)
+        {
+            if (File.Exists(Path.Combine(game.GameDir, launcher)))
+            {
+                var through = LaunchCommand.ThroughLauncher(command, game.GameDir, launcher);
+                if (through != command)
+                {
+                    AppLog.Info($"run: starting {game.Title} through {ext.Name}");
+                    command = through;
+                }
+            }
         }
 
         var psi = new ProcessStartInfo(command[0]) { UseShellExecute = false };

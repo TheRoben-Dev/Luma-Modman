@@ -41,49 +41,57 @@
     "id": "skse64",
     "name": "Skyrim Script Extender 64",
     "source": "https://skse.silverlock.org",
-    "about": "Extends Skyrim Special Edition's scripting; most big mods need it."
+    "about": "Extends Skyrim Special Edition's scripting; most big mods need it.",
+    "launcher": "skse64_loader.exe"
   },
   {
     "id": "skse",
     "name": "Skyrim Script Extender",
     "source": "https://skse.silverlock.org",
-    "about": "Extends Skyrim (2011)'s scripting."
+    "about": "Extends Skyrim (2011)'s scripting.",
+    "launcher": "skse_loader.exe"
   },
   {
     "id": "f4se",
     "name": "Fallout 4 Script Extender",
     "source": "https://f4se.silverlock.org",
-    "about": "Extends Fallout 4's scripting."
+    "about": "Extends Fallout 4's scripting.",
+    "launcher": "f4se_loader.exe"
   },
   {
     "id": "sfse",
     "name": "Starfield Script Extender",
     "source": "github:ianpatt/sfse",
-    "about": "Extends Starfield's scripting."
+    "about": "Extends Starfield's scripting.",
+    "launcher": "sfse_loader.exe"
   },
   {
     "id": "xnvse",
     "name": "xNVSE",
     "source": "github:xNVSE/NVSE",
-    "about": "New Vegas Script Extender, community edition."
+    "about": "New Vegas Script Extender, community edition.",
+    "launcher": "nvse_loader.exe"
   },
   {
     "id": "fose",
     "name": "Fallout Script Extender",
     "source": "https://fose.silverlock.org",
-    "about": "Extends Fallout 3's scripting."
+    "about": "Extends Fallout 3's scripting.",
+    "launcher": "fose_loader.exe"
   },
   {
     "id": "xobse",
     "name": "xOBSE",
     "source": "github:llde/xOBSE",
-    "about": "Oblivion Script Extender, community edition."
+    "about": "Oblivion Script Extender, community edition.",
+    "launcher": "obse_loader.exe"
   },
   {
     "id": "obse64",
     "name": "OBSE64",
     "source": "nexus:oblivionremastered/282",
-    "about": "Script extender for Oblivion Remastered."
+    "about": "Script extender for Oblivion Remastered.",
+    "launcher": "OblivionRemastered/Binaries/Win64/obse64_loader.exe"
   },
   {
     "id": "mwse",

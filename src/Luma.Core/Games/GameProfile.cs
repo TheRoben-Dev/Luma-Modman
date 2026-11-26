@@ -178,6 +178,15 @@ public sealed record LoaderInfo
     /// <summary>For GitHub sources: a regular expression picking the release file to install (Windows build, for Proton).</summary>
     public string? Asset { get; init; }
 
+    /// <summary>
+    /// The program that starts the game with the loader (script extenders: "skse64_loader.exe"),
+    /// relative to the game folder. When it's in the game, `luma run` starts it instead of the game.
+    /// </summary>
+    public string? Launcher { get; init; }
+
+    /// <summary>The loader's files go in the launcher's folder ("" for the game folder).</summary>
+    public string LauncherDir => Launcher == null ? "" : Path.GetDirectoryName(Launcher.Replace('\\', '/'))?.Replace('\\', '/') ?? "";
+
     /// <summary>True when Luma can download and install it by itself (a GitHub release with a known file).</summary>
     public bool AutoInstall => Source.StartsWith("github:", StringComparison.Ordinal) && Asset != null;
 }

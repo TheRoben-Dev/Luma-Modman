@@ -167,6 +167,8 @@ public partial class ModsScreen : Screen
         {
             items.Add(Add(scrollCol, new ActionButton("Check for updates", () => ModActions.CheckUpdates(game), "Asks the mod sites for newer versions.")));
         }
+        items.Add(Add(scrollCol, new ActionButton("Add a mod from a file", () => App.Push(new AddFilePage(game)),
+            "Install a mod you downloaded yourself, such as a script extender.")));
         foreach (var link in game.Profile.Links.Where(l => l.ImportTo != null))
         {
             var l = link;
