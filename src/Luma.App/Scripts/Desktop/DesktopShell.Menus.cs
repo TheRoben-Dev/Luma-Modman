@@ -12,6 +12,7 @@ public partial class DesktopShell
 {
     private Button _deployButton = null!;
     private Button _steamButton = null!;
+    private Button _pluginsButton = null!;
     private Button _updatesButton = null!;
     private Button _addFileButton = null!;
     private OptionButton _profiles = null!;
@@ -154,6 +155,10 @@ public partial class DesktopShell
         yield return Separator;
         yield return new MenuItem("Move selected mod up", () => _mods.MoveSelected(-1), "Ctrl+Up", _mods.HasSelection);
         yield return new MenuItem("Move selected mod down", () => _mods.MoveSelected(+1), "Ctrl+Down", _mods.HasSelection);
+        if (game.Profile.Plugins != null)
+        {
+            yield return new MenuItem("Plugins…", ShowPlugins, "Ctrl+P");
+        }
         yield return Separator;
         yield return new MenuItem("New profile…", NewProfile);
         yield return new MenuItem($"Delete profile \"{store.State.Active}\"…", DeleteProfile, "", store.State.Active != GameMods.DefaultProfile);
@@ -231,6 +236,8 @@ public partial class DesktopShell
         row.AddChild(_updatesButton);
         row.AddChild(_addFileButton);
         row.AddChild(DesktopTheme.Button("Browse mods", () => SelectTab("Browse"), "Search the mod sites that carry this game (Ctrl+2).", "ToolButton"));
+        _pluginsButton = DesktopTheme.Button("Plugins…", ShowPlugins, "The plugin load order Luma writes to plugins.txt, with each plugin on or off (Ctrl+P).", "ToolButton");
+        row.AddChild(_pluginsButton);
         row.AddChild(new VSeparator());
         row.AddChild(DesktopTheme.Label("Profile", DesktopTheme.Dim, DesktopTheme.SmallSize));
         _profiles = new OptionButton { CustomMinimumSize = new Vector2(170, 0), TooltipText = "Profiles are separate sets of mods and orders for the same game." };
@@ -270,6 +277,7 @@ public partial class DesktopShell
             b.Disabled = !moddable;
         }
         _profiles.Disabled = !moddable;
+        _pluginsButton.Visible = moddable && game!.Profile.Plugins != null;
         _fillingProfiles = true;
         _profiles.Clear();
         if (game != null && moddable)
@@ -279,6 +287,7 @@ public partial class DesktopShell
             _deployButton.Text = deployed ? "Take mods out of game" : "Put mods in game";
             _deployButton.TooltipText = deployed ? "Puts the game folder back as it was." : "Links the enabled mods into the game folder now, for starting it from another launcher.";
             _steamButton.Disabled = game.Install.Source != GameSource.Steam;
+            _pluginsButton.Visible = game.Profile.Plugins != null;
             _updatesButton.Disabled = !state.Mods.Any(m => m.Site is "thunderstore" or "nexus" or "modio" or "curseforge");
             foreach (var k in state.Profiles.Keys.OrderBy(k => k == GameMods.DefaultProfile ? "" : k))
             {
@@ -291,6 +300,14 @@ public partial class DesktopShell
             _deleteProfile.Disabled = state.Active == GameMods.DefaultProfile;
         }
         _fillingProfiles = false;
+    }
+
+    internal void ShowPlugins()
+    {
+        if (Host.ActiveGame is { Profile.Plugins: not null } game)
+        {
+            App.Push(new PluginsPage(game));
+        }
     }
 
     private void ToggleDeploy()

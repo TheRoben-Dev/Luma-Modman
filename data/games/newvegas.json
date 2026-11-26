@@ -14,7 +14,40 @@
   "sites": {
     "nexus": "newvegas"
   },
+  "plugins": {
+    "file": "{localappdata}/FalloutNV/plugins.txt",
+    "style": "plain",
+    "timestamps": true,
+    "base": [
+      "FalloutNV.esm",
+      "DeadMoney.esm",
+      "HonestHearts.esm",
+      "OldWorldBlues.esm",
+      "LonesomeRoad.esm",
+      "GunRunnersArsenal.esm",
+      "ClassicPack.esm",
+      "MercenaryPack.esm",
+      "TribalPack.esm",
+      "CaravanPack.esm"
+    ]
+  },
+  "ini": [
+    {
+      "file": "{mygames}/FalloutNV/Fallout.ini",
+      "section": "Archive",
+      "key": "bInvalidateOlderFiles",
+      "value": "1"
+    },
+    {
+      "file": "{mygames}/FalloutNV/Fallout.ini",
+      "section": "Archive",
+      "key": "SInvalidationFile",
+      "value": ""
+    }
+  ],
   "quirks": [
-    "The 4GB patch is built into xNVSE; no separate patcher needed."
+    "The 4GB patch is built into xNVSE; no separate patcher needed.",
+    "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins. The game orders plugins by file date, which Luma sets.",
+    "Archive invalidation (for replaced textures) is turned on in Fallout.ini while mods are in; start the game once first so the file exists."
   ]
 }

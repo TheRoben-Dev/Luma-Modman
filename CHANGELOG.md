@@ -3,6 +3,12 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.10.0
+
+- Plugins for Bethesda games. Skyrim (both editions), Enderal, Fallout 3, New Vegas, Fallout 4, Starfield and Oblivion: while mods are in the game, Luma writes plugins.txt (and loadorder.txt for Skyrim 2011, or file dates for the older games) so the plugins of your enabled mods load, masters first, in your mod order. Plugins you didn't install through Luma keep their place and state, and the game's own file is put back when the mods come out.
+- A Plugins list in both layouts (Mods → Plugins, or Ctrl+P on the desktop) shows the load order and turns single plugins on or off.
+- Archive invalidation is now actually set while mods are in (Fallout 3, New Vegas, Fallout 4, Fallout 76, Starfield, Oblivion), so replaced textures and meshes show up.
+
 ## 0.9.0
 
 - Modpacks. Export a game's profile as a .lumapack file and share it: as a download list (everyone gets each mod from its site), or full, with the mods that may be passed on inside. Importing makes a new profile in the pack's load order on Linux, SteamOS and Windows alike: mods inside install straight away, the others download from their sites, and anything that has to be fetched by hand (free Nexus accounts, for example) is listed with a link. Both layouts have it: Mods → Import/Export in controller mode, File → Import/Export modpack (Ctrl+I, Ctrl+E) on the desktop.

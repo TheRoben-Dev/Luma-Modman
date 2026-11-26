@@ -38,6 +38,7 @@ public partial class DesktopShell
             ImportPage i => ImportDialog(i),
             AddFilePage a => AddFileDialog(a),
             ModPackPage m => m.Export ? ExportPackDialog(m) : ImportPackDialog(m),
+            PluginsPage p => PluginsDialog(p),
             _ => null,
         };
         if (w == null)
@@ -285,6 +286,72 @@ public partial class DesktopShell
         Fill();
         d.AddButton("Close", () => App.Close(page), primary: true);
         return ShowDialog(d, page, filter);
+    }
+
+    /// <summary>The plugin load order with a checkbox per plugin (MO2's Plugins list).</summary>
+    private Window PluginsDialog(PluginsPage page)
+    {
+        var game = page.Game;
+        var d = new DesktopDialog($"Plugins: {game.Title}", new Vector2I(860, 620));
+        var info = d.AddText("", DesktopTheme.Dim);
+        var tree = new Tree { HideRoot = true, Columns = 4, ColumnTitlesVisible = true, SizeFlagsVertical = SizeFlags.ExpandFill, SelectMode = Tree.SelectModeEnum.Row, TooltipText = "Plugins" };
+        string[] titles = ["#", "On", "Plugin", "From mod"];
+        for (var i = 0; i < titles.Length; i++)
+        {
+            tree.SetColumnTitle(i, titles[i]);
+            tree.SetColumnTitleAlignment(i, HorizontalAlignment.Left);
+            tree.SetColumnExpand(i, i >= 2);
+        }
+        tree.SetColumnCustomMinimumWidth(0, 44);
+        tree.SetColumnCustomMinimumWidth(1, 44);
+        d.Body.AddChild(tree);
+        var filling = false;
+        void Fill()
+        {
+            filling = true;
+            tree.Clear();
+            var root = tree.CreateItem();
+            var (list, problem) = PluginsPage.Load(game);
+            info.Text = problem ?? $"{list.Count(p => p.Enabled)} of {list.Count} plugins on. Luma writes this order to plugins.txt when the mods go in: masters first, then your mods' plugins in mod order (reorder the mods to change it). Plugins not from Luma keep the state they have in the game.";
+            info.AddThemeColorOverride("font_color", problem != null ? DesktopTheme.Warn : DesktopTheme.Dim);
+            var n = 0;
+            foreach (var p in list)
+            {
+                var it = tree.CreateItem(root);
+                it.SetText(0, (++n).ToString());
+                it.SetCustomColor(0, DesktopTheme.Dim);
+                it.SetCellMode(1, TreeItem.TreeCellMode.Check);
+                it.SetChecked(1, p.Enabled);
+                it.SetEditable(1, p.ModId != null);
+                it.SetText(2, p.Name);
+                if (p.Master)
+                {
+                    it.SetCustomColor(2, DesktopTheme.Accent);
+                }
+                it.SetTooltipText(2, p.Master ? $"{p.Name} (master: loads before plugins)" : p.Name);
+                it.SetText(3, PluginsPage.ModName(game, p.ModId));
+                it.SetCustomColor(3, DesktopTheme.Dim);
+                it.SetMetadata(0, p.Name);
+            }
+            filling = false;
+        }
+        tree.ItemEdited += () =>
+        {
+            if (filling || tree.GetEdited() is not { } it)
+            {
+                return;
+            }
+            var name = it.GetMetadata(0).AsString();
+            var (list, _) = PluginsPage.Load(game);
+            if (list.FirstOrDefault(p => p.Name == name) is { ModId: not null } p)
+            {
+                PluginsPage.Toggle(game, p);
+            }
+            Callable.From(Fill).CallDeferred();
+        };
+        Fill();
+        d.AddButton("Close", () => App.Close(page), primary: true);
+        return ShowDialog(d, page, tree);
     }
 
     private Window SiteSetupDialog(SiteSetupPage page)

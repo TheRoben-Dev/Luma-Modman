@@ -569,6 +569,9 @@ public partial class DesktopShell : Screen
             case Key.Q:
                 GetTree().Quit();
                 return true;
+            case Key.P:
+                ShowPlugins();
+                return true;
             case Key.I:
                 App.Push(new ModPackPage(Host.ActiveGame, export: false));
                 return true;

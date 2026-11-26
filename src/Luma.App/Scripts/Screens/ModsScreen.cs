@@ -130,6 +130,11 @@ public partial class ModsScreen : Screen
                         Host.Mods.NotifyChanged(game);
                     }), "Goes back to the Default profile.")));
             }
+            if (game.Profile.Plugins != null)
+            {
+                items.Add(Add(scrollCol, new ActionButton("Plugins", () => App.Push(new PluginsPage(game)),
+                    "The plugin load order Luma writes to plugins.txt, with each plugin on or off.")));
+            }
             items.Add(Add(scrollCol, new ActionButton("Export this profile as a modpack", () => App.Push(new ModPackPage(game, export: true)),
                 "A file others can import on Linux, SteamOS or Windows: a download list, or with the mods inside.")));
             if (deployed)

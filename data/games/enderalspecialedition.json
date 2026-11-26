@@ -15,7 +15,20 @@
   "sites": {
     "nexus": "enderalspecialedition"
   },
+  "plugins": {
+    "file": "{localappdata}/Enderal Special Edition/plugins.txt",
+    "style": "asterisk",
+    "base": [
+      "Skyrim.esm",
+      "Update.esm",
+      "Dawnguard.esm",
+      "HearthFires.esm",
+      "Dragonborn.esm",
+      "Enderal - Forgotten Stories.esm"
+    ]
+  },
   "quirks": [
-    "A total conversion that runs on Skyrim Special Edition's engine."
+    "A total conversion that runs on Skyrim Special Edition's engine.",
+    "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins."
   ]
 }

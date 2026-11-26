@@ -15,8 +15,39 @@
     "nexus": "starfield",
     "curseforge": "starfield"
   },
+  "plugins": {
+    "file": "{localappdata}/Starfield/plugins.txt",
+    "style": "asterisk",
+    "base": [
+      "Starfield.esm",
+      "Constellation.esm",
+      "OldMars.esm",
+      "ShatteredSpace.esm",
+      "BlueprintShips-Starfield.esm",
+      "SFBGS003.esm",
+      "SFBGS004.esm",
+      "SFBGS006.esm",
+      "SFBGS007.esm",
+      "SFBGS008.esm"
+    ]
+  },
+  "ini": [
+    {
+      "file": "{mygames}/Starfield/StarfieldCustom.ini",
+      "section": "Archive",
+      "key": "bInvalidateOlderFiles",
+      "value": "1"
+    },
+    {
+      "file": "{mygames}/Starfield/StarfieldCustom.ini",
+      "section": "Archive",
+      "key": "sResourceDataDirsFinal",
+      "value": ""
+    }
+  ],
   "quirks": [
     "Loose-file mods need the archive invalidation settings Luma writes to StarfieldCustom.ini.",
-    "Creations from the in-game menu are managed by the game, not Luma."
+    "Creations from the in-game menu are managed by the game, not Luma.",
+    "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins."
   ]
 }

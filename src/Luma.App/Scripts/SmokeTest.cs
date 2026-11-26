@@ -56,6 +56,16 @@ public partial class SmokeTest : Node
             FindFocusable(GetTree().Root, "The Elder Scrolls V")?.GrabFocus();
             Tap(JoyButton.A);
         }, wait: 1.2, expect: "Browse mods", tab: "Mods");
+        // Bethesda plugins: a mod with a master and a plugin shows up in the Plugins page, and A turns one off.
+        Step("skyrim-plugin-mod", InstallPluginMod, wait: 1.2, tab: "Mods");
+        Step("plugins-open", () =>
+        {
+            FindFocusable(GetTree().Root, "The plugin load order")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0, expect: "Smoke Master.esm");
+        Step("plugins-toggle", () => Press(Pad.Accept), wait: 0.8, expect: "Smoke Master.esm", check: () =>
+            Main.Instance.Host!.Mods.Store(Main.Instance.Host.ActiveGame!).State.IsPluginOn("Smoke Master.esm") ? "A didn't turn the plugin off" : null);
+        Step("plugins-back", () => Press(Pad.Back), wait: 0.8, tab: "Mods");
         // A game with anti-cheat shows why it can't be modded instead of mod actions.
         Step("pick-not-moddable", () =>
         {
@@ -431,8 +441,27 @@ public partial class SmokeTest : Node
             Main.Instance.Host!.SaveSettings(Main.Instance.Host.Settings with { Layout = "auto" });
             Shell().PickGame("The Elder Scrolls V");
         }, wait: 1.5, tab: "Mods", check: () => Host().ActiveGame?.Title.StartsWith("The Elder Scrolls V", StringComparison.Ordinal) == true ? null : "Skyrim isn't active");
+        Step("desktop-skyrim-plugin-mod", InstallPluginMod, wait: 1.2, tab: "Mods");
+        Step("desktop-plugins", () => Key(Godot.Key.P, ctrl: true), wait: 1.2, check: () =>
+            DialogOpen("Plugins") ?? (All(GetTree().Root).OfType<Tree>().Any(t => t.TooltipText == "Plugins" && t.GetRoot()?.GetChildCount() == 2) ? null : "the plugin table doesn't list the mod's two plugins"));
+        Step("desktop-plugins-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
         Step("desktop-browse-nexus", () => Key(Godot.Key.Key2, ctrl: true), wait: 2.0, tab: "Browse");
         Step("desktop-not-moddable", () => Shell().PickGame("Marvel Rivals"), wait: 1.5, tab: "Mods", check: NoController);
+    }
+
+    /// <summary>Installs a small mod with a master and a plugin for the active (Bethesda) game.</summary>
+    private static void InstallPluginMod()
+    {
+        var host = Main.Instance.Host!;
+        var game = host.ActiveGame!;
+        var zip = Path.Combine(host.Paths.Data, "smoke-plugins.zip");
+        using (var z = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create))
+        {
+            z.CreateEntry("Smoke Master.esm");
+            z.CreateEntry("Smoke Patch.esp");
+        }
+        host.Mods.Install(game, zip, new Luma.Core.Mods.InstalledMod { Id = "local:smoke-plugins", Site = "local", Name = "Smoke plugins" });
+        host.Mods.NotifyChanged(game);
     }
 
     private static IEnumerable<Node> All(Node root)

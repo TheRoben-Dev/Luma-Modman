@@ -15,8 +15,37 @@
     "nexus": "fallout4",
     "curseforge": "fallout-4"
   },
+  "plugins": {
+    "file": "{localappdata}/Fallout4/plugins.txt",
+    "style": "asterisk",
+    "base": [
+      "Fallout4.esm",
+      "DLCRobot.esm",
+      "DLCworkshop01.esm",
+      "DLCCoast.esm",
+      "DLCworkshop02.esm",
+      "DLCworkshop03.esm",
+      "DLCNukaWorld.esm",
+      "DLCUltraHighResolution.esm"
+    ]
+  },
+  "ini": [
+    {
+      "file": "{mygames}/Fallout4/Fallout4Custom.ini",
+      "section": "Archive",
+      "key": "bInvalidateOlderFiles",
+      "value": "1"
+    },
+    {
+      "file": "{mygames}/Fallout4/Fallout4Custom.ini",
+      "section": "Archive",
+      "key": "sResourceDataDirsFinal",
+      "value": ""
+    }
+  ],
   "quirks": [
     "The 2024 next-gen update broke older F4SE plugins; check each mod's supported game version.",
-    "Loose files need bInvalidateOlderFiles=1, which Luma sets in Fallout4Custom.ini."
+    "Loose files need bInvalidateOlderFiles=1, which Luma sets in Fallout4Custom.ini.",
+    "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins."
   ]
 }

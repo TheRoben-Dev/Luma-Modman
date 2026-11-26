@@ -12,8 +12,22 @@
   "sites": {
     "nexus": "fallout76"
   },
+  "ini": [
+    {
+      "file": "{mygames}/Fallout 76/Fallout76Custom.ini",
+      "section": "Archive",
+      "key": "bInvalidateOlderFiles",
+      "value": "1"
+    },
+    {
+      "file": "{mygames}/Fallout 76/Fallout76Custom.ini",
+      "section": "Archive",
+      "key": "sResourceDataDirsFinal",
+      "value": ""
+    }
+  ],
   "quirks": [
     "Online-only: only client-side mods (interface, textures, sound) are allowed.",
-    "Archives are listed in Fallout76Custom.ini, which Luma keeps up to date."
+    "Loose-file mods need archive invalidation, which Luma sets in Fallout76Custom.ini while mods are in. Mods packed as .ba2 still have to be added to sResourceArchive2List in that file by hand."
   ]
 }

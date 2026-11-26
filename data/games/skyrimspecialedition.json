@@ -14,9 +14,21 @@
   "sites": {
     "nexus": "skyrimspecialedition"
   },
+  "plugins": {
+    "file": "{localappdata}/Skyrim Special Edition/plugins.txt",
+    "style": "asterisk",
+    "base": [
+      "Skyrim.esm",
+      "Update.esm",
+      "Dawnguard.esm",
+      "HearthFires.esm",
+      "Dragonborn.esm",
+      "_ResourcePack.esl"
+    ]
+  },
   "quirks": [
     "Script-extender mods need SKSE64. Add it from a file like any mod; Luma then starts the game through skse64_loader.exe.",
-    "Luma doesn't turn plugins (.esp/.esm/.esl) on in plugins.txt yet; new plugins may need turning on from a load order tool or the in-game Creations menu.",
-    "Anniversary Edition content is part of the same game."
+    "Anniversary Edition content is part of the same game.",
+    "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins."
   ]
 }

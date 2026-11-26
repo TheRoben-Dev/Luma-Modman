@@ -15,7 +15,36 @@
   "sites": {
     "nexus": "fallout3"
   },
+  "plugins": {
+    "file": "{localappdata}/Fallout3/plugins.txt",
+    "style": "plain",
+    "timestamps": true,
+    "base": [
+      "Fallout3.esm",
+      "Anchorage.esm",
+      "ThePitt.esm",
+      "BrokenSteel.esm",
+      "PointLookout.esm",
+      "Zeta.esm"
+    ]
+  },
+  "ini": [
+    {
+      "file": "{mygames}/Fallout3/FALLOUT.INI",
+      "section": "Archive",
+      "key": "bInvalidateOlderFiles",
+      "value": "1"
+    },
+    {
+      "file": "{mygames}/Fallout3/FALLOUT.INI",
+      "section": "Archive",
+      "key": "SInvalidationFile",
+      "value": ""
+    }
+  ],
   "quirks": [
-    "Games for Windows Live must be disabled; the GOTY edition on Steam is the one to mod."
+    "Games for Windows Live must be disabled; the GOTY edition on Steam is the one to mod.",
+    "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins. The game orders plugins by file date, which Luma sets.",
+    "Archive invalidation (for replaced textures) is turned on in FALLOUT.INI while mods are in; start the game once first so the file exists."
   ]
 }

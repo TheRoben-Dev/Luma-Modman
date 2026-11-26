@@ -85,6 +85,21 @@ public sealed class ModManager
     {
         var plan = Plan(game);
         var m = Deployer.Deploy(plan, game.Key, Manifest(game), BackupDir(game));
+        try
+        {
+            var plugins = GameSetup.Apply(game, _paths.Home, plan, ModsDir(game), Store(game).State, m, BackupDir(game));
+            Deployer.Write(Manifest(game), m);
+            if (game.Profile.Plugins != null)
+            {
+                AppLog.Info($"plugin list for {game.Key}: {plugins.Count(p => p.Enabled)} of {plugins.Count} plugins on");
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            Deployer.Write(Manifest(game), m);
+            Deployer.Undeploy(Manifest(game));
+            throw new IOException($"Couldn't write {game.Title}'s plugin list or settings: {e.Message}", e);
+        }
         AppLog.Info($"deployed {m.Files.Count} files for {game.Key} ({m.Backups.Count} game files set aside, {plan.Conflicts.Count} conflicts)");
         Changed?.Invoke(game.Key);
         return m;
@@ -95,6 +110,23 @@ public sealed class ModManager
         Deployer.Undeploy(Manifest(game));
         AppLog.Info($"mods removed from {game.Key}");
         Changed?.Invoke(game.Key);
+    }
+
+    /// <summary>The plugin list the next deploy writes (for showing and toggling plugins), or null for games without one.</summary>
+    public List<PluginEntry>? Plugins(DetectedGame game)
+    {
+        if (game.Profile.Plugins is not { } settings || ModsDir(game) is not { } mods)
+        {
+            return null;
+        }
+        var file = GamePaths.ResolvePath(game, settings.File, _paths.Home);
+        // While deployed, plugins.txt is Luma's own: the game's original is the backup (or there was none).
+        var deployed = Deployed(game);
+        var source = file == null ? null
+            : deployed != null && deployed.Written.Contains(file) ? deployed.Backups.GetValueOrDefault(file)
+            : file;
+        var current = source != null && File.Exists(source) ? File.ReadAllLines(source) : [];
+        return GameSetup.Plugins(Plan(game), mods, Store(game).State, settings, current);
     }
 
     public void NotifyChanged(DetectedGame game) => Changed?.Invoke(game.Key);
