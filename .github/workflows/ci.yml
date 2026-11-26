@@ -115,3 +115,43 @@ jobs:
         with:
           name: Luma-linux-x86_64
           path: build/godot
+
+  release:
+    # Every push to main whose version (Directory.Build.props) has no release yet publishes one:
+    # the tarball and checksums the in-app updater reads, with that version's changelog as notes.
+    name: Publish release
+    needs: [dotnet, app]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Version
+        id: v
+        run: |
+          v=$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' Directory.Build.props)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if gh release view "v$v" >/dev/null 2>&1; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        if: steps.v.outputs.exists == 'false'
+        with:
+          name: Luma-linux-x86_64
+          path: build/godot
+      - name: Package
+        if: steps.v.outputs.exists == 'false'
+        run: |
+          chmod +x build/godot/Luma.x86_64 build/godot/luma
+          tools/release/package.sh build/godot "${{ steps.v.outputs.version }}" dist
+          # Release notes: this version's section of CHANGELOG.md.
+          awk -v v="## ${{ steps.v.outputs.version }}" '$0==v{on=1;next} /^## /{on=0} on' CHANGELOG.md > dist/notes.md
+          test -s dist/notes.md
+      - name: Publish
+        if: steps.v.outputs.exists == 'false'
+        run: |
+          gh release create "v${{ steps.v.outputs.version }}" dist/Luma-linux-x86_64.tar.gz dist/SHA256SUMS \
+            --target "$GITHUB_SHA" --title "Luma ${{ steps.v.outputs.version }}" --notes-file dist/notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}

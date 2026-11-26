@@ -3,7 +3,28 @@
 A controller-first mod manager for SteamOS and Bazzite (Steam Deck), built with Godot 4 (.NET).
 It runs in Game Mode and Desktop Mode, and works just as well with touch and a mouse.
 
-> Work in progress. Built in phases; see [docs/plan.md](docs/plan.md).
+## Install
+
+1. Download `Luma-linux-x86_64.tar.gz` from the [latest release](https://github.com/TheRoben-Dev/Luma-Modman/releases/latest)
+   (in Desktop Mode on a Steam Deck).
+2. Unpack it and run `./install.sh` from the `Luma` folder. Luma goes to `~/Applications/Luma`
+   with a menu entry. If Steam is closed it also adds a Steam shortcut with Luma's own art;
+   `./install.sh --restart-steam` closes and restarts Steam to do it, and Settings → Updates →
+   "Add Luma to Steam" does the same from inside the app.
+3. Open Luma from Steam (Game Mode too). Updates install from inside the app, with one-step
+   rollback.
+
+### Playing with mods
+
+Mods are kept in Luma's folder. To have Steam link them in at every start (and take them out when
+the game closes), set the game's launch options to the line Luma shows under **Mods → Start with
+mods from Steam**:
+
+```
+"/home/deck/Applications/Luma/luma" run -- %command%
+```
+
+For other launchers, use **Put the mods in the game now** and **Take the mods out** when done.
 
 ## What it does
 
@@ -17,7 +38,8 @@ Select), and every tab works on that game. Games still start from Steam or their
   warnings, update checks and full rollback.
 - **Browse**: Thunderstore, mod.io, CurseForge and Nexus Mods, showing only the sites that carry
   the game, with guided setup for sites that need an account or API key.
-- **Downloads**: progress, retry, and "Mod Manager Download" links from Nexus Mods.
+- **Downloads**: progress, retry, and "Mod Manager Download" links from Nexus Mods. Finished
+  downloads install themselves for their game.
 - **Clean games**: mods live in Luma's own folder and are linked into the game only while it runs,
   so game files stay untouched and everything can be undone.
 
@@ -31,8 +53,9 @@ Select), and every tab works on that game. Games still start from Steam or their
 | Switch game | View / Select | G |
 | Context actions | X / Y | F / R |
 
-There is no visible cursor; touch and mouse clicks work everywhere. Text fields use the Steam
-on-screen keyboard.
+There is no visible cursor; touch and mouse clicks work everywhere. Text entry has its own
+on-screen keyboard (Y deletes, X adds a space, Paste for API keys); a real keyboard and Steam's
+keyboard (Steam + X) type straight in.
 
 ## Rules
 
@@ -58,11 +81,13 @@ tools/smoke/run-ui-smoke.sh "$(which godot)" /tmp/shots   # scripted UI test und
 src/
   Luma.Core/   Godot-free: paths, game profiles, detection, mod store and deployment
   Luma.Host/   composition root shared by the app and the CLI, settings, self-update, log
-  Luma.Cli/    `luma` headless command (later: Steam launch wrapper)
+  Luma.Cli/    `luma`: Steam launch wrapper (`luma run`), deploy/undeploy, nxm links, steam-add
   Luma.App/    Godot project: screens, focus, input, themes, sounds, animation
 tests/         xUnit tests, run in CI without Godot or a display
 data/games/    per-game support profiles (JSON): add a game by adding a file
 data/loaders.json  mod loaders and script extenders Luma can install
+data/steam-art/    Steam library art (drawn by tools/art/make_steam_art.py)
+tools/release/     packaging and install.sh; CI publishes a release when the version changes
 ```
 
 ## Supported games
