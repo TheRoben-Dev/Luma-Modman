@@ -59,6 +59,16 @@ public sealed class AppHost
     public AppSettings Settings { get; private set; }
     public AppUpdater Updater { get; }
     public GameLibrary Games { get; }
+    public CredentialStore Keys { get; }
+
+    private readonly Lazy<ModSites> _sites;
+    private readonly Lazy<DownloadQueue> _downloads;
+
+    /// <summary>The mod sites (created on first use).</summary>
+    public ModSites Sites => _sites.Value;
+
+    /// <summary>The download queue (created on first use; the CLI never starts it).</summary>
+    public DownloadQueue Downloads => _downloads.Value;
 
     public AppHost(AppPaths? paths = null, HttpClient? http = null)
     {
@@ -68,7 +78,13 @@ public sealed class AppHost
         Settings = LoadJson<AppSettings>(Paths.SettingsFile) ?? new AppSettings();
         Updater = new AppUpdater(http);
         Games = new GameLibrary(Paths);
+        Keys = new CredentialStore(Path.Combine(Paths.Config, "credentials.json"));
+        _sites = new Lazy<ModSites>(() => new ModSites(Keys));
+        _downloads = new Lazy<DownloadQueue>(() => new DownloadQueue(Paths));
     }
+
+    /// <summary>The app's pid file, so `luma nxm` knows whether to start the app.</summary>
+    public string PidFile => Path.Combine(Paths.Runtime, "luma-app.pid");
 
     /// <summary>The game the player is working on: the one they picked, else the first moddable one found.</summary>
     public Luma.Core.Detection.DetectedGame? ActiveGame =>

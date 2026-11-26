@@ -15,9 +15,28 @@ internal static class Cli
           luma settings                print the settings file path and contents
           luma games                   scan for installed games Luma supports
           luma games --all             list every supported game (profiles)
+          luma nxm <nxm://link>        hand a Nexus "Mod Manager Download" link to the app
 
         Luma never downloads games, DRM bypasses or pirated content.
         """;
+
+    /// <summary>Starts Luma (next to this binary) unless it's already running; it picks up the link from its inbox.</summary>
+    private static void StartAppIfNeeded(AppHost host)
+    {
+        if (File.Exists(host.PidFile) && int.TryParse(File.ReadAllText(host.PidFile).Trim(), out var pid) && Directory.Exists($"/proc/{pid}"))
+        {
+            return;
+        }
+        var app = Path.Combine(AppContext.BaseDirectory, "Luma.x86_64");
+        if (File.Exists(app))
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(app) { UseShellExecute = false });
+        }
+        else
+        {
+            Console.WriteLine("Link saved. Luma picks it up the next time it starts.");
+        }
+    }
 
     public static int Run(string[] args)
     {
@@ -37,6 +56,14 @@ internal static class Cli
                 case "settings":
                     Console.WriteLine(host.Paths.SettingsFile);
                     Console.WriteLine(File.Exists(host.Paths.SettingsFile) ? File.ReadAllText(host.Paths.SettingsFile) : "(defaults)");
+                    return 0;
+                case "nxm" when args.Length > 1:
+                    if (!NxmHandler.Drop(host.Paths, args[1]))
+                    {
+                        Console.Error.WriteLine("error: not a Nexus Mods download link");
+                        return 1;
+                    }
+                    StartAppIfNeeded(host);
                     return 0;
                 case "games" when args.Length > 1 && args[1] == "--all":
                     foreach (var g in host.Games.Catalog.Games)
