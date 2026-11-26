@@ -3,6 +3,13 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.5.0
+
+- First release: download `Luma-linux-x86_64.tar.gz` and run `./install.sh`. Luma installs to ~/Applications/Luma with a menu entry.
+- Add Luma to Steam, with its own library art, from the installer or Settings → Updates, so it opens from Game Mode.
+- Updates install from inside the app, and the previous version is kept for rollback.
+- A new icon.
+
 ## 0.4.0
 
 - Downloads install themselves for their game. Mods are kept in Luma's folder, never mixed into the game's.

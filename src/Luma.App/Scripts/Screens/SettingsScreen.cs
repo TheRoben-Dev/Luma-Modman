@@ -206,12 +206,50 @@ public partial class SettingsScreen : TwoPaneScreen
                     $"Go back to the previous Luma{prev}? The app restarts.", "Roll back", App.RollbackApp)));
             }
         }
+        if (updater.CanSelfUpdate)
+        {
+            var dir = updater.InstallDir;
+            var added = Try(() => SteamSetup.IsAdded(Host.Paths.Home, dir), false, "Steam's shortcuts", col);
+            Add(new ActionButton(added ? "Add Luma to Steam again (refresh art)" : "Add Luma to Steam", () => AddToSteam(dir),
+                "A Steam shortcut with Luma's own art, so it opens from Game Mode."));
+        }
         else
         {
             col.AddChild(UiTheme.Label("This copy can't update itself (development build or package). Use the installer to update.",
                 UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
         col.AddChild(UiTheme.Label("Luma installs mods only from the sites you connect, never games, DRM bypasses or pirated content.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+    }
+
+    private void AddToSteam(string dir)
+    {
+        var home = Host.Paths.Home;
+        if (!Luma.Core.Steam.SteamShortcuts.SteamRunning(home))
+        {
+            if (App.Guard(() => SteamSetup.Add(home, dir)))
+            {
+                App.Success("Luma is in your Steam library.");
+            }
+            return;
+        }
+        if (SteamSetup.InGameMode)
+        {
+            App.Push(new ChoicePage("Steam reads shortcuts only when it starts, and it can't be closed from Game Mode. Switch to Desktop Mode and add Luma from there, or run the installer again.",
+                ("OK", () => { })));
+            return;
+        }
+        App.Push(new ChoicePage("Steam reads shortcuts only when it starts. Luma can close Steam, add itself, and start Steam again.",
+            ("Close Steam and add Luma", () => App.Busy("Adding Luma to Steam…", (_, _) => Task.Run(() =>
+            {
+                if (!SteamSetup.CloseSteam(home, TimeSpan.FromSeconds(30)))
+                {
+                    throw new InvalidOperationException("Steam didn't close. Exit it yourself (Steam → Exit), then try again.");
+                }
+                var n = SteamSetup.Add(home, dir);
+                SteamSetup.StartSteam();
+                return n;
+            }), _ => App.Success("Luma is in your Steam library."), cancellable: false)),
+            ("Cancel", () => { })));
     }
 
     private void BuildAbout(VBoxContainer col, Action<Control> Add)

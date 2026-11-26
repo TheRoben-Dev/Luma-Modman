@@ -21,6 +21,8 @@ internal static class Cli
           luma deploy KEY              link a game's enabled mods in and leave them there
           luma undeploy KEY            take a game's mods out again
           luma mods KEY                list a game's mods in load order
+          luma steam-add [--restart]   add Luma to Steam with its art (--restart closes and
+                                       restarts Steam around it)
 
         Luma never downloads games, DRM bypasses or pirated content.
         """;
@@ -102,6 +104,23 @@ internal static class Cli
                         }
                     }
                     return 0;
+                case "steam-add":
+                {
+                    var dir = AppContext.BaseDirectory.TrimEnd('/');
+                    var restart = args.Contains("--restart") && Luma.Core.Steam.SteamShortcuts.SteamRunning(host.Paths.Home);
+                    if (restart && !SteamSetup.CloseSteam(host.Paths.Home, TimeSpan.FromSeconds(30)))
+                    {
+                        Console.Error.WriteLine("error: Steam didn't close. Exit it yourself, then run this again.");
+                        return 1;
+                    }
+                    var n = SteamSetup.Add(host.Paths.Home, dir);
+                    Console.WriteLine($"Luma added to Steam ({n} account{(n == 1 ? "" : "s")}).");
+                    if (restart)
+                    {
+                        SteamSetup.StartSteam();
+                    }
+                    return 0;
+                }
                 case "run":
                     return Launch.Run(host, args[1..]);
                 case "deploy" when args.Length > 1:
@@ -135,7 +154,7 @@ internal static class Cli
                     return 2;
             }
         }
-        catch (Exception e) when (e is InvalidOperationException or IOException or ArgumentException)
+        catch (Exception e) when (e is InvalidOperationException or IOException or ArgumentException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
         {
             Console.Error.WriteLine($"error: {e.Message}");
             return 1;
