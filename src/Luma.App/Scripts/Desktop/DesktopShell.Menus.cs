@@ -19,6 +19,7 @@ public partial class DesktopShell
     private Button _addFileButton = null!;
     private OptionButton _profiles = null!;
     private Button _deleteProfile = null!;
+    private Button _renameProfile = null!;
     private Button _newProfile = null!;
     private bool _fillingProfiles;
 
@@ -32,6 +33,7 @@ public partial class DesktopShell
         AddMenu(bar, "File", FileMenu);
         AddMenu(bar, "Game", GameMenu);
         AddMenu(bar, "Mods", ModsMenu);
+        AddMenu(bar, "Tools", ToolsMenu);
         AddMenu(bar, "View", ViewMenu);
         AddMenu(bar, "Help", HelpMenu);
         return bar;
@@ -168,7 +170,38 @@ public partial class DesktopShell
         }
         yield return Separator;
         yield return new MenuItem("New profile…", NewProfile);
+        yield return new MenuItem($"Rename profile \"{store.State.Active}\"…", () => ModInfo.RenameProfile(game), "", store.State.Active != GameMods.DefaultProfile);
+        if (ModManager.CanKeepSaves(game))
+        {
+            yield return new MenuItem("Own saves for this profile", () => ModInfo.SetLocal(game, true, !store.State.HasLocalSaves), "", true, store.State.HasLocalSaves);
+        }
+        if (ModManager.CanKeepInis(game))
+        {
+            yield return new MenuItem("Own game settings (INI files) for this profile", () => ModInfo.SetLocal(game, false, !store.State.HasLocalInis), "", true, store.State.HasLocalInis);
+        }
+        yield return new MenuItem("Add a separator…", () => ModInfo.AddSeparator(game));
         yield return new MenuItem($"Delete profile \"{store.State.Active}\"…", DeleteProfile, "", store.State.Active != GameMods.DefaultProfile);
+    }
+
+    private IEnumerable<MenuItem> ToolsMenu()
+    {
+        var game = Host.ActiveGame;
+        if (game is not { Profile.Moddable: true })
+        {
+            yield return new MenuItem("Pick a game that can be modded", null, "", false);
+            yield break;
+        }
+        foreach (var t in Host.Mods.Store(game).State.Tools)
+        {
+            var tool = t;
+            yield return new MenuItem($"Run {t.Name}", () => ToolsPage.Run(game, tool));
+        }
+        if (Host.Mods.Store(game).State.Tools.Count > 0)
+        {
+            yield return Separator;
+        }
+        yield return new MenuItem("Manage tools…", () => App.Push(new ToolsPage(game)), "Ctrl+T");
+        yield return new MenuItem("Add a program…", () => ToolsPage.PickProgram(game));
     }
 
     private IEnumerable<MenuItem> ViewMenu()
@@ -255,6 +288,13 @@ public partial class DesktopShell
         row.AddChild(_pluginsButton);
         _conflictsButton = DesktopTheme.Button("Conflicts…", ShowConflicts, "Files that more than one mod has, and which mod's copy goes in (Ctrl+K).", "ToolButton");
         row.AddChild(_conflictsButton);
+        row.AddChild(DesktopTheme.Button("Tools…", () =>
+        {
+            if (Host.ActiveGame is { Profile.Moddable: true } g)
+            {
+                App.Push(new ToolsPage(g));
+            }
+        }, "Run xEdit, LOOT, BodySlide and other tools with the mods in (Ctrl+T).", "ToolButton"));
         row.AddChild(new VSeparator());
         row.AddChild(DesktopTheme.Label("Profile", DesktopTheme.Dim, DesktopTheme.SmallSize));
         _profiles = new OptionButton { CustomMinimumSize = new Vector2(170, 0), TooltipText = "Profiles are separate sets of mods and orders for the same game." };
@@ -270,12 +310,20 @@ public partial class DesktopShell
         };
         row.AddChild(_profiles);
         _newProfile = DesktopTheme.Button("New…", NewProfile, "A copy of the current profile, to change without losing it.", "ToolButton");
+        _renameProfile = DesktopTheme.Button("Rename…", () =>
+        {
+            if (Host.ActiveGame is { } g)
+            {
+                ModInfo.RenameProfile(g);
+            }
+        }, "Gives this profile another name.", "ToolButton");
         _deleteProfile = DesktopTheme.Button("Delete", DeleteProfile, "Deletes this profile. Its mods stay installed.", "ToolButton");
         row.AddChild(_newProfile);
+        row.AddChild(_renameProfile);
         row.AddChild(_deleteProfile);
         row.AddChild(Spacer());
         row.AddChild(DesktopTheme.Label("Filter", DesktopTheme.Dim, DesktopTheme.SmallSize));
-        var filter = new LineEdit { PlaceholderText = "Filter mods by name", CustomMinimumSize = new Vector2(220, 0), ClearButtonEnabled = true, TooltipText = "Shows only the mods whose name contains this." };
+        var filter = new LineEdit { PlaceholderText = "Filter mods by name or category", CustomMinimumSize = new Vector2(220, 0), ClearButtonEnabled = true, TooltipText = "Shows only the mods whose name contains this." };
         filter.TextChanged += t =>
         {
             _mods.Filter = t;
@@ -289,7 +337,7 @@ public partial class DesktopShell
     {
         var game = Host.ActiveGame;
         var moddable = game?.Profile.Moddable == true;
-        foreach (var b in new[] { _deployButton, _steamButton, _updatesButton, _addFileButton, _newProfile, _deleteProfile, _conflictsButton, _updateAllButton })
+        foreach (var b in new[] { _deployButton, _steamButton, _updatesButton, _addFileButton, _newProfile, _renameProfile, _deleteProfile, _conflictsButton, _updateAllButton })
         {
             b.Disabled = !moddable;
         }
@@ -318,6 +366,7 @@ public partial class DesktopShell
                 }
             }
             _deleteProfile.Disabled = state.Active == GameMods.DefaultProfile;
+            _renameProfile.Disabled = state.Active == GameMods.DefaultProfile;
         }
         _fillingProfiles = false;
     }

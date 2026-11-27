@@ -35,6 +35,20 @@ public static class Tools
         new("Creation Kit", ["CreationKit.exe"]),
     ];
 
+    /// <summary>The name LOOT knows a game by (its --game argument).</summary>
+    public static string LootName(string profileId, string title) => profileId switch
+    {
+        "skyrimspecialedition" => "Skyrim Special Edition",
+        "skyrim" => "Skyrim",
+        "enderalspecialedition" => "Enderal Special Edition",
+        "fallout4" => "Fallout4",
+        "newvegas" => "FalloutNV",
+        "fallout3" => "Fallout3",
+        "oblivion" => "Oblivion",
+        "starfield" => "Starfield",
+        _ => title,
+    };
+
     public static KnownTool? Recognise(string exe) =>
         Known.FirstOrDefault(k => k.Programs.Any(p => p.Equals(Path.GetFileName(exe), StringComparison.OrdinalIgnoreCase)));
 

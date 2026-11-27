@@ -185,6 +185,9 @@ public static class DesktopTheme
         t.SetConstant("draw_guides", "Tree", 0);
         t.SetConstant("draw_relationship_lines", "Tree", 0);
         t.SetColor("font_outline_color", "Tree", Colors.Transparent);
+        // Godot's own empty tick box is near-black on this background: an outline that shows.
+        t.SetIcon("unchecked", "Tree", EmptyBox(Dim));
+        t.SetIcon("unchecked_disabled", "Tree", EmptyBox(new Color(Dim, 0.45f)));
 
         t.SetStylebox("panel", "TabContainer", Flat(Panel, 1, Line, 0, 0, 0));
         t.SetStylebox("tabbar_background", "TabContainer", Flat(Bg, 0, null, 0, 0, 0));
@@ -304,5 +307,20 @@ public static class DesktopTheme
         var b = new Button { Text = text, TooltipText = tooltip, ThemeTypeVariation = variation, FocusMode = Control.FocusModeEnum.All };
         b.Pressed += pressed;
         return b;
+    }
+
+    /// <summary>A 16 px empty tick box: a rounded outline in <paramref name="c"/>.</summary>
+    private static ImageTexture EmptyBox(Color c)
+    {
+        var img = Image.CreateEmpty(16, 16, false, Image.Format.Rgba8);
+        img.Fill(Colors.Transparent);
+        for (var i = 2; i < 14; i++)
+        {
+            foreach (var (x, y) in new[] { (i, 1), (i, 14), (1, i), (14, i) })
+            {
+                img.SetPixel(x, y, c);
+            }
+        }
+        return ImageTexture.CreateFromImage(img);
     }
 }

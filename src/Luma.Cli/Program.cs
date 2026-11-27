@@ -21,6 +21,7 @@ internal static class Cli
           luma deploy KEY              link a game's enabled mods in and leave them there
           luma undeploy KEY            take a game's mods out again
           luma mods KEY                list a game's mods in load order
+          luma tool KEY [NAME]         run a tool (xEdit, LOOT…) with the mods in; no NAME lists them
           luma pack export KEY FILE [--full]
                                        save the active profile as a modpack (.lumapack): a
                                        download list, or --full with the mods that may be
@@ -146,6 +147,22 @@ internal static class Cli
                     host.Mods.Undeploy(g);
                     Console.WriteLine($"Mods taken out of {g.Title}.");
                     return 0;
+                }
+                case "tool" when args.Length > 1:
+                {
+                    var g = FindGame(host, args[1]);
+                    var tools = host.Mods.Store(g).State.Tools;
+                    if (args.Length < 3)
+                    {
+                        foreach (var t in tools)
+                        {
+                            Console.WriteLine($"  {t.Name}: {t.Exe} {t.Args}");
+                        }
+                        return 0;
+                    }
+                    var tool = tools.FirstOrDefault(t => t.Name.Equals(args[2], StringComparison.OrdinalIgnoreCase))
+                        ?? throw new InvalidOperationException($"No tool called {args[2]} for {g.Title}. Add it in the app (Mods → Tools).");
+                    return ToolRunner.Run(host, g, tool);
                 }
                 case "mods" when args.Length > 1:
                 {

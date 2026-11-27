@@ -170,6 +170,42 @@ public sealed class ModsTests : IDisposable
     }
 
     [Fact]
+    public void NamesNotesCategoriesSeparatorsAndProfileRenames()
+    {
+        var store = new ModStore(Path.Combine(_dir, "store"), "steam:1");
+        var p = Profile("Data");
+        store.Install(Zip("a1.zip", "a.esp"), new InstalledMod { Id = "nexus:1", Name = "Site Name", Version = "1" }, p);
+        store.Install(Zip("b1.zip", "b.esp"), new InstalledMod { Id = "nexus:2", Name = "Other" }, p);
+        store.SetModInfo("nexus:1", name: "My Name", notes: "keep below B", category: "UI");
+        // An update keeps the player's name, notes and category.
+        store.Install(Zip("a2.zip", "a.esp"), new InstalledMod { Id = "nexus:1", Name = "Site Name v2", Version = "2" }, p);
+        var a = store.State.Find("nexus:1")!;
+        Assert.Equal(("My Name", "keep below B", "UI", "2"), (a.Name, a.Notes, a.Category, a.Version));
+        Assert.Equal(["UI"], store.State.Categories());
+
+        var sep = store.AddSeparator("Interface", "nexus:2");
+        Assert.Equal(["nexus:1", sep, "nexus:2"], store.State.Order.Select(e => e.Id));
+        Assert.Equal(0, store.State.Pending());
+        Assert.Equal(2, store.State.Enabled().Count());
+        store.ForgetMissing();
+        Assert.Contains(store.State.Order, e => e.Id == sep);
+        store.RenameSeparator(sep, "UI mods");
+        Assert.Equal("UI mods", store.State.Separators[sep]);
+
+        store.UseProfile("Survival");
+        store.SetPluginOrder(["b.esp", "a.esp"]);
+        store.RenameProfile("Survival", "Hardcore");
+        Assert.Equal("Hardcore", store.State.Active);
+        Assert.Equal(["b.esp", "a.esp"], store.State.PluginOrder["Hardcore"]);
+        Assert.Throws<InvalidOperationException>(() => store.RenameProfile(GameMods.DefaultProfile, "X"));
+        store.RemoveSeparator(sep);
+        Assert.True(store.State.Separators.ContainsKey(sep));  // still in the Default profile
+        store.UseProfile(GameMods.DefaultProfile);
+        store.RemoveSeparator(sep);
+        Assert.False(store.State.Separators.ContainsKey(sep));
+    }
+
+    [Fact]
     public void ProfilesDependenciesAndRollbackHistory()
     {
         var store = new ModStore(Path.Combine(_dir, "store"), "steam:1");

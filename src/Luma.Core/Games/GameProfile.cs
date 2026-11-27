@@ -93,6 +93,12 @@ public sealed record GameProfile
     /// <summary>INI settings mods need (archive invalidation): written while mods are in, put back after.</summary>
     public List<IniSetting> Ini { get; init; } = new();
 
+    /// <summary>The game's save folder ("{mygames}/Skyrim Special Edition/Saves"): a profile can keep its own saves there while it's in.</summary>
+    public string? Saves { get; init; }
+
+    /// <summary>The game's own INI files (settings, prefs): a profile can keep its own copies of them.</summary>
+    public List<string> Inis { get; init; } = new();
+
     /// <summary>Set when the game can't be modded safely (anti-cheat, online-only bans): the reason shown to the player.</summary>
     public string? NotModdable { get; init; }
 
@@ -162,6 +168,10 @@ public sealed record GameProfile
             if (Ini.Any(i => !i.File.StartsWith('{') || i.Section.Length == 0 || i.Key.Length == 0))
             {
                 errors.Add("each ini setting needs a file with a location token, a section and a key");
+            }
+            if ((Saves is { } sv && !sv.StartsWith('{')) || Inis.Any(i => !i.StartsWith('{')))
+            {
+                errors.Add("saves and inis must start with a location token");
             }
             if (WindowsModsPath is { } w && (w.StartsWith('/') || w.Contains("..") || (w.StartsWith('{') && !WindowsTokens.Any(t => w.StartsWith(t, StringComparison.Ordinal)))))
             {

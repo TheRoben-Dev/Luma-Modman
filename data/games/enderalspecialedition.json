@@ -27,6 +27,11 @@
       "Enderal - Forgotten Stories.esm"
     ]
   },
+  "saves": "{mygames}/Enderal Special Edition/Saves",
+  "inis": [
+    "{mygames}/Enderal Special Edition/Enderal.ini",
+    "{mygames}/Enderal Special Edition/EnderalPrefs.ini"
+  ],
   "quirks": [
     "A total conversion that runs on Skyrim Special Edition's engine.",
     "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins."

@@ -43,6 +43,12 @@
       "value": ""
     }
   ],
+  "saves": "{mygames}/Fallout4/Saves",
+  "inis": [
+    "{mygames}/Fallout4/Fallout4.ini",
+    "{mygames}/Fallout4/Fallout4Prefs.ini",
+    "{mygames}/Fallout4/Fallout4Custom.ini"
+  ],
   "quirks": [
     "The 2024 next-gen update broke older F4SE plugins; check each mod's supported game version.",
     "Loose files need bInvalidateOlderFiles=1, which Luma sets in Fallout4Custom.ini.",

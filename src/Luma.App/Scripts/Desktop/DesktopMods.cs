@@ -17,8 +17,8 @@ public partial class DesktopMods : VBoxContainer
     private static Main App => Main.Instance;
     private static AppHost Host => Main.Instance.Host!;
 
-    private const int ColOrder = 0, ColOn = 1, ColName = 2, ColVersion = 3, ColSource = 4, ColConflicts = 5, ColUpdate = 6;
-    private static readonly string[] Titles = ["#", "On", "Name", "Version", "Source", "Conflicts", "Update"];
+    private const int ColOrder = 0, ColOn = 1, ColName = 2, ColCategory = 3, ColVersion = 4, ColSource = 5, ColConflicts = 6, ColUpdate = 7;
+    private static readonly string[] Titles = ["#", "On", "Name", "Category", "Version", "Source", "Conflicts", "Update"];
 
     private VBoxContainer _banners = null!;
     private ModTable _table = null!;
@@ -81,6 +81,7 @@ public partial class DesktopMods : VBoxContainer
         _table.SetColumnCustomMinimumWidth(ColOrder, 44);
         _table.SetColumnCustomMinimumWidth(ColOn, 44);
         _table.SetColumnCustomMinimumWidth(ColName, 220);
+        _table.SetColumnCustomMinimumWidth(ColCategory, 110);
         _table.SetColumnCustomMinimumWidth(ColVersion, 100);
         _table.SetColumnCustomMinimumWidth(ColSource, 120);
         _table.SetColumnCustomMinimumWidth(ColConflicts, 150);
@@ -103,7 +104,15 @@ public partial class DesktopMods : VBoxContainer
                 ShowMenu(_table.GetGlobalRect().Position + pos);
             }
         };
-        _table.ItemActivated += () => Toggle(_selected);
+        _table.ItemActivated += () =>
+        {
+            if (_selected != null && GameMods.IsSeparator(_selected) && Game is { } g)
+            {
+                ModInfo.RenameSeparator(g, _selected);
+                return;
+            }
+            Toggle(_selected);
+        };
         _table.ColumnTitleClicked += (col, button) =>
         {
             if (button != (long)MouseButton.Left)
@@ -248,14 +257,18 @@ public partial class DesktopMods : VBoxContainer
         var scroll = _table.GetScroll();
         _table.Clear();
         var root = _table.CreateItem();
-        var rows = state.Order.Select((e, i) => (Entry: e, Index: i, Mod: state.Find(e.Id))).Where(r => r.Mod != null).ToList();
+        // Separators show in the plain load order only: sorting or filtering would scatter them.
+        var plain = _sortCol == ColOrder && _sortAsc && _filter.Length == 0;
+        var rows = state.Order.Select((e, i) => (Entry: e, Index: i, Mod: state.Find(e.Id)))
+            .Where(r => r.Mod != null || (plain && GameMods.IsSeparator(r.Entry.Id) && state.Separators.ContainsKey(r.Entry.Id))).ToList();
         if (_filter.Length > 0)
         {
-            rows = rows.Where(r => r.Mod!.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+            rows = rows.Where(r => r.Mod!.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase) || r.Mod.Category.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
         }
         IEnumerable<(ProfileEntry Entry, int Index, InstalledMod? Mod)> sorted = _sortCol switch
         {
             ColName => rows.OrderBy(r => r.Mod!.Name, StringComparer.OrdinalIgnoreCase),
+            ColCategory => rows.OrderBy(r => r.Mod!.Category.Length == 0 ? "\uffff" : r.Mod.Category, StringComparer.OrdinalIgnoreCase).ThenBy(r => r.Mod!.Name, StringComparer.OrdinalIgnoreCase),
             ColVersion => rows.OrderBy(r => r.Mod!.Version, StringComparer.OrdinalIgnoreCase),
             ColSource => rows.OrderBy(r => ModsScreen.SiteName(r.Mod!.Site)),
             ColConflicts => rows.OrderBy(r => losers.GetValueOrDefault(r.Mod!.Id) + winners.GetValueOrDefault(r.Mod!.Id)),
@@ -270,6 +283,28 @@ public partial class DesktopMods : VBoxContainer
         TreeItem? select = null;
         foreach (var (entry, index, mod) in sorted)
         {
+            if (mod == null)
+            {
+                // A separator: a heading row across the table.
+                var sep = _table.CreateItem(root);
+                sep.SetMetadata(0, entry.Id);
+                sep.SetMetadata(1, index);
+                sep.SetText(ColOrder, (index + 1).ToString());
+                sep.SetTextAlignment(ColOrder, HorizontalAlignment.Center);
+                sep.SetCustomColor(ColOrder, DesktopTheme.Dim);
+                sep.SetText(ColName, "━━  " + state.Separators[entry.Id] + "  ━━");
+                sep.SetCustomColor(ColName, DesktopTheme.Accent);
+                sep.SetTooltipText(ColName, "A separator: drag it like a mod, double-click to rename, right-click for options.");
+                for (var c = 0; c < Titles.Length; c++)
+                {
+                    sep.SetCustomBgColor(c, DesktopTheme.Header);
+                }
+                if (entry.Id == _selected)
+                {
+                    select = sep;
+                }
+                continue;
+            }
             var m = mod!;
             var it = _table.CreateItem(root);
             it.SetMetadata(0, m.Id);
@@ -281,8 +316,10 @@ public partial class DesktopMods : VBoxContainer
             it.SetEditable(ColOn, true);
             it.SetChecked(ColOn, entry.Enabled);
             it.SetTooltipText(ColOn, entry.Enabled ? "On: goes into the game" : "Off: stays installed, left out of the game");
-            it.SetText(ColName, m.Name);
-            it.SetTooltipText(ColName, $"{m.Name}{(m.Author.Length > 0 ? " by " + m.Author : "")}");
+            it.SetText(ColName, m.Name + (m.Notes.Length > 0 ? "  ✎" : ""));
+            it.SetTooltipText(ColName, $"{m.Name}{(m.Author.Length > 0 ? " by " + m.Author : "")}{(m.Notes.Length > 0 ? "\n✎ " + m.Notes : "")}");
+            it.SetText(ColCategory, m.Category);
+            it.SetCustomColor(ColCategory, DesktopTheme.Dim);
             if (!entry.Enabled)
             {
                 it.SetCustomColor(ColName, DesktopTheme.Dim);
@@ -360,7 +397,7 @@ public partial class DesktopMods : VBoxContainer
             Banner($"{loader.Name} isn't installed. {loader.About}", game.Profile.LoaderOptional ? DesktopTheme.Dim : DesktopTheme.Warn,
                 loader.AutoInstall ? $"Install {loader.Name}" : "Get it…", () => ModActions.InstallLoader(game, loader));
         }
-        var pending = store.State.Order.Count(e => store.State.Find(e.Id) == null);
+        var pending = store.State.Pending();
         if (pending > 0)
         {
             Banner($"{pending} mod{(pending == 1 ? "" : "s")} of this profile {(pending == 1 ? "isn't" : "aren't")} installed yet (from a modpack: downloading, or to get by hand). They take their place in the order when they arrive.",
@@ -422,6 +459,20 @@ public partial class DesktopMods : VBoxContainer
             return;
         }
         var store = Host.Mods.Store(game);
+        if (_selected != null && GameMods.IsSeparator(_selected) && store.State.Separators.TryGetValue(_selected, out var sepName))
+        {
+            var sid = _selected;
+            _detail.AddChild(DesktopTheme.Label(sepName, null, DesktopTheme.FontSize + 4, wrap: true));
+            _detail.AddChild(DesktopTheme.Label("A separator: a heading that groups the mods below it. Drag it like a mod.", DesktopTheme.Dim, DesktopTheme.SmallSize, wrap: true));
+            _detail.AddChild(new HSeparator());
+            foreach (var (label, action, tip) in SeparatorActions(game, sid))
+            {
+                var b = DesktopTheme.Button(label, action, tip);
+                b.Alignment = HorizontalAlignment.Left;
+                _detail.AddChild(b);
+            }
+            return;
+        }
         var mod = _selected == null ? null : store.State.Find(_selected);
         if (mod == null)
         {
@@ -437,6 +488,7 @@ public partial class DesktopMods : VBoxContainer
                  {
                      ("Version", mod.Version),
                      ("Author", mod.Author),
+                     ("Category", mod.Category),
                      ("Source", ModsScreen.SiteName(mod.Site)),
                      ("Files", mod.Files.ToString()),
                      ("Position", $"{index + 1} of {order.Count} in {store.State.Active}"),
@@ -460,6 +512,10 @@ public partial class DesktopMods : VBoxContainer
         if (mod.Dependencies.Count > 0)
         {
             _detail.AddChild(DesktopTheme.Label("Needs " + string.Join(", ", mod.Dependencies.Select(d => d.Name)), DesktopTheme.Dim, DesktopTheme.SmallSize, wrap: true));
+        }
+        if (mod.Notes.Length > 0)
+        {
+            _detail.AddChild(DesktopTheme.Label("✎ " + mod.Notes, null, DesktopTheme.SmallSize, wrap: true));
         }
         _detail.AddChild(new HSeparator());
         foreach (var (label, action, tip) in Actions(game, mod, index, order.Count, on))
@@ -517,13 +573,37 @@ public partial class DesktopMods : VBoxContainer
         {
             list.Add(("Open website", () => ModActions.OpenUrl(mod.PageUrl), mod.PageUrl));
         }
+        list.Add(("Rename…", () => ModInfo.Rename(game, mod), "Your own name for it; updates keep it."));
+        list.Add((mod.Category.Length > 0 ? $"Category: {mod.Category}…" : "Set a category…", () => ModInfo.EditCategory(game, mod), "Group it with similar mods; sort by the Category column."));
+        list.Add((mod.Notes.Length > 0 ? "Edit notes…" : "Add notes…", () => ModInfo.EditNotes(game, mod), "Your own notes about it."));
+        list.Add(("Add a separator above…", () => ModInfo.AddSeparator(game, id), "A heading in the load order, to group the mods below it."));
+        list.Add((mod.Hidden.Count > 0 ? $"Files ({mod.Hidden.Count} hidden)…" : "Files…", () => App.Push(new ModFilesPage(game, id)), "See the mod's files and hide the ones you don't want in the game."));
         list.Add(("Open mod folder", () => DesktopShell.OpenFolder(store.ModDir(id)), "The mod's files in Luma's mod folder."));
         list.Add(("Uninstall…", () => Uninstall(id), "Removes it from Luma's mod folder. Its download is kept."));
         return list;
     }
 
+    private List<(string Label, Action Run, string Tip)> SeparatorActions(DetectedGame game, string id) =>
+    [
+        ("Rename…", () => ModInfo.RenameSeparator(game, id), "Changes the heading."),
+        ("Add a separator above…", () => ModInfo.AddSeparator(game, id), "Another heading above this one."),
+        ("Remove separator", () => ModInfo.RemoveSeparator(game, id), "Takes the heading out; the mods below it stay where they are."),
+    ];
+
     private void ShowMenu(Vector2? at = null)
     {
+        if (Game is { } sg && _selected != null && GameMods.IsSeparator(_selected))
+        {
+            _menu.Clear();
+            _menuActions.Clear();
+            foreach (var (label, run, _) in SeparatorActions(sg, _selected))
+            {
+                _menu.AddItem(label, _menuActions.Count);
+                _menuActions.Add(run);
+            }
+            PopupAtMouse(_menu, _table, at);
+            return;
+        }
         if (Game is not { } game || _selected == null || Host.Mods.Store(game).State.Find(_selected) is not { } mod)
         {
             return;
@@ -613,6 +693,10 @@ public partial class DesktopMods : VBoxContainer
     public void Toggle(string? id)
     {
         if (id == null || Game is not { } game)
+        {
+            return;
+        }
+        if (GameMods.IsSeparator(id))
         {
             return;
         }

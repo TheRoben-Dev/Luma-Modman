@@ -3,6 +3,28 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.18.0
+
+- Own saves per profile, like MO2's profile-specific saves: turn on "Own saves for this profile" and, while that profile's mods are in, the game's save folder is the profile's own, so a different mod list never loads (and breaks) your other playthroughs. Start it empty or with a copy of your current saves. The game's own saves come back when the mods come out.
+- Own game settings per profile: the profile keeps its own copies of the game's INI files (Skyrim.ini, SkyrimPrefs.ini and the like), so an ENB or performance profile can have different settings. Changes the game makes are kept with the profile.
+- Both are for Skyrim (LE, SE/AE), Enderal SE, Oblivion, Fallout 3, New Vegas, Fallout 4 and Starfield. Where: under the profile picker on the Mods page in controller mode, the Mods menu on the desktop.
+- A mod's files: see every file of a mod, folder by folder, and hide files or whole folders so they stay out of the game (an optional texture set, a readme, a plugin you don't want). Hidden files are left out of conflicts too, and stay hidden through updates. Where: Files on a mod's page in controller mode; Files… in a mod's right-click menu on the desktop, as a tree with tick boxes.
+
+## 0.17.0
+
+- Separators, like MO2's: add a named separator anywhere in the load order to group mods (Add a separator on the Mods page, "Add separator above" on a mod; Mods → Add a separator… or a row's right-click menu on the desktop). Rename, remove or move them like mods; they don't change what goes in.
+- Categories: give any mod a category. The desktop has a Category column, the filter matches categories, and controller mode can sort by category.
+- Notes on any mod (shown with ✎ in the desktop list and in the mod's details), and rename a mod to what you call it. Updates still match it by the site's own name, and the name, notes and category are kept across updates.
+- Rename a profile (Mods page in controller mode, the Rename… button next to the profile on the desktop).
+- Controller mode: a mod's page scrolls, and has Move to top/bottom and Open mod folder.
+
+## 0.16.0
+
+- Tools, like MO2's executables: run xEdit, LOOT, BodySlide, Outfit Studio, Nemesis, Pandora, FNIS, DynDOLOD, TexGen, Wrye Bash, Synthesis or any other program with your mods in. Luma puts the mods in, starts the tool (on SteamOS and Bazzite inside the game's own Proton prefix, with the Proton Steam uses for the game, so it sees the same Data folder and plugin list), and takes the mods out when you close it. What the tool writes (patches, meshes, behaviour files) lands in Overwrite.
+- Tools that come as mods (BodySlide, Nemesis) or that you unpacked into Downloads or the game folder are found for you; add one with a single press, or pick any program. Known tools get the arguments they need (xEdit is pointed at the Data folder, LOOT at the game).
+- LOOT: when it closes, the plugin order it saved becomes your plugin order for the profile.
+- Where: Mods → Tools in controller mode; the Tools menu (with a Run entry per tool), the Tools… toolbar button or Ctrl+T on the desktop; `luma tool GAME NAME` from a terminal.
+
 ## 0.15.0
 
 - Plugins, deeper: Luma now reads each plugin's header, so ESP files flagged as masters load with the masters and light (ESL-flagged) plugins are known as light. The Plugins list shows each plugin's type and the masters it needs, and warns when a master is missing or turned off (the game would crash at start), when a plugin loads before a master it needs, and when more full plugins are on than the game can load (254).

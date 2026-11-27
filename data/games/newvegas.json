@@ -45,6 +45,11 @@
       "value": ""
     }
   ],
+  "saves": "{mygames}/FalloutNV/Saves",
+  "inis": [
+    "{mygames}/FalloutNV/Fallout.ini",
+    "{mygames}/FalloutNV/FalloutPrefs.ini"
+  ],
   "quirks": [
     "The 4GB patch is built into xNVSE; no separate patcher needed.",
     "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins. The game orders plugins by file date, which Luma sets.",

@@ -33,6 +33,21 @@ public sealed record InstalledMod
 
     /// <summary>The options picked in the mod's FOMOD installer; null when it has none (or none were picked yet).</summary>
     public List<FomodChoice>? Fomod { get; init; }
+
+    /// <summary>The player renamed it: updates keep <see cref="Name"/> instead of the site's.</summary>
+    public bool Renamed { get; init; }
+
+    /// <summary>The player's own notes.</summary>
+    public string Notes { get; init; } = "";
+
+    /// <summary>The player's category for it ("Textures", "UI"…), empty for none.</summary>
+    public string Category { get; init; } = "";
+
+    /// <summary>Files left out when the mod goes in, by key ("mods/textures/a.dds"); a key ending in "/" hides a whole folder.</summary>
+    public List<string> Hidden { get; init; } = new();
+
+    public bool IsHidden(string key) => Hidden.Any(h => string.Equals(h, key, StringComparison.OrdinalIgnoreCase)
+        || (h.EndsWith('/') && key.StartsWith(h, StringComparison.OrdinalIgnoreCase)));
 }
 
 public sealed record ModVersion(string Version, string FileId, string Archive, DateTime InstalledAt);
@@ -57,6 +72,17 @@ public sealed record GameMods
 
     public InstalledMod? Find(string id) => Mods.FirstOrDefault(m => m.Id == id);
 
+    /// <summary>Separators in the load order (MO2-style headings): id ("sep:…") → name. They sit in profiles like mods.</summary>
+    public Dictionary<string, string> Separators { get; init; } = new();
+
+    public static bool IsSeparator(string id) => id.StartsWith("sep:", StringComparison.Ordinal);
+
+    /// <summary>Entries of the active profile whose mod isn't installed (a modpack's, still downloading); separators aren't counted.</summary>
+    public int Pending() => Order.Count(e => !IsSeparator(e.Id) && Find(e.Id) == null);
+
+    /// <summary>The categories in use, sorted.</summary>
+    public List<string> Categories() => Mods.Select(m => m.Category).Where(c => c.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+
     public bool IsEnabled(string id) => Order.Any(e => e.Id == id && e.Enabled);
 
     /// <summary>Plugins (.esp/.esm/.esl) turned off by hand, per profile; plugins of enabled mods are on otherwise.</summary>
@@ -73,6 +99,16 @@ public sealed record GameMods
 
     /// <summary>Conflict winners picked by hand, per profile: file key ("mods/meshes/a.nif") → mod id.</summary>
     public Dictionary<string, Dictionary<string, string>> Winners { get; init; } = new();
+
+    /// <summary>Profiles that keep their own saves (the game's save folder is theirs while their mods are in).</summary>
+    public List<string> LocalSaves { get; init; } = new();
+
+    /// <summary>Profiles that keep their own copies of the game's INI files.</summary>
+    public List<string> LocalInis { get; init; } = new();
+
+    public bool HasLocalSaves => LocalSaves.Contains(Active);
+
+    public bool HasLocalInis => LocalInis.Contains(Active);
 
     /// <summary>The mod picked to win <paramref name="key"/> in the active profile, if any.</summary>
     public string? WinnerOf(string key) =>
@@ -112,6 +148,70 @@ public sealed class ModStore
     /// and put in last at every deploy, like MO2's Overwrite.
     /// </summary>
     public string OverwriteDir => Path.Combine(Root, ".overwrite");
+
+    /// <summary>Where a profile keeps its own saves ("saves") and INI files ("inis").</summary>
+    public string ProfileDir(string profile) =>
+        Path.Combine(Root, ".profiles", Safe(profile) + "-" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(profile)))[..8].ToLowerInvariant());
+
+    /// <summary>A mod's files as keys ("game/…", "mods/…") with their sizes, sorted.</summary>
+    public List<(string Key, long Size)> ModFiles(string id)
+    {
+        var dir = ModDir(id);
+        var list = new List<(string, long)>();
+        foreach (var sub in new[] { "game", "mods" })
+        {
+            var src = Path.Combine(dir, sub);
+            if (Directory.Exists(src))
+            {
+                list.AddRange(Directory.EnumerateFiles(src, "*", SearchOption.AllDirectories)
+                    .Select(f => (Deployer.FileKey(sub, Path.GetRelativePath(src, f)), new FileInfo(f).Length)));
+            }
+        }
+        return list.OrderBy(f => f.Item1, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>
+    /// Hides (leaves out of the game) or shows files or folders ("mods/textures/" for a folder) of a mod.
+    /// Showing a folder shows everything in it.
+    /// </summary>
+    public void SetHidden(string id, IEnumerable<string> keys, bool hidden)
+    {
+        var mod = State.Find(id) ?? throw new KeyNotFoundException("That mod isn't installed any more.");
+        var list = mod.Hidden.ToList();
+        foreach (var key in keys)
+        {
+            if (hidden)
+            {
+                if (!mod.IsHidden(key) && !list.Contains(key, StringComparer.OrdinalIgnoreCase))
+                {
+                    // A folder hidden as a whole replaces the files hidden inside it.
+                    if (key.EndsWith('/'))
+                    {
+                        list.RemoveAll(h => h.StartsWith(key, StringComparison.OrdinalIgnoreCase));
+                    }
+                    list.Add(key);
+                }
+            }
+            else
+            {
+                list.RemoveAll(h => string.Equals(h, key, StringComparison.OrdinalIgnoreCase)
+                    || (key.EndsWith('/') && h.StartsWith(key, StringComparison.OrdinalIgnoreCase)));
+            }
+        }
+        list.Sort(StringComparer.OrdinalIgnoreCase);
+        Save(State with { Mods = State.Mods.Select(m => m.Id == id ? m with { Hidden = list } : m).ToList() });
+    }
+
+    /// <summary>Turns the active profile's own saves or INI files on or off.</summary>
+    public void SetLocal(bool saves, bool on)
+    {
+        var list = (saves ? State.LocalSaves : State.LocalInis).Where(p => p != State.Active).ToList();
+        if (on)
+        {
+            list.Add(State.Active);
+        }
+        Save(saves ? State with { LocalSaves = list } : State with { LocalInis = list });
+    }
 
     /// <summary>The Overwrite folder's files, as "game/…" or "mods/…" paths.</summary>
     public List<string> OverwriteFiles() => Directory.Exists(OverwriteDir)
@@ -267,6 +367,11 @@ public sealed class ModStore
             }
             history.RemoveAll(h => h.Archive == archive || !File.Exists(h.Archive));
             var installed = mod with { Archive = archive, Files = plan.Count, InstalledAt = DateTime.UtcNow, History = history.Take(5).ToList(), UpdateVersion = null };
+            if (old != null)
+            {
+                // The player's own name, notes and category survive updates and reinstalls.
+                installed = installed with { Notes = old.Notes, Category = old.Category, Hidden = old.Hidden, Renamed = old.Renamed, Name = old.Renamed ? old.Name : installed.Name };
+            }
             var mods = State.Mods.Where(m => m.Id != mod.Id).Append(installed).ToList();
             var profiles = State.Profiles.ToDictionary(p => p.Key, p => p.Value.Any(e => e.Id == mod.Id) || (onlyProfile != null && p.Key != onlyProfile)
                 ? p.Value : p.Value.Append(new ProfileEntry(mod.Id)).ToList());
@@ -419,7 +524,94 @@ public sealed class ModStore
     }
 
     /// <summary>Takes entries whose mod isn't installed (a modpack's that never arrived) out of the active profile.</summary>
-    public void ForgetMissing() => UpdateOrder(o => o.Where(e => State.Find(e.Id) != null).ToList());
+    public void ForgetMissing() => UpdateOrder(o => o.Where(e => GameMods.IsSeparator(e.Id) || State.Find(e.Id) != null).ToList());
+
+    /// <summary>Changes a mod's name, notes or category (null leaves it as it is).</summary>
+    public void SetModInfo(string id, string? name = null, string? notes = null, string? category = null)
+    {
+        var mod = State.Find(id) ?? throw new KeyNotFoundException("That mod isn't installed any more.");
+        if (name != null && name.Trim().Length == 0)
+        {
+            throw new ArgumentException("A mod needs a name.");
+        }
+        var changed = mod with
+        {
+            Name = name?.Trim() ?? mod.Name,
+            Renamed = mod.Renamed || (name != null && name.Trim() != mod.Name),
+            Notes = notes?.Trim() ?? mod.Notes,
+            Category = category?.Trim() ?? mod.Category,
+        };
+        Save(State with { Mods = State.Mods.Select(m => m.Id == id ? changed : m).ToList() });
+    }
+
+    /// <summary>Adds a separator to the active profile, before <paramref name="beforeId"/> (or at the end). Returns its id.</summary>
+    public string AddSeparator(string name, string? beforeId = null)
+    {
+        name = name.Trim();
+        if (name.Length == 0)
+        {
+            throw new ArgumentException("Give the separator a name.");
+        }
+        var id = "sep:" + Guid.NewGuid().ToString("N")[..10];
+        var seps = new Dictionary<string, string>(State.Separators) { [id] = name };
+        Save(State with { Separators = seps });
+        UpdateOrder(o =>
+        {
+            var at = beforeId == null ? -1 : o.FindIndex(e => e.Id == beforeId);
+            o.Insert(at < 0 ? o.Count : at, new ProfileEntry(id));
+            return o;
+        });
+        return id;
+    }
+
+    public void RenameSeparator(string id, string name)
+    {
+        if (name.Trim().Length == 0 || !State.Separators.ContainsKey(id))
+        {
+            return;
+        }
+        Save(State with { Separators = new Dictionary<string, string>(State.Separators) { [id] = name.Trim() } });
+    }
+
+    /// <summary>Takes a separator out of the active profile (and forgets it when no profile has it).</summary>
+    public void RemoveSeparator(string id)
+    {
+        UpdateOrder(o => o.Where(e => e.Id != id).ToList());
+        if (!State.Profiles.Values.Any(p => p.Any(e => e.Id == id)))
+        {
+            Save(State with { Separators = State.Separators.Where(s => s.Key != id).ToDictionary(s => s.Key, s => s.Value) });
+        }
+    }
+
+    /// <summary>Renames a profile, with its plugin settings, picked winners and plugin order.</summary>
+    public void RenameProfile(string from, string to)
+    {
+        to = to.Trim();
+        if (from == GameMods.DefaultProfile)
+        {
+            throw new InvalidOperationException("The Default profile can't be renamed. Make a copy with New profile instead.");
+        }
+        if (to.Length == 0 || State.Profiles.ContainsKey(to))
+        {
+            throw new InvalidOperationException(to.Length == 0 ? "Give the profile a name." : $"There's already a profile called {to}.");
+        }
+        static Dictionary<string, T> Move<T>(Dictionary<string, T> d, string a, string b) =>
+            d.ToDictionary(p => p.Key == a ? b : p.Key, p => p.Value);
+        if (Directory.Exists(ProfileDir(from)) && !Directory.Exists(ProfileDir(to)))
+        {
+            Directory.Move(ProfileDir(from), ProfileDir(to));  // its own saves and INI files
+        }
+        Save(State with
+        {
+            Profiles = Move(State.Profiles, from, to),
+            PluginsOff = Move(State.PluginsOff, from, to),
+            Winners = Move(State.Winners, from, to),
+            PluginOrder = Move(State.PluginOrder, from, to),
+            LocalSaves = State.LocalSaves.Select(p => p == from ? to : p).ToList(),
+            LocalInis = State.LocalInis.Select(p => p == from ? to : p).ToList(),
+            Active = State.Active == from ? to : State.Active,
+        });
+    }
 
     public void DeleteProfile(string name)
     {
@@ -428,7 +620,14 @@ public sealed class ModStore
             throw new InvalidOperationException("The Default profile can't be deleted.");
         }
         var profiles = State.Profiles.Where(p => p.Key != name).ToDictionary(p => p.Key, p => p.Value);
-        Save(State with { Profiles = profiles, Active = State.Active == name ? GameMods.DefaultProfile : State.Active });
+        // Its own saves stay in its folder under .profiles (a profile made again with the name gets them back).
+        Save(State with
+        {
+            Profiles = profiles,
+            Active = State.Active == name ? GameMods.DefaultProfile : State.Active,
+            LocalSaves = State.LocalSaves.Where(p => p != name).ToList(),
+            LocalInis = State.LocalInis.Where(p => p != name).ToList(),
+        });
     }
 
     /// <summary>Required mods (by site id) that aren't installed and enabled.</summary>

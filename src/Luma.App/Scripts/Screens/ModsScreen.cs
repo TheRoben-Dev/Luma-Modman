@@ -1,6 +1,7 @@
 using Luma.App.Ui;
 using Luma.Core.Detection;
 using Luma.Core.Mods;
+using Luma.Host;
 using Godot;
 
 namespace Luma.App.Screens;
@@ -79,7 +80,7 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
         var scrollCol = Column(8);
         right.AddChild(Scroller(scrollCol));
         items.Add(Add(scrollCol, new ActionButton("Browse mods", () => App.SwitchTab("Browse"), $"Search mod sites for {game.Title} mods.")));
-        var pending = state.Order.Count(e => state.Find(e.Id) == null);
+        var pending = state.Pending();
         if (pending > 0)
         {
             var row = new ListRow($"{pending} mod{(pending == 1 ? "" : "s")} of this profile not installed yet", "From a modpack: downloading, or to get by hand. They take their place in the order when they arrive.",
@@ -120,9 +121,20 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
                 CallDeferred(MethodName.Rebuild);
             };
             items.Add(Add(scrollCol, profile));
+            if (ModManager.CanKeepSaves(game))
+            {
+                items.Add(Add(scrollCol, Toggle.Create("Own saves for this profile", state.HasLocalSaves,
+                    on => ModInfo.SetLocal(game, true, on, () => CallDeferred(MethodName.Rebuild)), ModInfo.SavesHelp)));
+            }
+            if (ModManager.CanKeepInis(game))
+            {
+                items.Add(Add(scrollCol, Toggle.Create("Own game settings (INI files)", state.HasLocalInis,
+                    on => ModInfo.SetLocal(game, false, on, () => CallDeferred(MethodName.Rebuild)), ModInfo.InisHelp)));
+            }
             if (state.Active != GameMods.DefaultProfile)
             {
                 var name = state.Active;
+                items.Add(Add(scrollCol, new ActionButton($"Rename the {name} profile", () => ModInfo.RenameProfile(game), "Gives this profile another name.")));
                 items.Add(Add(scrollCol, new ActionButton($"Delete the {name} profile", () => App.Confirm(
                     $"Delete the {name} profile? Its mods stay installed; only this set and order goes.", "Delete", () =>
                     {
@@ -138,6 +150,9 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
                 items.Add(Add(scrollCol, new ActionButton($"Conflicts ({n} file{(n == 1 ? "" : "s")})", () => App.Push(new ConflictsPage(game)),
                     $"Files in more than one mod, and which mod's copy goes in{(picked > 0 ? $" ({picked} picked by you)" : "")}.")));
             }
+            var tools = store.State.Tools.Count;
+            items.Add(Add(scrollCol, new ActionButton(tools > 0 ? $"Tools ({tools})" : "Tools", () => App.Push(new ToolsPage(game)),
+                "Run xEdit, LOOT, BodySlide, Nemesis and other tools with the mods in.")));
             if (game.Profile.Plugins != null)
             {
                 items.Add(Add(scrollCol, new ActionButton("Plugins", () => App.Push(new PluginsPage(game)),
@@ -197,11 +212,37 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
             };
             items.Add(Add(scrollCol, sort));
             var canMove = _sort == "order" && _filter.Length == 0;
+            if (canMove)
+            {
+                items.Add(Add(scrollCol, new ActionButton("Add a separator", () => ModInfo.AddSeparator(game), "A heading at the end of the load order to group mods under; move it like a mod.")));
+            }
             var winners = plan?.Conflicts.GroupBy(c => c.Winner).ToDictionary(g => g.Key, g => g.Count()) ?? new();
             foreach (var entry in Sorted(state, losers, winners))
             {
+                if (GameMods.IsSeparator(entry.Id))
+                {
+                    var sepId = entry.Id;
+                    var sep = new ListRow("▍ " + state.Separators[sepId], "Separator", "", UiTheme.Accent, null, () =>
+                    {
+                        _focusMod = sepId;
+                        ModInfo.SeparatorOptions(game, sepId);
+                    }, $"{state.Separators[sepId]}: a heading. A to rename, move or remove it.");
+                    sep.SetMeta("mod", sepId);
+                    sep.Modulate = new Color(1.1f, 1.05f, 1.25f);
+                    if (canMove)
+                    {
+                        TouchScroll.AllowReorder(sep, this);
+                    }
+                    if (sepId == _focusMod)
+                    {
+                        _modRow = sep;
+                    }
+                    scrollCol.AddChild(sep);
+                    items.Add(sep);
+                    continue;
+                }
                 var mod = state.Find(entry.Id)!;
-                var detail = string.Join("  ·  ", new[] { mod.Version, SiteName(mod.Site), mod.UpdateVersion != null ? $"update {mod.UpdateVersion}" : "",
+                var detail = string.Join("  ·  ", new[] { mod.Category, mod.Version, SiteName(mod.Site), mod.Notes.Length > 0 ? "✎ notes" : "", mod.UpdateVersion != null ? $"update {mod.UpdateVersion}" : "",
                     losers.TryGetValue(mod.Id, out var n) ? $"{n} file{(n == 1 ? "" : "s")} replaced by other mods" : "" }.Where(x => x.Length > 0));
                 var id = mod.Id;
                 var row = new ListRow(mod.Name, detail, entry.Enabled ? "On" : "Off", entry.Enabled ? UiTheme.Good : UiTheme.Dim, null,
@@ -298,7 +339,7 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
     }
 
     internal static readonly (string, string)[] SortOptions =
-        [("order", "Load order"), ("name", "Name"), ("site", "Site"), ("version", "Version"), ("conflicts", "Conflicts"), ("update", "Updates first"), ("off", "Off first")];
+        [("order", "Load order"), ("name", "Name"), ("category", "Category"), ("site", "Site"), ("version", "Version"), ("conflicts", "Conflicts"), ("update", "Updates first"), ("off", "Off first")];
 
     /// <summary>The name filter and sort of the load order list (kept while the app runs).</summary>
     internal static string _filter = "";
@@ -306,12 +347,16 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
 
     private static IEnumerable<ProfileEntry> Sorted(GameMods state, Dictionary<string, int> losers, Dictionary<string, int> winners)
     {
-        var rows = state.Order.Where(e => state.Find(e.Id) is { } m && (_filter.Length == 0 || m.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase)));
+        // Separators show only in the plain load order (sorting or filtering would scatter them).
+        var plain = _sort == "order" && _filter.Length == 0;
+        var rows = state.Order.Where(e => (plain && GameMods.IsSeparator(e.Id) && state.Separators.ContainsKey(e.Id))
+            || (state.Find(e.Id) is { } m && (_filter.Length == 0 || m.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase) || m.Category.Contains(_filter, StringComparison.OrdinalIgnoreCase))));
         InstalledMod M(ProfileEntry e) => state.Find(e.Id)!;
         return _sort switch
         {
             "name" => rows.OrderBy(e => M(e).Name, StringComparer.OrdinalIgnoreCase),
             "site" => rows.OrderBy(e => SiteName(M(e).Site)).ThenBy(e => M(e).Name, StringComparer.OrdinalIgnoreCase),
+            "category" => rows.OrderBy(e => M(e).Category.Length == 0 ? "\uffff" : M(e).Category, StringComparer.OrdinalIgnoreCase).ThenBy(e => M(e).Name, StringComparer.OrdinalIgnoreCase),
             "version" => rows.OrderBy(e => M(e).Version, StringComparer.OrdinalIgnoreCase),
             "conflicts" => rows.OrderByDescending(e => losers.GetValueOrDefault(e.Id) + winners.GetValueOrDefault(e.Id)),
             "update" => rows.OrderBy(e => M(e).UpdateVersion == null ? 1 : 0),
@@ -347,6 +392,10 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
             return;
         }
         var id = (string)f.GetMeta("mod");
+        if (GameMods.IsSeparator(id))
+        {
+            return;
+        }
         var store = Host.Mods.Store(game);
         App.Guard(() => store.SetEnabled(id, !store.State.IsEnabled(id)));
         _focusMod = id;

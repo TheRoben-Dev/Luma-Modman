@@ -26,6 +26,12 @@
       "_ResourcePack.esl"
     ]
   },
+  "saves": "{mygames}/Skyrim Special Edition/Saves",
+  "inis": [
+    "{mygames}/Skyrim Special Edition/Skyrim.ini",
+    "{mygames}/Skyrim Special Edition/SkyrimPrefs.ini",
+    "{mygames}/Skyrim Special Edition/SkyrimCustom.ini"
+  ],
   "quirks": [
     "Script-extender mods need SKSE64. Add it from a file like any mod; Luma then starts the game through skse64_loader.exe.",
     "Anniversary Edition content is part of the same game.",

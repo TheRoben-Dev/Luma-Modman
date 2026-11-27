@@ -109,6 +109,23 @@ public partial class SmokeTest : Node
             Press(Pad.Accept);
         }, wait: 1.0, expect: "Make a mod from these files", check: () => All(GetTree().Root).OfType<Luma.App.Screens.OverwritePage>().Any(p => p.IsVisibleInTree()) ? null : "Overwrite didn't open");
         Step("overwrite-back", () => Press(Pad.Back), wait: 0.8, tab: "Mods");
+        // Tools: BodySlide inside a mod is found and added; a tool run with the mods in leaves its output in Overwrite.
+        Step("tools-mod", InstallToolMod, wait: 1.2, tab: "Mods");
+        Step("tools-open", () =>
+        {
+            FindFocusable(GetTree().Root, "Run xEdit, LOOT, BodySlide")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.2, expect: "Adds BodySlide", check: () => All(GetTree().Root).OfType<Luma.App.Screens.ToolsPage>().Any(p => p.IsVisibleInTree()) ? null : "Tools didn't open");
+        Step("tools-add-found", () => Press(Pad.Accept), wait: 1.0, check: () =>
+            Main.Instance.Host!.Mods.Store(Main.Instance.Host.ActiveGame!).State.Tools.Any(t => t.Name == "BodySlide") ? null : "BodySlide wasn't added");
+        Step("tools-run", RunScriptTool, wait: 4.0, check: () =>
+            Main.Instance.Host!.Mods.OverwriteFiles(Main.Instance.Host.ActiveGame!).Contains("mods/tool-output.txt") ? null
+            : "the tool's output isn't in Overwrite: " + string.Join(", ", Main.Instance.Host.Mods.OverwriteFiles(Main.Instance.Host.ActiveGame!)));
+        Step("tools-back", () =>
+        {
+            Main.Instance.Host!.Mods.ClearOverwrite(Main.Instance.Host.ActiveGame!);
+            Press(Pad.Back);
+        }, wait: 0.8, tab: "Mods");
         // Touch reorder: hold a mod row still to pick it up, drag it above the one before it, lift.
         Luma.App.Ui.ListRow? ModRow(string name) =>
             All(GetTree().Root).OfType<Luma.App.Ui.ListRow>().FirstOrDefault(r => r.IsVisibleInTree() && r.HasMeta("mod") && r.TooltipText.StartsWith(name + ":", StringComparison.Ordinal));
@@ -154,11 +171,56 @@ public partial class SmokeTest : Node
             Luma.App.Screens.ModsScreen._filter = "";
             Luma.App.Screens.ModsScreen._sort = "name";
             Main.Instance.Host!.Mods.NotifyChanged(Main.Instance.Host.ActiveGame!);
-        }, wait: 1.0, tab: "Mods", check: () => ShownMods().FirstOrDefault() == "local:Smoke_Armor" && ShownMods().Count == 3 ? null : "sorted by name: " + string.Join(", ", ShownMods()));
+        }, wait: 1.0, tab: "Mods", check: () => ShownMods().FirstOrDefault() == "local:Smoke_Armor" && ShownMods().Count >= 3 ? null : "sorted by name: " + string.Join(", ", ShownMods()));
         Step("mods-sort-reset", () =>
         {
             Luma.App.Screens.ModsScreen._sort = "order";
             Main.Instance.Host!.Mods.NotifyChanged(Main.Instance.Host.ActiveGame!);
+        }, wait: 0.8, tab: "Mods");
+        // A separator: added from the load order, typed with the keyboard, shown as a heading row.
+        Step("separator-add", () =>
+        {
+            FindFocusable(GetTree().Root, "A heading at the end of the load order")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 0.8);
+        Step("separator-typed", () =>
+        {
+            TypeText("Visuals");
+            Key(Godot.Key.Enter);
+        }, wait: 1.0, tab: "Mods", check: () =>
+            All(GetTree().Root).OfType<Luma.App.Ui.ListRow>().Any(r => r.IsVisibleInTree() && r.HasMeta("mod") && ((string)r.GetMeta("mod")).StartsWith("sep:", StringComparison.Ordinal))
+                ? null : "the separator row isn't in the load order");
+        // Own saves per profile: the toggle asks how to start; with the mods in, the save folder is the profile's.
+        Step("profile-saves", () =>
+        {
+            Directory.CreateDirectory(SavesDir());
+            File.WriteAllText(Path.Combine(SavesDir(), "global.ess"), "the game's own save");
+            FindFocusable(GetTree().Root, "This profile gets its own save folder")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0, expect: "Copy my current saves");
+        Step("profile-saves-empty", () =>
+        {
+            Press("ui_down");
+            Press(Pad.Accept);
+        }, wait: 1.0, tab: "Mods", check: () => Host().Mods.Store(Host().ActiveGame!).State.HasLocalSaves ? null : "the profile doesn't have its own saves");
+        Step("profile-saves-in", () => Host().Mods.Deploy(Host().ActiveGame!), wait: 0.8, check: () =>
+            File.Exists(Path.Combine(SavesDir(), "global.ess")) ? "the game's own save is still there with the profile's mods in" : null);
+        Step("profile-saves-out", () => Host().Mods.Undeploy(Host().ActiveGame!), wait: 0.8, tab: "Mods", check: () =>
+            File.Exists(Path.Combine(SavesDir(), "global.ess")) ? null : "the game's own save didn't come back");
+        // A mod's files: open a folder, hide a file; it stays out of the deploy plan.
+        Step("mod-files", () => Main.Instance.Push(new Luma.App.Screens.ModFilesPage(Host().ActiveGame!, "local:Smoke_Armor", "mods/")), wait: 1.0, expect: "Opens the folder");
+        Step("mod-files-folder", () => Press(Pad.Accept), wait: 1.0, expect: "Hide this whole folder");
+        Step("mod-files-hide", () =>
+        {
+            Press("ui_down");
+            Press(Pad.Accept);
+        }, wait: 1.0, check: () => Host().Mods.Store(Host().ActiveGame!).State.Find("local:Smoke_Armor")?.Hidden.Contains("mods/meshes/armor.nif") == true
+            && !Host().Mods.Plan(Host().ActiveGame!).Files.Values.Any(f => f.ModId == "local:Smoke_Armor" && f.Source.EndsWith("armor.nif", StringComparison.Ordinal))
+            ? null : "armor.nif isn't hidden");
+        Step("mod-files-back", () =>
+        {
+            Press(Pad.Back);
+            Press(Pad.Back);
         }, wait: 0.8, tab: "Mods");
         // A game with anti-cheat shows why it can't be modded instead of mod actions.
         Step("pick-not-moddable", () =>
@@ -407,7 +469,6 @@ public partial class SmokeTest : Node
     private void DesktopSteps()
     {
         static DesktopShell Shell() => Main.Instance.GetChildren().OfType<DesktopShell>().First();
-        static Luma.Host.AppHost Host() => Main.Instance.Host!;
         string? NoController()
         {
             var bad = All(GetTree().Root).FirstOrDefault(n => n is ButtonGlyph or HintBar or Header or FocusHighlight);
@@ -578,9 +639,63 @@ public partial class SmokeTest : Node
         Step("desktop-overwrite", () => FindButton("Overwrite…")?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0, check: () =>
             DialogOpen("Overwrite") ?? (All(GetTree().Root).OfType<ItemList>().Any(l => l.TooltipText == "Files in Overwrite" && l.ItemCount == 1) ? null : "Overwrite doesn't list the file"));
         Step("desktop-overwrite-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-tools-mod", InstallToolMod, wait: 1.2, tab: "Mods");
+        Step("desktop-tools", () => Key(Godot.Key.T, ctrl: true), wait: 1.2, check: () =>
+            DialogOpen("Tools") ?? (All(GetTree().Root).OfType<ItemList>().Any(l => l.TooltipText == "Found tools" && l.ItemCount >= 1) ? null : "BodySlide isn't listed as found"));
+        Step("desktop-tools-run", RunScriptTool, wait: 4.0, check: () =>
+            Host().Mods.OverwriteFiles(Host().ActiveGame!).Contains("mods/tool-output.txt") ? null : "the tool's output isn't in Overwrite");
+        Step("desktop-tools-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-separator", () =>
+        {
+            var store = Host().Mods.Store(Host().ActiveGame!);
+            store.AddSeparator("Visuals", store.State.Order[0].Id);
+            store.SetModInfo(store.State.Mods[0].Id, category: "Textures", notes: "smoke note");
+            Host().Mods.NotifyChanged(Host().ActiveGame!);
+        }, wait: 1.0, tab: "Mods", check: () =>
+            All(GetTree().Root).OfType<Tree>().FirstOrDefault(t => t.TooltipText == "Load order" && t.IsVisibleInTree())?.GetRoot()?.GetChild(0)?.GetText(2).Contains("Visuals") == true
+                ? null : "the separator isn't the first row");
+        // Own INI files per profile: the game's settings come back, the profile keeps its changes.
+        string PrefsIni() => Path.Combine(Path.GetDirectoryName(SavesDir())!, "SkyrimPrefs.ini");
+        Step("desktop-profile-inis", () =>
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(PrefsIni())!);
+            File.WriteAllText(PrefsIni(), "[Display]\r\niSize H=720\r\n");
+            Luma.App.Screens.ModInfo.SetLocal(Host().ActiveGame!, false, true);
+        }, wait: 0.8, tab: "Mods", check: () => Host().Mods.Store(Host().ActiveGame!).State.HasLocalInis ? null : "the profile doesn't have its own INI files");
+        Step("desktop-profile-inis-in", () =>
+        {
+            Host().Mods.Deploy(Host().ActiveGame!);
+            File.WriteAllText(PrefsIni(), "[Display]\r\niSize H=1080\r\n");
+            Host().Mods.Undeploy(Host().ActiveGame!);
+        }, wait: 0.8, check: () => File.ReadAllText(PrefsIni()).Contains("720")
+            && File.ReadAllText(Path.Combine(Host().Mods.ProfileDir(Host().ActiveGame!), "inis", "SkyrimPrefs.ini")).Contains("1080")
+            ? null : "the INI files weren't swapped and put back");
+        Step("desktop-mod-files", () =>
+        {
+            Host().Mods.SetHidden(Host().ActiveGame!, "local:Smoke_Armor", ["mods/meshes/"], true);
+            Main.Instance.Push(new Luma.App.Screens.ModFilesPage(Host().ActiveGame!, "local:Smoke_Armor"));
+        }, wait: 1.0, check: () => DialogOpen("Files") ?? (All(GetTree().Root).OfType<Tree>().FirstOrDefault(t => t.TooltipText == "The mod's files" && t.IsVisibleInTree()) is { } t
+            && All(t.GetRoot()).Any(it => it.GetText(0) == "meshes/" && !it.IsChecked(0)) ? null : "the hidden folder isn't shown unticked"));
+        Step("desktop-mod-files-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
         Step("desktop-browse-nexus", () => Key(Godot.Key.Key2, ctrl: true), wait: 2.0, tab: "Browse");
         Step("desktop-not-moddable", () => Shell().PickGame("Marvel Rivals"), wait: 1.5, tab: "Mods", check: NoController);
     }
+
+    private static Luma.Host.AppHost Host() => Main.Instance.Host!;
+
+    private static IEnumerable<TreeItem> All(TreeItem item)
+    {
+        foreach (var c in item.GetChildren())
+        {
+            yield return c;
+            foreach (var d in All(c))
+            {
+                yield return d;
+            }
+        }
+    }
+
+    private static string SavesDir() => Luma.Core.Mods.ProfileFiles.SavesDir(Host().ActiveGame!, Host().Paths.Home)!;
 
     /// <summary>A mod archive with a FOMOD installer: a body choice (CBBE adds a step with an extra) and a patch for CBBE.</summary>
     private static string FomodZip()
@@ -659,6 +774,37 @@ public partial class SmokeTest : Node
         }
         host.Mods.Install(game, zip, new Luma.Core.Mods.InstalledMod { Id = "local:smoke-retexture", Site = "local", Name = "Smoke Retexture" });
         host.Mods.NotifyChanged(game);
+    }
+
+    /// <summary>A mod that carries BodySlide (CalienteTools/BodySlide/BodySlide x64.exe in Data).</summary>
+    private static void InstallToolMod()
+    {
+        var host = Main.Instance.Host!;
+        var game = host.ActiveGame!;
+        var zip = Path.Combine(host.Paths.Data, "smoke-bodyslide.zip");
+        if (!File.Exists(zip))
+        {
+            using var z = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create);
+            z.CreateEntry("CalienteTools/BodySlide/BodySlide x64.exe");
+            z.CreateEntry("CalienteTools/BodySlide/Config.xml");
+        }
+        host.Mods.Install(game, zip, new Luma.Core.Mods.InstalledMod { Id = "local:smoke-bodyslide", Site = "local", Name = "Smoke BodySlide" });
+        host.Mods.NotifyChanged(game);
+    }
+
+    /// <summary>Adds a shell-script "tool" that writes a file into Data, and runs it with the mods in.</summary>
+    private static void RunScriptTool()
+    {
+        var host = Main.Instance.Host!;
+        var game = host.ActiveGame!;
+        var script = Path.Combine(host.Paths.Data, "smoke-tool.sh");
+        File.WriteAllText(script, $"#!/bin/sh\necho made > \"{host.Mods.ModsDir(game)}/tool-output.txt\"\n");
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+        host.Mods.Store(game).SetTool(new Luma.Core.Mods.ToolDef("Smoke tool", script));
+        Luma.App.Screens.ToolsPage.Run(game, host.Mods.Store(game).State.Tools.First(t => t.Name == "Smoke tool"));
     }
 
     /// <summary>Puts the mods in, has "the game" write a file into Data, and takes them out again: the file goes to Overwrite.</summary>

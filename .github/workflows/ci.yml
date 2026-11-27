@@ -295,9 +295,13 @@ jobs:
           tools/release/package.sh build/godot "${{ steps.v.outputs.version }}" dist
           tools/release/package-windows.sh build/godot-windows "${{ steps.v.outputs.version }}" dist
           grep -q "Luma-linux-x86_64.tar.gz" dist/SHA256SUMS && grep -q "Luma-windows-x86_64.zip" dist/SHA256SUMS
-          # Release notes: this version's section of CHANGELOG.md.
-          awk -v v="## ${{ steps.v.outputs.version }}" '$0==v{on=1;next} /^## /{on=0} on' CHANGELOG.md > dist/notes.md
+          # Release notes: this version's section of CHANGELOG.md, and those of versions in between
+          # that never got a release of their own (several shipped in one merge).
+          last=$(gh release list --limit 1 --json tagName -q '.[0].tagName' | sed 's/^v//')
+          awk -v v="## ${{ steps.v.outputs.version }}" -v stop="## ${last:-none}" '$0==v{on=1;next} $0==stop{on=0} /^## /&&!on&&seen{exit} on{seen=1;print}' CHANGELOG.md > dist/notes.md
           test -s dist/notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Publish
         if: steps.v.outputs.exists == 'false'
         run: |

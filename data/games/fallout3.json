@@ -42,6 +42,11 @@
       "value": ""
     }
   ],
+  "saves": "{mygames}/Fallout3/Saves",
+  "inis": [
+    "{mygames}/Fallout3/FALLOUT.INI",
+    "{mygames}/Fallout3/FalloutPrefs.ini"
+  ],
   "quirks": [
     "Games for Windows Live must be disabled; the GOTY edition on Steam is the one to mod.",
     "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins. The game orders plugins by file date, which Luma sets.",
