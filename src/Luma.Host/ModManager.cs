@@ -220,35 +220,6 @@ public sealed class ModManager
         }
     }
 
-    /// <summary>Files in the game's Overwrite folder (made by the game or a tool while mods were in).</summary>
-    public List<string> OverwriteFiles(DetectedGame game) => Store(game).OverwriteFiles();
-
-    public void ClearOverwrite(DetectedGame game)
-    {
-        NotWhileDeployed(game);
-        Store(game).ClearOverwrite();
-        AppLog.Info($"cleared Overwrite for {game.Key}");
-        Changed?.Invoke(game.Key);
-    }
-
-    /// <summary>Makes a mod of the Overwrite folder's files.</summary>
-    public InstalledMod OverwriteToMod(DetectedGame game, string name)
-    {
-        NotWhileDeployed(game);
-        var mod = Store(game).OverwriteToMod(name);
-        AppLog.Info($"made {mod.Id} from Overwrite for {game.Key} ({mod.Files} files)");
-        Changed?.Invoke(game.Key);
-        return mod;
-    }
-
-    private void NotWhileDeployed(DetectedGame game)
-    {
-        if (IsDeployed(game))
-        {
-            throw new InvalidOperationException("The mods are in the game right now. Take them out first (or close the game), then try again.");
-        }
-    }
-
     public void NotifyChanged(DetectedGame game) => Changed?.Invoke(game.Key);
 
     /// <summary>The Steam launch options that make Steam start the game through Luma.</summary>
