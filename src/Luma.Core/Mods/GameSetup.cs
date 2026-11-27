@@ -5,7 +5,12 @@ namespace Luma.Core.Mods;
 
 /// <summary>A plugin in the game's load order, and where it comes from.</summary>
 /// <param name="ModId">The Luma mod that brings it, or null for plugins Luma doesn't manage (the game's own, Creations, hand-installed).</param>
-public sealed record PluginEntry(string Name, string? ModId, bool Enabled, bool Master);
+/// <param name="Light">A light plugin (ESL): doesn't count toward the plugin limit.</param>
+/// <param name="Needs">The plugins its header names as masters.</param>
+public sealed record PluginEntry(string Name, string? ModId, bool Enabled, bool Master, bool Light = false, IReadOnlyList<string>? Needs = null);
+
+/// <summary>Something wrong with a plugin list: a plugin whose masters are missing or load after it, or too many plugins.</summary>
+public sealed record PluginProblem(string? Plugin, string Text);
 
 /// <summary>
 /// The game files besides the mods themselves that Bethesda games need while mods are in:
@@ -22,17 +27,20 @@ public static class GameSetup
 
     /// <summary>
     /// The load order: plugins Luma doesn't manage keep their place and state from the current
-    /// plugins.txt; then the enabled mods' plugins, masters first, in mod order.
+    /// plugins.txt; then the enabled mods' plugins in mod order. An order set by hand or by
+    /// <see cref="SortPlugins"/> (kept per profile) comes first; masters always load before plugins.
     /// </summary>
-    public static List<PluginEntry> Plugins(DeployPlan plan, string modsDir, GameMods state, PluginSettings settings, IEnumerable<string> current)
+    /// <param name="header">Reads a plugin's header (the file in Luma's store or the game's folder); null: judged by the file name.</param>
+    public static List<PluginEntry> Plugins(DeployPlan plan, string modsDir, GameMods state, PluginSettings settings, IEnumerable<string> current,
+        Func<string, PluginHeader>? header = null)
     {
+        header ??= f => PluginFile.Read(f, 0) with { Masters = [] };
         // Plugins the mods place directly in the mods folder (Data/x.esp), in load order.
         var order = state.Enabled().Select((m, i) => (m.Id, i)).ToDictionary(x => x.Id, x => x.i);
         var fromMods = plan.Files
             .Where(f => IsPlugin(f.Key) && string.Equals(Path.GetDirectoryName(f.Key)?.TrimEnd('/', '\\'), modsDir.TrimEnd('/', '\\'), Platform.PathComparison))
-            .Select(f => (Name: Path.GetFileName(f.Key), f.Value.ModId))
-            .OrderBy(p => IsMaster(p.Name) ? 0 : 1)
-            .ThenBy(p => order.TryGetValue(p.ModId, out var i) ? i : int.MaxValue)
+            .Select(f => (Name: Path.GetFileName(f.Key), f.Value.ModId, Header: header(f.Value.Source)))
+            .OrderBy(p => order.TryGetValue(p.ModId, out var i) ? i : int.MaxValue)
             .ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
         var ours = new HashSet<string>(fromMods.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
@@ -52,17 +60,141 @@ public static class GameSetup
             {
                 continue;
             }
-            list.Add(new PluginEntry(name, null, on, IsMaster(name)));
+            var h = header(Path.Combine(modsDir, name));
+            list.Add(new PluginEntry(name, null, on, h.Master, h.Light, h.Masters));
         }
-        foreach (var (name, modId) in fromMods)
+        foreach (var (name, modId, h) in fromMods)
         {
             if (seen.Add(name))
             {
-                list.Add(new PluginEntry(name, modId, state.IsPluginOn(name), IsMaster(name)));
+                list.Add(new PluginEntry(name, modId, state.IsPluginOn(name), h.Master, h.Light, h.Masters));
             }
+        }
+        if (state.PluginOrder.TryGetValue(state.Active, out var saved) && saved.Count > 0)
+        {
+            list = ApplyOrder(list, saved);
         }
         // Masters before plugins, keeping each group's order: the game enforces that anyway.
         return list.Where(p => p.Master).Concat(list.Where(p => !p.Master)).ToList();
+    }
+
+    /// <summary>
+    /// Puts the plugins named in <paramref name="saved"/> in that order; a plugin it doesn't name
+    /// (new since) stays right after the plugin it followed before.
+    /// </summary>
+    public static List<PluginEntry> ApplyOrder(List<PluginEntry> list, IReadOnlyList<string> saved)
+    {
+        var at = saved.Select((n, i) => (n, i)).GroupBy(x => x.n, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First().i, StringComparer.OrdinalIgnoreCase);
+        var keyed = new List<(PluginEntry P, double Key)>();
+        var last = -1.0;
+        var step = 0;
+        foreach (var p in list)
+        {
+            if (at.TryGetValue(p.Name, out var i))
+            {
+                last = i;
+                step = 0;
+                keyed.Add((p, i));
+            }
+            else
+            {
+                keyed.Add((p, last + ++step / 10000.0));
+            }
+        }
+        return keyed.OrderBy(k => k.Key).Select(k => k.P).ToList();
+    }
+
+    /// <summary>
+    /// A load order where every plugin comes after the masters it needs, changing as little as
+    /// possible: masters first, then each plugin in its current place unless a master it needs is
+    /// later, in which case that master moves up in front of it.
+    /// </summary>
+    public static List<PluginEntry> SortPlugins(IReadOnlyList<PluginEntry> list)
+    {
+        var byName = list.GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        var done = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new List<PluginEntry>();
+        void Visit(PluginEntry p)
+        {
+            if (done.Contains(p.Name) || !visiting.Add(p.Name))
+            {
+                return;  // placed already, or a cycle: leave it where it is
+            }
+            foreach (var m in p.Needs ?? [])
+            {
+                if (byName.TryGetValue(m, out var needed) && (needed.Master || !p.Master))
+                {
+                    Visit(needed);
+                }
+            }
+            visiting.Remove(p.Name);
+            if (done.Add(p.Name))
+            {
+                result.Add(p);
+            }
+        }
+        foreach (var p in list.Where(p => p.Master))
+        {
+            Visit(p);
+        }
+        foreach (var p in list.Where(p => !p.Master))
+        {
+            Visit(p);
+        }
+        return result.Where(p => p.Master).Concat(result.Where(p => !p.Master)).ToList();
+    }
+
+    /// <summary>What would stop the game loading this list: missing or late masters, and too many plugins.</summary>
+    public static List<PluginProblem> Problems(IReadOnlyList<PluginEntry> list, PluginSettings settings)
+    {
+        var problems = new List<PluginProblem>();
+        var baseSet = new HashSet<string>(settings.Base, StringComparer.OrdinalIgnoreCase);
+        var pos = list.Select((p, i) => (p, i)).GroupBy(x => x.p.Name, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < list.Count; i++)
+        {
+            var p = list[i];
+            if (!p.Enabled)
+            {
+                continue;
+            }
+            var missing = new List<string>();
+            var late = new List<string>();
+            foreach (var m in p.Needs ?? [])
+            {
+                if (baseSet.Contains(m))
+                {
+                    continue;
+                }
+                if (!pos.TryGetValue(m, out var at) || !at.p.Enabled)
+                {
+                    missing.Add(m);
+                }
+                else if (at.i > i)
+                {
+                    late.Add(m);
+                }
+            }
+            if (missing.Count > 0)
+            {
+                problems.Add(new PluginProblem(p.Name, $"{p.Name} needs {string.Join(", ", missing)}, which {(missing.Count == 1 ? "isn't" : "aren't")} installed and on. The game crashes at start without {(missing.Count == 1 ? "it" : "them")}."));
+            }
+            if (late.Count > 0)
+            {
+                problems.Add(new PluginProblem(p.Name, $"{p.Name} loads before {string.Join(", ", late)}, which it needs first. Sort the plugins to fix it."));
+            }
+        }
+        var full = list.Count(p => p.Enabled && !p.Light) + settings.Base.Count;
+        if (full > settings.MaxPlugins)
+        {
+            problems.Add(new PluginProblem(null, $"{full} full plugins are on (the game's own included), more than the {settings.MaxPlugins} the game can load. Turn some off, or use light (ESL) versions."));
+        }
+        var light = list.Count(p => p.Enabled && p.Light);
+        if (light > 4096)
+        {
+            problems.Add(new PluginProblem(null, $"{light} light plugins are on, more than the 4096 the game can load."));
+        }
+        return problems;
     }
 
     /// <summary>
@@ -137,7 +269,7 @@ public static class GameSetup
         if (game.Profile.Plugins is { } settings && modsDir != null && GamePaths.ResolvePath(game, settings.File, home) is { } file)
         {
             var current = File.Exists(file) ? File.ReadAllLines(file) : [];
-            plugins = Plugins(plan, modsDir, state, settings, current);
+            plugins = Plugins(plan, modsDir, state, settings, current, f => PluginFile.Read(f, settings.Light));
             var baseHere = settings.Base.Where(b => File.Exists(GamePaths.Resolve(modsDir, b))).ToList();
             Write(file, PluginsTxt(plugins, settings, baseHere), m, backupDir);
             if (settings.LoadOrderFile)

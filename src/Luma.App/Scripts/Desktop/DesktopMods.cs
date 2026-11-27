@@ -106,7 +106,7 @@ public partial class DesktopMods : VBoxContainer
         _table.ItemActivated += () => Toggle(_selected);
         _table.ColumnTitleClicked += (col, button) =>
         {
-            if (button != (long)MouseButton.Left || col == ColOn)
+            if (button != (long)MouseButton.Left)
             {
                 return;
             }
@@ -260,6 +260,7 @@ public partial class DesktopMods : VBoxContainer
             ColSource => rows.OrderBy(r => ModsScreen.SiteName(r.Mod!.Site)),
             ColConflicts => rows.OrderBy(r => losers.GetValueOrDefault(r.Mod!.Id) + winners.GetValueOrDefault(r.Mod!.Id)),
             ColUpdate => rows.OrderBy(r => r.Mod!.UpdateVersion == null ? 1 : 0),
+            ColOn => rows.OrderBy(r => r.Entry.Enabled ? 1 : 0),
             _ => rows,
         };
         if (!_sortAsc)
@@ -309,7 +310,7 @@ public partial class DesktopMods : VBoxContainer
         }
         for (var i = 0; i < Titles.Length; i++)
         {
-            _table.SetColumnTitle(i, Titles[i] + (i == _sortCol && i != ColOn ? (_sortAsc ? "  ▲" : "  ▼") : ""));
+            _table.SetColumnTitle(i, Titles[i] + (i == _sortCol ? (_sortAsc ? "  ▲" : "  ▼") : ""));
         }
         if (select != null)
         {

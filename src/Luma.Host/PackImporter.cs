@@ -105,6 +105,10 @@ public static class PackImporter
         {
             store.SetPluginEnabled(plugin, false);
         }
+        if (pack.PluginOrder.Count > 0)
+        {
+            store.SetPluginOrder(pack.PluginOrder);
+        }
         var results = new List<PackModResult>();
         var unpack = Path.Combine(host.Paths.DownloadsDir, "modpacks", ModStore.Safe(Path.GetFileNameWithoutExtension(file)));
         for (var i = 0; i < pack.Mods.Count; i++)

@@ -197,6 +197,15 @@ public sealed record PluginSettings
 
     /// <summary>The game's own plugins, always loaded first and never written by Luma.</summary>
     public List<string> Base { get; init; } = new();
+
+    /// <summary>The header flag that marks a light plugin (ESL): 0x200 in Skyrim SE and Fallout 4, 0x100 in Starfield; 0 where there are none.</summary>
+    public uint? LightFlag { get; init; }
+
+    /// <summary>The light flag in effect: <see cref="LightFlag"/>, else 0x200 for the "asterisk" games and none for the older ones.</summary>
+    public uint Light => LightFlag ?? (Style == "asterisk" ? Mods.PluginFile.DefaultLightFlag : 0u);
+
+    /// <summary>How many full (not light) plugins the game can load, the game's own included.</summary>
+    public int MaxPlugins { get; init; } = 254;
 }
 
 /// <summary>One INI value: [Section] Key=Value in File (a location token path).</summary>

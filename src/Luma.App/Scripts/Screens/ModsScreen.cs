@@ -180,13 +180,27 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
             var losers = plan?.Conflicts.SelectMany(c => c.Losers).GroupBy(x => x).ToDictionary(g => g.Key, g => g.Count()) ?? new();
 
             scrollCol.AddChild(Section($"Load order  ·  {state.Active}"));
-            foreach (var entry in state.Order)
-            {
-                var mod = state.Find(entry.Id);
-                if (mod == null)
+            // Find and sort, like the desktop table's filter box and column headers.
+            var find = new ListRow(_filter.Length == 0 ? "Find a mod" : $"Showing mods with \"{_filter}\"", _filter.Length == 0 ? "Show only mods whose name has some text." : "A changes the text; clear it to see every mod.",
+                _filter.Length == 0 ? "Find" : "Change", UiTheme.Dim, null, () => App.Push(new TextEntryPage("Find a mod", _filter, text =>
                 {
-                    continue;
-                }
+                    _filter = text.Trim();
+                    Rebuild();
+                }, "Part of a mod's name. Leave it empty to see every mod.")), "Filters the load order by name.");
+            scrollCol.AddChild(find);
+            items.Add(find);
+            var sort = new Stepper("Sort by", SortOptions, _sort, "Sorting only changes what you see; the load order stays as it is. Mods can be moved only while sorted by load order.");
+            sort.Changed += v =>
+            {
+                _sort = v;
+                CallDeferred(MethodName.Rebuild);
+            };
+            items.Add(Add(scrollCol, sort));
+            var canMove = _sort == "order" && _filter.Length == 0;
+            var winners = plan?.Conflicts.GroupBy(c => c.Winner).ToDictionary(g => g.Key, g => g.Count()) ?? new();
+            foreach (var entry in Sorted(state, losers, winners))
+            {
+                var mod = state.Find(entry.Id)!;
                 var detail = string.Join("  ·  ", new[] { mod.Version, SiteName(mod.Site), mod.UpdateVersion != null ? $"update {mod.UpdateVersion}" : "",
                     losers.TryGetValue(mod.Id, out var n) ? $"{n} file{(n == 1 ? "" : "s")} replaced by other mods" : "" }.Where(x => x.Length > 0));
                 var id = mod.Id;
@@ -197,7 +211,10 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
                         App.Push(new InstalledModPage(game, id));
                     }, $"{mod.Name}: A for options, Y turns it {(entry.Enabled ? "off" : "on")}. On the touchscreen, hold it to drag it.");
                 row.SetMeta("mod", id);
-                TouchScroll.AllowReorder(row, this);
+                if (canMove)
+                {
+                    TouchScroll.AllowReorder(row, this);
+                }
                 if (id == _focusMod)
                 {
                     _modRow = row;
@@ -223,6 +240,11 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
             items.Add(Add(scrollCol, new ActionButton($"Add {l.Item}s from {l.Name}", () => App.Push(new ImportPage(game, l)),
                 $"Install {l.Item}s you downloaded from {l.Name}.")));
         }
+        items.Add(Add(scrollCol, new ActionButton("Open a folder", () => App.Push(new ChoicePage($"Open one of {game.Title}'s folders in the file manager.",
+            ("Game folder", () => Luma.App.Desktop.DesktopShell.OpenFolder(game.GameDir)),
+            ("Mods folder (Luma's copy of the mods)", () => Luma.App.Desktop.DesktopShell.OpenFolder(store.Root)),
+            ("Overwrite folder", () => Luma.App.Desktop.DesktopShell.OpenFolder(store.OverwriteDir)),
+            ("Cancel", () => { }))), "The game's folder, its mods in Luma's folder, or Overwrite.")));
         items.Add(Add(scrollCol, new ActionButton("Switch game", App.OpenGamePicker, "Pick the game to work on.")));
         if (game.Profile.Quirks.Count > 0)
         {
@@ -275,9 +297,36 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
         }
     }
 
+    internal static readonly (string, string)[] SortOptions =
+        [("order", "Load order"), ("name", "Name"), ("site", "Site"), ("version", "Version"), ("conflicts", "Conflicts"), ("update", "Updates first"), ("off", "Off first")];
+
+    /// <summary>The name filter and sort of the load order list (kept while the app runs).</summary>
+    internal static string _filter = "";
+    internal static string _sort = "order";
+
+    private static IEnumerable<ProfileEntry> Sorted(GameMods state, Dictionary<string, int> losers, Dictionary<string, int> winners)
+    {
+        var rows = state.Order.Where(e => state.Find(e.Id) is { } m && (_filter.Length == 0 || m.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase)));
+        InstalledMod M(ProfileEntry e) => state.Find(e.Id)!;
+        return _sort switch
+        {
+            "name" => rows.OrderBy(e => M(e).Name, StringComparer.OrdinalIgnoreCase),
+            "site" => rows.OrderBy(e => SiteName(M(e).Site)).ThenBy(e => M(e).Name, StringComparer.OrdinalIgnoreCase),
+            "version" => rows.OrderBy(e => M(e).Version, StringComparer.OrdinalIgnoreCase),
+            "conflicts" => rows.OrderByDescending(e => losers.GetValueOrDefault(e.Id) + winners.GetValueOrDefault(e.Id)),
+            "update" => rows.OrderBy(e => M(e).UpdateVersion == null ? 1 : 0),
+            "off" => rows.OrderBy(e => e.Enabled ? 1 : 0),
+            _ => rows,
+        };
+    }
+
     /// <summary>Y turns the focused mod on or off.</summary>
     public override bool OnShortcut(InputEventKey key)
     {
+        if (_sort != "order" || _filter.Length > 0)
+        {
+            return false;
+        }
         if (!key.CtrlPressed || key.Keycode is not (Key.Up or Key.Down) || Host.ActiveGame is not { } game
             || GetViewport().GuiGetFocusOwner() is not { } f || !f.HasMeta("mod"))
         {

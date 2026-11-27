@@ -74,6 +74,54 @@ public sealed class GameSetupTests : IDisposable
     }
 
     [Fact]
+    public void PluginHeadersGiveFlagsAndMasters()
+    {
+        var esp = Path.Combine(_dir, "Flagged.esp");
+        File.WriteAllBytes(esp, PluginFile.Make(PluginFile.MasterFlag | 0x200, "Skyrim.esm", "Base Mod.esm"));
+        var h = PluginFile.Read(esp, 0x200);
+        Assert.True(h.Master);
+        Assert.True(h.Light);
+        Assert.Equal(["Skyrim.esm", "Base Mod.esm"], h.Masters);
+        Assert.False(PluginFile.Read(esp, 0).Light);  // a game without light plugins
+        // Starfield's light flag is 0x100; an empty or foreign file is judged by its name.
+        File.WriteAllBytes(esp, PluginFile.Make(0x100));
+        Assert.True(PluginFile.Read(esp, 0x100).Light);
+        File.WriteAllText(Path.Combine(_dir, "x.esl"), "not a plugin");
+        Assert.Equal(new PluginHeader(true, true, []), PluginFile.Read(Path.Combine(_dir, "x.esl"), 0x200) with { Masters = [] });
+        Assert.Equal(PluginHeader.None.Master, PluginFile.Read(Path.Combine(_dir, "missing.esp"), 0x200).Master);
+    }
+
+    [Fact]
+    public void SortPutsPluginsAfterTheirMastersAndProblemsAreFound()
+    {
+        PluginEntry P(string name, bool master = false, bool on = true, params string[] needs) => new(name, "local:x", on, master, false, needs);
+        var list = new List<PluginEntry>
+        {
+            P("Lib.esm", master: true, needs: "Core.esm"),
+            P("Core.esm", master: true),
+            P("Patch.esp", needs: ["Main.esp", "Lib.esm"]),
+            P("Main.esp"),
+            P("Other.esp"),
+            P("Broken.esp", needs: "Gone.esp"),
+        };
+        var problems = GameSetup.Problems(list, Sse);
+        Assert.Contains(problems, p => p.Plugin == "Lib.esm" && p.Text.Contains("loads before Core.esm"));
+        Assert.Contains(problems, p => p.Plugin == "Patch.esp" && p.Text.Contains("Main.esp"));
+        Assert.Contains(problems, p => p.Plugin == "Broken.esp" && p.Text.Contains("needs Gone.esp"));
+
+        var sorted = GameSetup.SortPlugins(list);
+        Assert.Equal(["Core.esm", "Lib.esm", "Main.esp", "Patch.esp", "Other.esp", "Broken.esp"], sorted.Select(p => p.Name));
+        Assert.Equal(["Broken.esp"], GameSetup.Problems(sorted, Sse).Select(p => p.Plugin));
+
+        // A saved order wins; a plugin new since stays after the one it followed.
+        var applied = GameSetup.ApplyOrder(list, ["Other.esp", "Main.esp"]);
+        Assert.Equal(["Patch.esp", "Other.esp", "Broken.esp", "Main.esp"], applied.Where(p => !p.Master).Select(p => p.Name));
+
+        var many = Enumerable.Range(0, 260).Select(i => P($"p{i}.esp")).ToList();
+        Assert.Contains(GameSetup.Problems(many, Sse), p => p.Plugin == null && p.Text.Contains("more than the 254"));
+    }
+
+    [Fact]
     public void IniValuesAreSetInTheirSection()
     {
         var ini = "[General]\r\nsLanguage=EN\r\n\r\n[Archive]\r\nbInvalidateOlderFiles=0\r\n\r\n[Display]\r\niSize W=1280\r\n";
