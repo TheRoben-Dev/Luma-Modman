@@ -222,6 +222,49 @@ public partial class SmokeTest : Node
             Press(Pad.Back);
             Press(Pad.Back);
         }, wait: 0.8, tab: "Mods");
+        // Mods left in from a run that was stopped: offered to be taken out at start.
+        Step("left-in", LeaveModsIn, wait: 1.0, expect: "Take them out");
+        Step("left-in-out", () => Press(Pad.Accept), wait: 1.5, tab: "Mods", check: () => Host().Mods.IsDeployed(Host().ActiveGame!) ? "the mods are still in" : null);
+        // An unpacked mod folder, picked while browsing Downloads.
+        Step("add-folder", () =>
+        {
+            UnpackedMod();
+            Main.Instance.Push(new Luma.App.Screens.AddFilePage(Host().ActiveGame!));
+        }, wait: 1.0);
+        Step("add-folder-downloads", () =>
+        {
+            FindFocusable(GetTree().Root, "Look for mod files in " + Path.Combine(Host().Paths.Home, "Downloads"))?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0);
+        Step("add-folder-open", () =>
+        {
+            FindFocusable(GetTree().Root, "Open Smoke Unpacked")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0);
+        Step("add-folder-install", () =>
+        {
+            FindFocusable(GetTree().Root, "Installs Smoke Unpacked as it is")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 2.5, tab: "Mods", check: () => Host().Mods.Store(Host().ActiveGame!).State.Find("local:Smoke_Unpacked") is { Files: 2 } ? null : "the folder wasn't installed as a mod");
+        // A mod archive dropped on the window installs like one picked from a file.
+        Step("drop-file", () => Main.Instance.DropFiles([DroppedZip()]), wait: 2.5, tab: "Mods", check: () =>
+            Host().Mods.Store(Host().ActiveGame!).State.Find("local:Smoke_Dropped") != null ? null : "the dropped archive wasn't installed");
+        // A Nexus collection: the link is asked for; a collection (here from a fixture, no network) imports into a new profile.
+        Step("collection-ask", () =>
+        {
+            FindFocusable(GetTree().Root, "Paste the link of a collection")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0);
+        Step("collection-bad-link", () =>
+        {
+            TypeText("not a link");
+            Key(Godot.Key.Enter);
+        }, wait: 1.0, tab: "Mods");
+        Step("collection-show", () => Luma.App.Screens.CollectionActions.Show(SmokeCollection()), wait: 1.0, expect: "Import (2 mods)");
+        Step("collection-import", () => Press(Pad.Accept), wait: 2.0, check: () =>
+            Host().Mods.Store(Host().ActiveGame!).State is var st && st.Active.Contains("(collection)") && st.Order.Any(e => e.Id == "nexus:12604")
+                ? null : "the collection's profile wasn't made");
+        Step("collection-result", () => Press(Pad.Back), wait: 1.0, tab: "Mods");
         // A game with anti-cheat shows why it can't be modded instead of mod actions.
         Step("pick-not-moddable", () =>
         {
@@ -677,6 +720,19 @@ public partial class SmokeTest : Node
         }, wait: 1.0, check: () => DialogOpen("Files") ?? (All(GetTree().Root).OfType<Tree>().FirstOrDefault(t => t.TooltipText == "The mod's files" && t.IsVisibleInTree()) is { } t
             && All(t.GetRoot()).Any(it => it.GetText(0) == "meshes/" && !it.IsChecked(0)) ? null : "the hidden folder isn't shown unticked"));
         Step("desktop-mod-files-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-left-in", LeaveModsIn, wait: 1.0, check: () => All(GetTree().Root).OfType<Window>().Any(w => w.Visible && w.Title.Length > 0 && All(w).OfType<Button>().Any(b => b.Text == "Take them out")) ? null : "no notice about mods left in");
+        Step("desktop-left-in-keep", () => All(GetTree().Root).OfType<Button>().FirstOrDefault(b => b.Text == "Leave them in" && b.IsVisibleInTree())?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0, check: () =>
+            NoDialogs() ?? (Host().Mods.LeftIn([Host().ActiveGame!]).Count == 0 && Host().Mods.IsDeployed(Host().ActiveGame!) ? null : "leaving them in didn't stick"));
+        Step("desktop-left-in-cleanup", () => Host().Mods.Undeploy(Host().ActiveGame!), wait: 0.5);
+        Step("desktop-drop", () => Main.Instance.DropFiles([DroppedZip(), UnpackedMod()]), wait: 3.0, tab: "Mods", check: () =>
+            Host().Mods.Store(Host().ActiveGame!).State is var st && st.Find("local:Smoke_Dropped") != null && st.Find("local:Smoke_Unpacked") != null ? null : "the dropped archive and folder weren't both installed");
+        Step("desktop-add-folder", () => Key(Godot.Key.O, shift: true, ctrl: true), wait: 1.0, check: () => DialogOpen("Add an unpacked mod"));
+        Step("desktop-add-folder-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-collection", () => Luma.App.Screens.CollectionActions.Show(SmokeCollection()), wait: 1.0, check: () =>
+            All(GetTree().Root).OfType<Button>().Any(b => b.Text.StartsWith("Import with the 1 optional", StringComparison.Ordinal) && b.IsVisibleInTree()) ? null : "the collection's import choices aren't shown");
+        Step("desktop-collection-import", () => All(GetTree().Root).OfType<Button>().FirstOrDefault(b => b.Text.StartsWith("Import with the 1 optional", StringComparison.Ordinal) && b.IsVisibleInTree())?.EmitSignal(BaseButton.SignalName.Pressed), wait: 2.0, check: () =>
+            Host().Mods.Store(Host().ActiveGame!).State is var st && st.Active.Contains("(collection)") && st.Order.Count(e => e.Id.StartsWith("nexus:", StringComparison.Ordinal)) >= 3 ? null : "the collection's profile with its optional mod wasn't made");
+        Step("desktop-collection-close", () => All(GetTree().Root).OfType<Button>().FirstOrDefault(b => b.Text == "Done" && b.IsVisibleInTree())?.EmitSignal(BaseButton.SignalName.Pressed), wait: 0.8, check: NoDialogs);
         Step("desktop-browse-nexus", () => Key(Godot.Key.Key2, ctrl: true), wait: 2.0, tab: "Browse");
         Step("desktop-not-moddable", () => Shell().PickGame("Marvel Rivals"), wait: 1.5, tab: "Mods", check: NoController);
     }
@@ -693,6 +749,44 @@ public partial class SmokeTest : Node
                 yield return d;
             }
         }
+    }
+
+    private static Luma.Core.Sources.NexusCollection SmokeCollection() => new("Smoke Collection", "smk123", 3, "Curator", "skyrimspecialedition",
+    [
+        new("12604", "111", "SkyUI", "SkyUI_5_2_SE.7z", "5.2", "SkyUI Team", false),
+        new("266", "222", "Unofficial Patch", "ussep.7z", "4.3", "Arthmoor", false),
+        new("5", "333", "Extra", "extra.zip", "1", "Someone", true),
+    ]);
+
+    /// <summary>Mods in the game as if a launch had put them in and then been killed.</summary>
+    private static void LeaveModsIn()
+    {
+        var game = Host().ActiveGame!;
+        var m = Host().Mods.Deploy(game, temporary: true);
+        Luma.Core.Mods.Deployer.Write(Host().Mods.Manifest(game), m with { Pid = 0 });
+        Main.Instance.WarnLeftInGame();
+    }
+
+    /// <summary>An unpacked mod in Downloads: a folder with a plugin and a texture.</summary>
+    private static string UnpackedMod()
+    {
+        var dir = Path.Combine(Host().Paths.Home, "Downloads", "Smoke Unpacked");
+        Directory.CreateDirectory(Path.Combine(dir, "textures"));
+        File.WriteAllText(Path.Combine(dir, "SmokeUnpacked.esp"), "p");
+        File.WriteAllText(Path.Combine(dir, "textures", "u.dds"), "t");
+        return dir;
+    }
+
+    private static string DroppedZip()
+    {
+        var zip = Path.Combine(Host().Paths.Data, "Smoke Dropped.zip");
+        if (!File.Exists(zip))
+        {
+            using var z = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create);
+            using var w = new StreamWriter(z.CreateEntry("SmokeDropped.esp").Open());
+            w.Write("dropped");
+        }
+        return zip;
     }
 
     private static string SavesDir() => Luma.Core.Mods.ProfileFiles.SavesDir(Host().ActiveGame!, Host().Paths.Home)!;

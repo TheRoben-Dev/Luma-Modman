@@ -99,6 +99,10 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
         }
         items.Add(Add(scrollCol, new ActionButton("Import a modpack", () => App.Push(new ModPackPage(game, export: false)),
             "Installs a .lumapack into a new profile.")));
+        if (game.Profile.Sites.Nexus != null)
+        {
+            items.Add(Add(scrollCol, new ActionButton("Import a Nexus collection", CollectionActions.Ask, CollectionActions.About)));
+        }
         if (state.Mods.Count > 0)
         {
             var profiles = state.Profiles.Keys.OrderBy(k => k == GameMods.DefaultProfile ? "" : k).Select(k => (k, k)).Append(("+", "New profile…"));

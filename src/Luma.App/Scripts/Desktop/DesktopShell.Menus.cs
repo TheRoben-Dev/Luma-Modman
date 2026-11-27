@@ -105,6 +105,7 @@ public partial class DesktopShell
         var game = Host.ActiveGame;
         var moddable = game?.Profile.Moddable == true;
         yield return new MenuItem("Add mod from file…", AddModFromFile, "Ctrl+O", moddable);
+        yield return new MenuItem("Add mod from folder…", AddModFromFolder, "Ctrl+Shift+O", moddable);
         if (game != null && moddable)
         {
             foreach (var link in game.Profile.Links.Where(l => l.ImportTo != null))
@@ -115,6 +116,7 @@ public partial class DesktopShell
         }
         yield return Separator;
         yield return new MenuItem("Import modpack…", () => App.Push(new ModPackPage(game, export: false)), "Ctrl+I");
+        yield return new MenuItem("Import Nexus collection…", CollectionActions.Ask, "", game?.Profile.Sites.Nexus != null);
         yield return new MenuItem("Export modpack…", ExportModpack, "Ctrl+E", moddable && Host.Mods.Store(game!).State.Order.Count > 0);
         yield return Separator;
         yield return new MenuItem("Open mods folder", () => OpenFolder(game != null && moddable ? Host.Mods.Store(game).Root : Host.Paths.ModsDir));

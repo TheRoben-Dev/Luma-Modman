@@ -224,7 +224,7 @@ public static class PackActions
     }
 
     /// <summary>What the import did, with a way to each mod the player has to fetch.</summary>
-    private static void ShowResult(PackImportResult r)
+    internal static void ShowResult(PackImportResult r)
     {
         var msg = $"\"{r.Profile}\" is your active profile now: {r.Summary}.";
         var manual = r.Mods.Where(m => m.Outcome is PackModOutcome.Manual or PackModOutcome.Failed).ToList();

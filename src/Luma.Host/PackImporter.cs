@@ -84,7 +84,12 @@ public static class PackImporter
     /// </summary>
     public static PackImportResult Import(AppHost host, DetectedGame game, string file, string? profile = null, Action<string, double>? progress = null, bool queueDownloads = true)
     {
-        var pack = ModPack.Read(file);
+        return Import(host, game, ModPack.Read(file), file, profile, progress, queueDownloads);
+    }
+
+    /// <summary>Imports a pack already read (or made from a Nexus collection, <paramref name="file"/> null: nothing bundled).</summary>
+    public static PackImportResult Import(AppHost host, DetectedGame game, PackManifest pack, string? file, string? profile = null, Action<string, double>? progress = null, bool queueDownloads = true)
+    {
         if (!string.Equals(pack.Game, game.Profile.Id, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException($"This modpack is for {(pack.GameName.Length > 0 ? pack.GameName : pack.Game)}, not {game.Title}.");
@@ -110,7 +115,7 @@ public static class PackImporter
             store.SetPluginOrder(pack.PluginOrder);
         }
         var results = new List<PackModResult>();
-        var unpack = Path.Combine(host.Paths.DownloadsDir, "modpacks", ModStore.Safe(Path.GetFileNameWithoutExtension(file)));
+        var unpack = Path.Combine(host.Paths.DownloadsDir, "modpacks", ModStore.Safe(file != null ? Path.GetFileNameWithoutExtension(file) : pack.Name));
         for (var i = 0; i < pack.Mods.Count; i++)
         {
             var mod = pack.Mods[i];
@@ -119,11 +124,11 @@ public static class PackImporter
         }
         progress?.Invoke("", 1);
         host.Mods.NotifyChanged(game);
-        AppLog.Info($"imported modpack {Path.GetFileName(file)} into {game.Key} profile \"{name}\": {string.Join(", ", results.GroupBy(r => r.Outcome).Select(g => $"{g.Key} {g.Count()}"))}");
+        AppLog.Info($"imported {(file != null ? "modpack " + Path.GetFileName(file) : pack.Name)} into {game.Key} profile \"{name}\": {string.Join(", ", results.GroupBy(r => r.Outcome).Select(g => $"{g.Key} {g.Count()}"))}");
         return new PackImportResult(name, pack, results);
     }
 
-    private static PackModResult ImportOne(AppHost host, DetectedGame game, string file, PackMod mod, string profile, string unpack, bool queueDownloads)
+    private static PackModResult ImportOne(AppHost host, DetectedGame game, string? file, PackMod mod, string profile, string unpack, bool queueDownloads)
     {
         var store = host.Mods.Store(game);
         if (store.State.Find(mod.Id) is { } have)
@@ -131,7 +136,7 @@ public static class PackImporter
             var same = have.FileId.Length > 0 ? have.FileId == mod.FileId : have.Version == mod.Version;
             return new PackModResult(mod, PackModOutcome.AlreadyInstalled, same ? "" : $"you have {Show(have.Version)}, the pack has {Show(mod.Version)}");
         }
-        if (mod.File != null)
+        if (mod.File != null && file != null)
         {
             try
             {

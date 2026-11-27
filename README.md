@@ -99,6 +99,9 @@ Select), and every tab works on that game. Games still start from Steam or their
   on any mod, rename mods (the site's name stays for updates) and profiles.
 - **Profiles with their own saves and INI files** (Bethesda games), and a **file browser** per mod
   to hide files or folders you don't want in the game.
+- **Drag and drop** archives or unpacked folders onto the window to install them; install from a
+  folder; a warning at start when mods were left in a game.
+- **Nexus collections**: import a collection's mod list into a new profile.
 - **Overwrite**: files the game or a tool makes while the mods are in (configs, generated patches,
   tool output) are moved to the game's Overwrite when the mods come out and go back in last next
   time, like MO2. Make a mod of them, or delete them (Mods → Overwrite).

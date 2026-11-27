@@ -17,7 +17,7 @@ public static class NxmHandler
     /// <summary>Queues a link for the app. Returns false when it isn't an nxm link.</summary>
     public static bool Drop(AppPaths paths, string link)
     {
-        if (NxmLink.TryParse(link) == null)
+        if (NxmLink.TryParse(link) == null && NexusCollectionRef.TryParse(link) == null)
         {
             return false;
         }
@@ -29,11 +29,14 @@ public static class NxmHandler
         return true;
     }
 
-    /// <summary>Links waiting in the inbox, oldest first; each file is removed as it is read.</summary>
-    public static List<NxmLink> Take(AppPaths paths)
+    /// <summary>Links waiting in the inbox, oldest first (mod files, and collections from the website's mod manager button); each file is removed as it is read.</summary>
+    public static List<NxmLink> Take(AppPaths paths) => Take(paths, out _);
+
+    public static List<NxmLink> Take(AppPaths paths, out List<NexusCollectionRef> collections)
     {
         var dir = Inbox(paths);
         var list = new List<NxmLink>();
+        collections = new List<NexusCollectionRef>();
         if (!Directory.Exists(dir))
         {
             return list;
@@ -42,9 +45,14 @@ public static class NxmHandler
         {
             try
             {
-                if (NxmLink.TryParse(File.ReadAllText(f)) is { } l)
+                var text = File.ReadAllText(f);
+                if (NxmLink.TryParse(text) is { } l)
                 {
                     list.Add(l);
+                }
+                else if (NexusCollectionRef.TryParse(text) is { } c)
+                {
+                    collections.Add(c);
                 }
                 File.Delete(f);
             }

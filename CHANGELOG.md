@@ -3,6 +3,18 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.20.0
+
+- Nexus Mods collections: paste a collection's link (Mods → Import a Nexus collection in controller mode, File → Import Nexus collection… on the desktop), or press the mod manager button on a collection's page. Luma shows what it holds and imports it into a new profile, in the exact file versions the collection lists, with or without its optional mods. Your other profiles don't change.
+- Premium accounts get every mod downloaded. Free accounts press "Mod Manager Download" on the website once per file (Nexus's rule for free accounts); Luma lists each with a link straight to its download, and every file takes its place in the profile as it arrives.
+- Not yet carried over from a collection: the curator's installer (FOMOD) picks, which you choose as each mod installs, and their plugin rules; press Sort plugins after importing.
+
+## 0.19.0
+
+- Drop mods on Luma: drag archives, unpacked mod folders or single mod files from your file manager onto Luma's window and they install for the game you have picked, one after another (installers open as usual). Drop a .lumapack to import it. Works in both layouts.
+- Install a mod you unpacked yourself: "Install this folder as a mod" while browsing a folder in controller mode, Mods → Add mod from folder… (Ctrl+Shift+O) on the desktop. Luma keeps a copy, so you can move or delete the original.
+- Mods left in a game: if Luma or the game's launch was stopped before the mods came out (or you put them in by hand last time), Luma says so when it starts and offers to take them out, so Steam updates, file checks and online play don't meet a modded game by surprise. "Leave them in" keeps them and stops asking until next time.
+
 ## 0.18.0
 
 - Own saves per profile, like MO2's profile-specific saves: turn on "Own saves for this profile" and, while that profile's mods are in, the game's save folder is the profile's own, so a different mod list never loads (and breaks) your other playthroughs. Start it empty or with a copy of your current saves. The game's own saves come back when the mods come out.

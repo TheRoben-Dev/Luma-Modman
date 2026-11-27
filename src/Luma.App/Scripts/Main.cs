@@ -234,6 +234,7 @@ public partial class Main : Control
         // The cached list shows at once; a fresh scan replaces it in the background.
         ScanGames(quiet: true);
         StartNxmInbox();
+        GetWindow().FilesDropped += files => DropFiles(files);
 
         var args = OS.GetCmdlineUserArgs();
         var smoke = Array.IndexOf(args, "--smoke");
@@ -248,7 +249,7 @@ public partial class Main : Control
         {
             AddChild(new SmokeTest(args[smoke + 1]));
         }
-        else if (!ShowWhatsNew() && Host is { Settings.CheckForUpdates: true, Updater.CanSelfUpdate: true })
+        else if (!WarnLeftInGame() && !ShowWhatsNew() && Host is { Settings.CheckForUpdates: true, Updater.CanSelfUpdate: true })
         {
             CheckForAppUpdate(silent: true);
         }
@@ -426,6 +427,92 @@ public partial class Main : Control
     /// After an update, shows the changes since the last version the user saw, once. A fresh install
     /// just records the version. Returns true if the page was shown.
     /// </summary>
+    /// <summary>
+    /// Mods dropped on the window (archives, unpacked mod folders, single mod files, modpacks):
+    /// installed for the game picked now, one after another. The same in both layouts.
+    /// </summary>
+    public void DropFiles(IEnumerable<string> files)
+    {
+        var list = files.ToList();
+        if (Host == null || list.Count == 0)
+        {
+            return;
+        }
+        if (list.FirstOrDefault(f => f.EndsWith(Luma.Core.Mods.ModPack.Extension, StringComparison.OrdinalIgnoreCase)) is { } pack)
+        {
+            PackActions.Import(pack);
+            return;
+        }
+        if (Host.ActiveGame is not { Profile.Moddable: true } game)
+        {
+            Error("Pick a game that can be modded first, then drop its mods on Luma.");
+            return;
+        }
+        AppLog.Info($"dropped {list.Count} file(s) for {game.Key}");
+        void Next(int i)
+        {
+            if (i >= list.Count)
+            {
+                return;
+            }
+            var f = list[i];
+            if (Directory.Exists(f))
+            {
+                AddFilePage.InstallFolder(game, f, _ => Next(i + 1));
+            }
+            else if (File.Exists(f))
+            {
+                FomodSession.InstallFile(game, f, _ => Next(i + 1));
+            }
+            else
+            {
+                Next(i + 1);
+            }
+        }
+        Next(0);
+    }
+
+    /// <summary>
+    /// At start: mods still in a game although nothing of Luma's is running any more (Luma or the
+    /// game's launch was stopped, or they were put in by hand last time). Offers to take them out,
+    /// so the game isn't left modded by surprise (Steam updates and file checks, playing online).
+    /// </summary>
+    internal bool WarnLeftInGame()
+    {
+        if (Host == null)
+        {
+            return false;
+        }
+        var left = Host.Mods.LeftIn(Host.Games.Games);
+        if (left.Count == 0)
+        {
+            return false;
+        }
+        var names = string.Join(", ", left.Select(l => l.Game.Title));
+        var when = left.Max(l => l.Manifest.At).ToLocalTime();
+        var why = left.Any(l => l.Manifest.Temporary)
+            ? "Luma or the game was stopped before it could take them out."
+            : "They were put in by hand.";
+        AppLog.Warn($"mods left in: {string.Join(", ", left.Select(l => l.Game.Key))}");
+        Push(new ChoicePage($"Mods are still in {names} (since {when:d MMM HH:mm}). {why} Take them out now? Leave them in only if you start the game from Steam with them on purpose.",
+            ("Take them out", () =>
+            {
+                var failed = left.Where(l => !Guard(() => Host.Mods.Undeploy(l.Game))).ToList();
+                if (failed.Count == 0)
+                {
+                    Success(left.Count == 1 ? $"The mods are out of {names}." : "The mods are out of those games.");
+                }
+            }),
+            ("Leave them in", () =>
+            {
+                foreach (var l in left)
+                {
+                    Host.Mods.LeaveIn(l.Game);
+                }
+            })));
+        return true;
+    }
+
     private bool ShowWhatsNew()
     {
         if (Host == null)

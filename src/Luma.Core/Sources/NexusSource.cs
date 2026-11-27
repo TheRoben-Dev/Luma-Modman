@@ -153,6 +153,13 @@ public sealed class NexusSource(HttpGate http, Func<string?> apiKey, string appV
         _ => category,
     };
 
+    /// <summary>A collection revision (the newest published one when the link names none), from the public GraphQL API.</summary>
+    public async Task<NexusCollection> CollectionAsync(NexusCollectionRef r, CancellationToken ct = default)
+    {
+        using var doc = await Query(NexusCollection.Query, new { slug = r.Slug, rev = r.Revision }, ct);
+        return NexusCollection.Parse(doc.RootElement);
+    }
+
     /// <summary>Checks the key and says whether the account is Premium.</summary>
     public async Task<(string User, bool Premium)> ValidateAsync(CancellationToken ct = default)
     {

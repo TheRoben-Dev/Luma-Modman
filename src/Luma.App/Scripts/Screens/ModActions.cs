@@ -99,7 +99,11 @@ public static class ModActions
         List<NxmLink> links;
         try
         {
-            links = NxmHandler.Take(Host.Paths);
+            links = NxmHandler.Take(Host.Paths, out var collections);
+            foreach (var c in collections)
+            {
+                CollectionActions.Open(c);
+            }
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {

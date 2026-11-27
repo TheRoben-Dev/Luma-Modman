@@ -22,7 +22,47 @@ public partial class AddFilePage : Screen
     /// <summary>The folder being browsed; null shows the recent files and the places to start from.</summary>
     private string? _dir;
 
-    public AddFilePage(DetectedGame game) => _game = game;
+    /// <summary>Pick a folder (an unpacked mod) instead of an archive; the desktop opens a folder picker for it.</summary>
+    internal bool Folder { get; }
+
+    public AddFilePage(DetectedGame game, bool folder = false)
+    {
+        _game = game;
+        Folder = folder;
+    }
+
+    /// <summary>Why a folder can't be installed as a mod (a whole drive or home folder, or far too big), or null.</summary>
+    internal static string? FolderProblem(string home, string dir)
+    {
+        var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(dir));
+        if (Path.GetPathRoot(full) is { } root && string.Equals(Path.TrimEndingDirectorySeparator(root), full, StringComparison.OrdinalIgnoreCase)
+            || Places(home).Any(p => string.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(p.Path)), full, StringComparison.Ordinal)))
+        {
+            var shown = Path.GetFileName(full) is { Length: > 0 } n ? n : full;
+            return $"{shown} isn't a mod: pick the folder the mod's files are in.";
+        }
+        try
+        {
+            var n = Directory.EnumerateFiles(full, "*", SearchOption.AllDirectories).Take(50001).Count();
+            return n == 0 ? "That folder is empty." : n > 50000 ? "That folder holds more than 50,000 files: pick the mod's own folder." : null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return "Luma can't read that folder: " + e.Message;
+        }
+    }
+
+    /// <summary>Installs a folder (an unpacked mod), after checking it's a sensible one.</summary>
+    internal static void InstallFolder(DetectedGame game, string dir, Action<InstalledMod>? done = null)
+    {
+        var app = Main.Instance;
+        if (FolderProblem(app.Host!.Paths.Home, dir) is { } problem)
+        {
+            app.Error(problem);
+            return;
+        }
+        FomodSession.InstallFile(game, Path.TrimEndingDirectorySeparator(dir), done);
+    }
 
     /// <summary>Where browsing can start: home, Downloads, Desktop, SD cards and USB drives (Linux), drives (Windows).</summary>
     internal static List<(string Name, string Path)> Places(string home)
@@ -104,7 +144,7 @@ public partial class AddFilePage : Screen
         var loader = Host.Mods.Loader(_game);
         var hint = loader?.Launcher != null
             ? $"Pick a .zip, .7z or .rar you downloaded. {loader.Name} goes in this way too: Luma then starts {_game.Title} through it."
-            : "Pick a .zip, .7z or .rar you downloaded. Luma keeps a copy, so it can be reinstalled later.";
+            : "Pick a .zip, .7z or .rar you downloaded, or a folder with an unpacked mod. Luma keeps a copy, so it can be reinstalled later.";
         col.AddChild(UiTheme.Label(hint, UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         var list = Column(8);
         var items = new List<Control>();
@@ -153,6 +193,16 @@ public partial class AddFilePage : Screen
         var back = new ActionButton(up != null ? "Up one folder" : "Back to the start", () => Open(up), "B goes back to where you started.");
         col.AddChild(back);
         items.Add(back);
+        if (FolderProblem(Host.Paths.Home, dir) == null)
+        {
+            var whole = new ActionButton($"Install this folder as a mod", () =>
+            {
+                App.Pop();
+                InstallFolder(_game, dir);
+            }, $"Installs {Path.GetFileName(Path.TrimEndingDirectorySeparator(dir))} as it is: for a mod you unpacked yourself.");
+            col.AddChild(whole);
+            items.Add(whole);
+        }
         col.AddChild(Scroller(list));
         foreach (var f in SafeArchives(dir))
         {
@@ -165,7 +215,7 @@ public partial class AddFilePage : Screen
             list.AddChild(row);
             items.Add(row);
         }
-        if (items.Count == 1)
+        if (items.Count <= 2 && !SafeArchives(dir).Any() && !SafeDirs(dir).Any())
         {
             list.AddChild(UiTheme.Label("No mod archives or folders here.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
         }
@@ -196,9 +246,23 @@ public partial class AddFilePage : Screen
     /// <summary>Copies the archive into Luma's downloads (for reinstall and rollback).</summary>
     public static string Keep(Luma.Host.AppHost host, DetectedGame game, string file)
     {
+        file = Path.TrimEndingDirectorySeparator(file);
         var kept = Path.Combine(host.Paths.DownloadsDir, "local", ModStore.Safe(game.Key), Path.GetFileName(file));
         Directory.CreateDirectory(Path.GetDirectoryName(kept)!);
-        if (!string.Equals(Path.GetFullPath(file), Path.GetFullPath(kept), StringComparison.Ordinal))
+        if (string.Equals(Path.GetFullPath(file), Path.GetFullPath(kept), StringComparison.Ordinal))
+        {
+            return kept;
+        }
+        if (Directory.Exists(file))
+        {
+            // An unpacked mod: a copy of the folder, so the original can be moved or deleted.
+            if (Directory.Exists(kept))
+            {
+                Directory.Delete(kept, true);
+            }
+            ProfileFiles.CopyDir(file, kept);
+        }
+        else
         {
             File.Copy(file, kept, overwrite: true);
         }
@@ -208,7 +272,8 @@ public partial class AddFilePage : Screen
     /// <summary>What a mod added from a file is called in the load order.</summary>
     public static InstalledMod LocalMod(string file)
     {
-        var name = Path.GetFileNameWithoutExtension(file);
+        file = Path.TrimEndingDirectorySeparator(file);
+        var name = Directory.Exists(file) ? Path.GetFileName(file) : Path.GetFileNameWithoutExtension(file);
         return new InstalledMod { Id = "local:" + ModStore.Safe(name), Site = "local", Name = name };
     }
 

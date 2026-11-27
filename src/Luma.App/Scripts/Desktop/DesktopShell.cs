@@ -564,7 +564,7 @@ public partial class DesktopShell : Screen
             case Key.Up or Key.Down when CurrentTab == "Mods":
                 return _mods.MoveSelected(key.Keycode == Key.Up ? -1 : +1);
             case Key.O:
-                AddModFromFile();
+                AddMod(key.ShiftPressed);
                 return true;
             case Key.Q:
                 GetTree().Quit();
@@ -612,11 +612,15 @@ public partial class DesktopShell : Screen
         }
     }
 
-    internal void AddModFromFile()
+    internal void AddModFromFile() => AddMod(false);
+
+    internal void AddModFromFolder() => AddMod(true);
+
+    private void AddMod(bool folder)
     {
         if (Host.ActiveGame is { Profile.Moddable: true } game)
         {
-            App.Push(new AddFilePage(game));
+            App.Push(new AddFilePage(game, folder));
         }
         else
         {

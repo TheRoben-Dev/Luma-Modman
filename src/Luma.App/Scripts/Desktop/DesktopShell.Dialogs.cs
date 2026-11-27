@@ -1019,8 +1019,20 @@ public partial class DesktopShell
     {
         var game = page.Game;
         var loader = Host.Mods.Loader(game);
-        var f = ArchivePicker(loader?.Launcher != null ? $"Add a mod from a file (including {loader.Name})" : $"Add a mod from a file for {game.Title}");
+        var f = ArchivePicker(page.Folder ? $"Add an unpacked mod from a folder for {game.Title}"
+            : loader?.Launcher != null ? $"Add a mod from a file (including {loader.Name})" : $"Add a mod from a file for {game.Title}");
         var picked = false;
+        if (page.Folder)
+        {
+            f.FileMode = FileDialog.FileModeEnum.OpenDir;
+            f.Filters = [];
+            f.DirSelected += dir =>
+            {
+                picked = true;
+                App.Close(page);
+                AddFilePage.InstallFolder(game, dir);
+            };
+        }
         f.FileSelected += path =>
         {
             picked = true;

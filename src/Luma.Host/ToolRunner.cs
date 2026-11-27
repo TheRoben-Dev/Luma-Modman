@@ -78,7 +78,7 @@ public static class ToolRunner
         var wasIn = mods.IsDeployed(game);
         if (!wasIn)
         {
-            mods.Deploy(game);
+            mods.Deploy(game, temporary: true);
         }
         try
         {
