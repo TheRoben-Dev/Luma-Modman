@@ -65,6 +65,12 @@ public sealed record GameMods
     public bool IsPluginOn(string plugin) =>
         !(PluginsOff.TryGetValue(Active, out var off) && off.Contains(plugin, StringComparer.OrdinalIgnoreCase));
 
+    /// <summary>Programs run with the mods in (xEdit, LOOT, BodySlide…), for every profile.</summary>
+    public List<ToolDef> Tools { get; init; } = new();
+
+    /// <summary>The plugin load order set by hand (moved or sorted), per profile; plugins not in it follow the mod order.</summary>
+    public Dictionary<string, List<string>> PluginOrder { get; init; } = new();
+
     /// <summary>Conflict winners picked by hand, per profile: file key ("mods/meshes/a.nif") → mod id.</summary>
     public Dictionary<string, Dictionary<string, string>> Winners { get; init; } = new();
 
@@ -362,6 +368,28 @@ public sealed class ModStore
             off.Add(plugin);
         }
         Save(State with { PluginsOff = all });
+    }
+
+    /// <summary>Adds a tool, or replaces the one with the same name.</summary>
+    public void SetTool(ToolDef tool, string? replacing = null) =>
+        Save(State with { Tools = State.Tools.Where(t => t.Name != tool.Name && t.Name != replacing).Append(tool).OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToList() });
+
+    public void RemoveTool(string name) => Save(State with { Tools = State.Tools.Where(t => t.Name != name).ToList() });
+
+    /// <summary>Sets the active profile's plugin load order (null or empty: back to the mod order).</summary>
+    public void SetPluginOrder(IEnumerable<string>? names)
+    {
+        var all = State.PluginOrder.ToDictionary(p => p.Key, p => p.Value.ToList());
+        var list = names?.ToList();
+        if (list is { Count: > 0 })
+        {
+            all[State.Active] = list;
+        }
+        else
+        {
+            all.Remove(State.Active);
+        }
+        Save(State with { PluginOrder = all });
     }
 
     /// <summary>

@@ -49,6 +49,9 @@ public sealed record PackManifest
 
     /// <summary>Plugins turned off by hand.</summary>
     public List<string> PluginsOff { get; init; } = new();
+
+    /// <summary>The plugin load order set by hand or by Sort (empty: the mod order).</summary>
+    public List<string> PluginOrder { get; init; } = new();
 }
 
 public sealed record PackExport(string File, int Bundled, int Listed, IReadOnlyList<string> NotBundled);
@@ -121,7 +124,8 @@ public static class ModPack
             }
             var manifest = new PackManifest { Name = name, CreatedBy = createdBy, Game = game.Id, GameName = game.Name, Full = full, Mods = mods,
                 Winners = store.State.Winners.TryGetValue(store.State.Active, out var picks) ? picks.Where(p => p.Value != ModStore.OverwriteId).ToDictionary(p => p.Key, p => p.Value) : new(),
-                PluginsOff = store.State.PluginsOff.TryGetValue(store.State.Active, out var off) ? off.ToList() : new() };
+                PluginsOff = store.State.PluginsOff.TryGetValue(store.State.Active, out var off) ? off.ToList() : new(),
+                PluginOrder = store.State.PluginOrder.TryGetValue(store.State.Active, out var po) ? po.ToList() : new() };
             using var w = new StreamWriter(zip.CreateEntry(ManifestName).Open());
             w.Write(JsonSerializer.Serialize(manifest, Json));
         }

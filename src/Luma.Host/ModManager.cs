@@ -144,7 +144,51 @@ public sealed class ModManager
             : deployed != null && deployed.Written.Contains(file) ? deployed.Backups.GetValueOrDefault(file)
             : file;
         var current = source != null && File.Exists(source) ? File.ReadAllLines(source) : [];
-        return GameSetup.Plugins(Plan(game), mods, Store(game).State, settings, current);
+        return GameSetup.Plugins(Plan(game), mods, Store(game).State, settings, current, f => PluginFile.Read(f, settings.Light));
+    }
+
+    /// <summary>Missing or late masters and plugin-limit problems in the list the next deploy writes.</summary>
+    public List<PluginProblem> PluginProblems(DetectedGame game) =>
+        game.Profile.Plugins is { } settings && Plugins(game) is { } list ? GameSetup.Problems(list, settings) : new();
+
+    /// <summary>Sorts the plugins so each loads after its masters, and keeps that order for the profile.</summary>
+    public int SortPlugins(DetectedGame game)
+    {
+        var list = Plugins(game) ?? throw new InvalidOperationException($"{game.Title} has no plugin list.");
+        var sorted = GameSetup.SortPlugins(list);
+        var moved = sorted.Where((p, i) => !string.Equals(list[i].Name, p.Name, StringComparison.OrdinalIgnoreCase)).Count();
+        Store(game).SetPluginOrder(sorted.Select(p => p.Name));
+        AppLog.Info($"sorted plugins for {game.Key}: {moved} moved");
+        Changed?.Invoke(game.Key);
+        return moved;
+    }
+
+    /// <summary>Moves a plugin up or down the load order (masters stay above plugins).</summary>
+    public void MovePlugin(DetectedGame game, string name, int delta)
+    {
+        var list = Plugins(game) ?? throw new InvalidOperationException($"{game.Title} has no plugin list.");
+        var i = list.FindIndex(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (i < 0)
+        {
+            return;
+        }
+        var j = Math.Clamp(i + delta, 0, list.Count - 1);
+        if (list[j].Master != list[i].Master)
+        {
+            return;  // a plugin can't go above a master, nor a master below a plugin
+        }
+        var p = list[i];
+        list.RemoveAt(i);
+        list.Insert(j, p);
+        Store(game).SetPluginOrder(list.Select(x => x.Name));
+        Changed?.Invoke(game.Key);
+    }
+
+    /// <summary>Back to plugins following the mod order.</summary>
+    public void ResetPluginOrder(DetectedGame game)
+    {
+        Store(game).SetPluginOrder(null);
+        Changed?.Invoke(game.Key);
     }
 
     /// <summary>Files in the game's Overwrite folder (made by the game or a tool while mods were in).</summary>

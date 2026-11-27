@@ -403,28 +403,41 @@ public partial class DesktopShell
     private Window PluginsDialog(PluginsPage page)
     {
         var game = page.Game;
-        var d = new DesktopDialog($"Plugins: {game.Title}", new Vector2I(860, 620));
+        var d = new DesktopDialog($"Plugins: {game.Title}", new Vector2I(980, 660));
         var info = d.AddText("", DesktopTheme.Dim);
-        var tree = new Tree { HideRoot = true, Columns = 4, ColumnTitlesVisible = true, SizeFlagsVertical = SizeFlags.ExpandFill, SelectMode = Tree.SelectModeEnum.Row, TooltipText = "Plugins" };
-        string[] titles = ["#", "On", "Plugin", "From mod"];
+        var warn = d.AddText("", DesktopTheme.Warn);
+        var tree = new Tree { HideRoot = true, Columns = 5, ColumnTitlesVisible = true, SizeFlagsVertical = SizeFlags.ExpandFill, SelectMode = Tree.SelectModeEnum.Row, TooltipText = "Plugins" };
+        string[] titles = ["#", "On", "Plugin", "Type", "From mod"];
         for (var i = 0; i < titles.Length; i++)
         {
             tree.SetColumnTitle(i, titles[i]);
             tree.SetColumnTitleAlignment(i, HorizontalAlignment.Left);
-            tree.SetColumnExpand(i, i >= 2);
+            tree.SetColumnExpand(i, i is 2 or 4);
         }
         tree.SetColumnCustomMinimumWidth(0, 44);
         tree.SetColumnCustomMinimumWidth(1, 44);
+        tree.SetColumnCustomMinimumWidth(3, 110);
         d.Body.AddChild(tree);
         var filling = false;
+        string? selected = null;
+        Button? reset = null;
         void Fill()
         {
             filling = true;
             tree.Clear();
             var root = tree.CreateItem();
             var (list, problem) = PluginsPage.Load(game);
-            info.Text = problem ?? $"{list.Count(p => p.Enabled)} of {list.Count} plugins on. Luma writes this order to plugins.txt when the mods go in: masters first, then your mods' plugins in mod order (reorder the mods to change it). Plugins not from Luma keep the state they have in the game.";
+            var custom = PluginsPage.CustomOrder(game);
+            info.Text = problem ?? $"{list.Count(p => p.Enabled)} of {list.Count} plugins on. Luma writes this order to plugins.txt when the mods go in: masters first, then {(custom ? "the order you set (Move up/down, Ctrl+Up/Down, or Sort)" : "your mods' plugins in mod order (reorder the mods, move single plugins, or Sort)")}. Plugins not from Luma keep the state they have in the game.";
             info.AddThemeColorOverride("font_color", problem != null ? DesktopTheme.Warn : DesktopTheme.Dim);
+            var problems = PluginsPage.Problems(game);
+            warn.Text = string.Join("\n", problems.Take(5).Select(p => "⚠ " + p.Text)) + (problems.Count > 5 ? $"\n…and {problems.Count - 5} more." : "");
+            warn.Visible = problems.Count > 0;
+            var bad = new HashSet<string>(problems.Where(x => x.Plugin != null).Select(x => x.Plugin!), StringComparer.OrdinalIgnoreCase);
+            if (reset != null)
+            {
+                reset.Disabled = !custom;
+            }
             var n = 0;
             foreach (var p in list)
             {
@@ -434,18 +447,53 @@ public partial class DesktopShell
                 it.SetCellMode(1, TreeItem.TreeCellMode.Check);
                 it.SetChecked(1, p.Enabled);
                 it.SetEditable(1, p.ModId != null);
-                it.SetText(2, p.Name);
-                if (p.Master)
+                it.SetText(2, (bad.Contains(p.Name) ? "⚠ " : "") + p.Name);
+                if (bad.Contains(p.Name))
+                {
+                    it.SetCustomColor(2, DesktopTheme.Warn);
+                }
+                else if (p.Master)
                 {
                     it.SetCustomColor(2, DesktopTheme.Accent);
                 }
-                it.SetTooltipText(2, p.Master ? $"{p.Name} (master: loads before plugins)" : p.Name);
-                it.SetText(3, PluginsPage.ModName(game, p.ModId));
+                var needs = p.Needs is { Count: > 0 } nd ? $"\nNeeds: {string.Join(", ", nd)}" : "";
+                var trouble = string.Join("\n", problems.Where(x => x.Plugin == p.Name).Select(x => x.Text));
+                it.SetTooltipText(2, $"{p.Name} ({PluginsPage.Kind(p)}){needs}{(trouble.Length > 0 ? "\n" + trouble : "")}");
+                it.SetText(3, PluginsPage.Kind(p));
                 it.SetCustomColor(3, DesktopTheme.Dim);
+                it.SetText(4, PluginsPage.ModName(game, p.ModId));
+                it.SetCustomColor(4, DesktopTheme.Dim);
                 it.SetMetadata(0, p.Name);
+                if (p.Name == selected)
+                {
+                    it.Select(0);
+                }
             }
             filling = false;
         }
+        void MoveSel(int delta)
+        {
+            if (tree.GetSelected() is { } it)
+            {
+                selected = it.GetMetadata(0).AsString();
+                PluginsPage.Move(game, selected, delta, () => Callable.From(Fill).CallDeferred());
+            }
+        }
+        tree.ItemSelected += () =>
+        {
+            if (!filling && tree.GetSelected() is { } it)
+            {
+                selected = it.GetMetadata(0).AsString();
+            }
+        };
+        tree.GuiInput += e =>
+        {
+            if (e is InputEventKey { Pressed: true, CtrlPressed: true } k && k.Keycode is Key.Up or Key.Down)
+            {
+                MoveSel(k.Keycode == Key.Up ? -1 : +1);
+                tree.AcceptEvent();
+            }
+        };
         tree.ItemEdited += () =>
         {
             if (filling || tree.GetEdited() is not { } it)
@@ -460,6 +508,10 @@ public partial class DesktopShell
             }
             Callable.From(Fill).CallDeferred();
         };
+        d.AddButton("Move up", () => MoveSel(-1), tooltip: "Moves the selected plugin up (Ctrl+Up). Masters stay above plugins.");
+        d.AddButton("Move down", () => MoveSel(+1), tooltip: "Moves the selected plugin down (Ctrl+Down).");
+        d.AddButton("Sort", () => PluginsPage.Sort(game, Fill), tooltip: "Moves plugins so each loads after the masters it needs, changing as little as possible.");
+        reset = d.AddButton("Use mod order", () => PluginsPage.ResetOrder(game, Fill), tooltip: "Forgets the order you set: plugins load in the order of their mods.");
         Fill();
         d.AddButton("Close", () => App.Close(page), primary: true);
         return ShowDialog(d, page, tree);

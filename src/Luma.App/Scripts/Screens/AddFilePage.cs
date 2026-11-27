@@ -9,6 +9,8 @@ namespace Luma.App.Screens;
 /// Installs a mod archive downloaded by hand (from a site with no app downloads, or a script
 /// extender such as SKSE64): pick it from Downloads or the Desktop and it joins the load order.
 /// A script extender is recognised by its loader program and installed as the game's loader.
+/// "Browse folders" walks any folder (home, SD cards and USB drives, Windows drives) for archives,
+/// like the desktop layout's file picker.
 /// </summary>
 public partial class AddFilePage : Screen
 {
@@ -17,7 +19,73 @@ public partial class AddFilePage : Screen
 
     internal DetectedGame Game => _game;
 
+    /// <summary>The folder being browsed; null shows the recent files and the places to start from.</summary>
+    private string? _dir;
+
     public AddFilePage(DetectedGame game) => _game = game;
+
+    /// <summary>Where browsing can start: home, Downloads, Desktop, SD cards and USB drives (Linux), drives (Windows).</summary>
+    internal static List<(string Name, string Path)> Places(string home)
+    {
+        var list = new List<(string, string)>();
+        foreach (var (name, dir) in new[] { ("Downloads", Path.Combine(home, "Downloads")), ("Desktop", Path.Combine(home, "Desktop")), ("Home folder", home) })
+        {
+            if (Directory.Exists(dir))
+            {
+                list.Add((name, dir));
+            }
+        }
+        if (Luma.Core.Platform.IsWindows)
+        {
+            foreach (var d in DriveInfo.GetDrives().Where(d => d.IsReady && d.DriveType is DriveType.Fixed or DriveType.Removable))
+            {
+                list.Add(($"Drive {d.Name.TrimEnd('\\')}" + (d.VolumeLabel.Length > 0 ? $" ({d.VolumeLabel})" : ""), d.RootDirectory.FullName));
+            }
+        }
+        else
+        {
+            // SteamOS and Bazzite mount SD cards and USB drives under /run/media (per user, or directly).
+            foreach (var media in new[] { "/run/media/" + System.Environment.UserName, "/run/media" })
+            {
+                if (!Directory.Exists(media))
+                {
+                    continue;
+                }
+                foreach (var d in SafeDirs(media).Where(d => Path.GetFileName(d) != System.Environment.UserName))
+                {
+                    list.Add(($"Drive {Path.GetFileName(d)}", d));
+                }
+            }
+        }
+        return list;
+    }
+
+    /// <summary>Visible subfolders, or none when the folder can't be read.</summary>
+    internal static List<string> SafeDirs(string dir)
+    {
+        try
+        {
+            return Directory.EnumerateDirectories(dir).Where(d => !Path.GetFileName(d).StartsWith('.'))
+                .OrderBy(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase).ToList();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return new List<string>();
+        }
+    }
+
+    /// <summary>Mod archives in a folder, newest first, or none when it can't be read.</summary>
+    internal static List<string> SafeArchives(string dir)
+    {
+        try
+        {
+            return Directory.EnumerateFiles(dir).Where(Archive.IsArchive).OrderByDescending(File.GetLastWriteTimeUtc).ToList();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return new List<string>();
+        }
+    }
 
     private IEnumerable<string> Candidates()
     {
@@ -38,28 +106,85 @@ public partial class AddFilePage : Screen
             ? $"Pick a .zip, .7z or .rar you downloaded. {loader.Name} goes in this way too: Luma then starts {_game.Title} through it."
             : "Pick a .zip, .7z or .rar you downloaded. Luma keeps a copy, so it can be reinstalled later.";
         col.AddChild(UiTheme.Label(hint, UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
-        col.AddChild(Section("Files in Downloads and on the Desktop"));
         var list = Column(8);
-        col.AddChild(Scroller(list));
         var items = new List<Control>();
-        foreach (var f in Candidates())
+        if (_dir != null)
         {
-            var file = f;
-            var info = new FileInfo(file);
-            var row = new ListRow(info.Name, $"{ModDetailsPage.Bytes(info.Length)}  ·  {info.LastWriteTime:d MMM HH:mm}", "Add", UiTheme.AccentText, null,
-                () => Install(file), $"Install {info.Name} for {_game.Title}.");
-            list.AddChild(row);
-            items.Add(row);
+            BuildFolder(col, list, items, _dir);
         }
-        if (items.Count == 0)
+        else
         {
-            list.AddChild(UiTheme.Label("No .zip, .7z or .rar files in Downloads or on the Desktop yet.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
-            var back = new ActionButton("Back", () => App.Pop());
-            col.AddChild(back);
-            items.Add(back);
+            col.AddChild(Section("Recent files in Downloads and on the Desktop"));
+            col.AddChild(Scroller(list));
+            foreach (var f in Candidates())
+            {
+                items.Add(FileRow(list, f));
+            }
+            if (items.Count == 0)
+            {
+                list.AddChild(UiTheme.Label("No .zip, .7z or .rar files in Downloads or on the Desktop yet. Browse a folder below.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+            }
+            list.AddChild(Section("Browse a folder"));
+            foreach (var (name, dir) in Places(Host.Paths.Home))
+            {
+                var d = dir;
+                var row = new ListRow(name, Host.Paths.Short(dir), "Open", UiTheme.Dim, null, () => Open(d), $"Look for mod files in {dir}.");
+                list.AddChild(row);
+                items.Add(row);
+            }
         }
         Focus.Column(items);
         _first = items.FirstOrDefault();
+    }
+
+    private ListRow FileRow(Control list, string file)
+    {
+        var info = new FileInfo(file);
+        var row = new ListRow(info.Name, $"{ModDetailsPage.Bytes(info.Length)}  ·  {info.LastWriteTime:d MMM HH:mm}", "Add", UiTheme.AccentText, null,
+            () => Install(file), $"Install {info.Name} for {_game.Title}.");
+        list.AddChild(row);
+        return row;
+    }
+
+    private void BuildFolder(VBoxContainer col, VBoxContainer list, List<Control> items, string dir)
+    {
+        col.AddChild(Section(Host.Paths.Short(dir)));
+        var up = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(dir));
+        var back = new ActionButton(up != null ? "Up one folder" : "Back to the start", () => Open(up), "B goes back to where you started.");
+        col.AddChild(back);
+        items.Add(back);
+        col.AddChild(Scroller(list));
+        foreach (var f in SafeArchives(dir))
+        {
+            items.Add(FileRow(list, f));
+        }
+        foreach (var d in SafeDirs(dir))
+        {
+            var sub = d;
+            var row = new ListRow(Path.GetFileName(d) + "/", "Folder", "Open", UiTheme.Dim, null, () => Open(sub), $"Open {Path.GetFileName(d)}.");
+            list.AddChild(row);
+            items.Add(row);
+        }
+        if (items.Count == 1)
+        {
+            list.AddChild(UiTheme.Label("No mod archives or folders here.", UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        }
+    }
+
+    private void Open(string? dir)
+    {
+        _dir = dir;
+        Rebuild();
+    }
+
+    public override bool OnBack()
+    {
+        if (_dir == null)
+        {
+            return false;
+        }
+        Open(null);
+        return true;
     }
 
     private void Install(string file)

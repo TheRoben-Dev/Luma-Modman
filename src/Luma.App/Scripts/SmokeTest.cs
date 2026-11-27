@@ -62,7 +62,12 @@ public partial class SmokeTest : Node
         {
             FindFocusable(GetTree().Root, "The plugin load order")?.GrabFocus();
             Press(Pad.Accept);
-        }, wait: 1.0, expect: "Smoke Master.esm");
+        }, wait: 1.0, expect: "Sort plugins", check: () =>
+            Main.Instance.Host!.Mods.PluginProblems(Main.Instance.Host.ActiveGame!).Any(p => p.Text.Contains("needs Smoke Missing.esm")) ? null : "the missing master isn't flagged");
+        Step("plugins-sort", () => Press(Pad.Accept), wait: 0.8, check: () =>
+            Main.Instance.Host!.Mods.PluginProblems(Main.Instance.Host.ActiveGame!).Any(p => p.Text.Contains("loads before")) ? "Sort left a master after its plugin" : null);
+        Step("plugins-row", () => FindFocusable(GetTree().Root, "Smoke Master.esm")?.GrabFocus(), wait: 0.5, expect: "Smoke Master.esm");
+        Step("plugins-options", () => Press(Pad.Accept), wait: 0.8, expect: "Turn it off");
         Step("plugins-toggle", () => Press(Pad.Accept), wait: 0.8, expect: "Smoke Master.esm", check: () =>
             Main.Instance.Host!.Mods.Store(Main.Instance.Host.ActiveGame!).State.IsPluginOn("Smoke Master.esm") ? "A didn't turn the plugin off" : null);
         Step("plugins-back", () => Press(Pad.Back), wait: 0.8, tab: "Mods");
@@ -132,6 +137,29 @@ public partial class SmokeTest : Node
             var order = Main.Instance.Host!.Mods.Store(Main.Instance.Host.ActiveGame!).State.Order.Select(e => e.Id).ToList();
             return order.IndexOf("local:smoke-retexture") < order.IndexOf("local:Smoke_Armor") ? null : "dragging didn't move Smoke Retexture above Smoke Armor: " + string.Join(", ", order);
         });
+        // Find and sort the load order, like the desktop table's filter box and column headers.
+        List<string> ShownMods() => All(GetTree().Root).OfType<Luma.App.Ui.ListRow>().Where(r => r.IsVisibleInTree() && r.HasMeta("mod")).Select(r => (string)r.GetMeta("mod")).ToList();
+        Step("mods-find", () =>
+        {
+            FindFocusable(GetTree().Root, "Filters the load order by name")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 0.8);
+        Step("mods-find-typed", () =>
+        {
+            TypeText("armor");
+            Key(Godot.Key.Enter);
+        }, wait: 1.0, tab: "Mods", check: () => ShownMods() is ["local:Smoke_Armor"] ? null : "the filter shows " + string.Join(", ", ShownMods()));
+        Step("mods-sort-name", () =>
+        {
+            Luma.App.Screens.ModsScreen._filter = "";
+            Luma.App.Screens.ModsScreen._sort = "name";
+            Main.Instance.Host!.Mods.NotifyChanged(Main.Instance.Host.ActiveGame!);
+        }, wait: 1.0, tab: "Mods", check: () => ShownMods().FirstOrDefault() == "local:Smoke_Armor" && ShownMods().Count == 3 ? null : "sorted by name: " + string.Join(", ", ShownMods()));
+        Step("mods-sort-reset", () =>
+        {
+            Luma.App.Screens.ModsScreen._sort = "order";
+            Main.Instance.Host!.Mods.NotifyChanged(Main.Instance.Host.ActiveGame!);
+        }, wait: 0.8, tab: "Mods");
         // A game with anti-cheat shows why it can't be modded instead of mod actions.
         Step("pick-not-moddable", () =>
         {
@@ -316,7 +344,10 @@ public partial class SmokeTest : Node
         {
             FindFocusable(GetTree().Root, "Install a mod you downloaded yourself")?.GrabFocus();
             Press(Pad.Accept);
-        }, expect: "Back");
+        }, expect: "Look for mod files in");
+        // Browsing a folder (home here), then B back to the start and B again out of the page.
+        Step("add-file-browse", () => Press(Pad.Accept), wait: 0.8, expect: "Up one folder");
+        Step("add-file-browse-back", () => Press(Pad.Back), wait: 0.8, expect: "Look for mod files in");
         Step("add-file-back", () => Press(Pad.Back), expect: "Add a mod from a file");
         // Modpacks: export this profile (full), then import it again into a new profile.
         bool PackPage() => All(GetTree().Root).OfType<Luma.App.Screens.ModPackPage>().Any(p => p.IsVisibleInTree());
@@ -509,7 +540,16 @@ public partial class SmokeTest : Node
         }, wait: 1.5, tab: "Mods", check: () => Host().ActiveGame?.Title.StartsWith("The Elder Scrolls V", StringComparison.Ordinal) == true ? null : "Skyrim isn't active");
         Step("desktop-skyrim-plugin-mod", InstallPluginMod, wait: 1.2, tab: "Mods");
         Step("desktop-plugins", () => Key(Godot.Key.P, ctrl: true), wait: 1.2, check: () =>
-            DialogOpen("Plugins") ?? (All(GetTree().Root).OfType<Tree>().Any(t => t.TooltipText == "Plugins" && t.GetRoot()?.GetChildCount() == 2) ? null : "the plugin table doesn't list the mod's two plugins"));
+            DialogOpen("Plugins") ?? (All(GetTree().Root).OfType<Tree>().Any(t => t.TooltipText == "Plugins" && t.GetRoot()?.GetChildCount() == 3) ? null : "the plugin table doesn't list the mod's three plugins"));
+        Step("desktop-plugins-move", () =>
+        {
+            // Selects the last plugin (Smoke Patch.esp, the only non-master) and presses Move up: it can't go above the masters.
+            if (All(GetTree().Root).OfType<Tree>().FirstOrDefault(t => t.TooltipText == "Plugins" && t.IsVisibleInTree()) is { } t && t.GetRoot()?.GetChild(2) is { } it)
+            {
+                it.Select(0);
+            }
+            FindButton("Sort", inDialog: true)?.EmitSignal(BaseButton.SignalName.Pressed);
+        }, wait: 0.8, check: () => All(GetTree().Root).OfType<Label>().Any(l => l.IsVisibleInTree() && l.Text.Contains("needs Smoke Missing.esm")) ? null : "the missing master isn't shown");
         Step("desktop-plugins-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
         Step("desktop-fomod", () => Luma.App.Screens.FomodSession.InstallFile(Host().ActiveGame!, FomodZip()), wait: 2.0, check: () => DialogOpen("Install options"));
         Step("desktop-fomod-pick", () =>
@@ -653,8 +693,18 @@ public partial class SmokeTest : Node
         var zip = Path.Combine(host.Paths.Data, "smoke-plugins.zip");
         using (var z = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create))
         {
-            z.CreateEntry("Smoke Master.esm");
-            z.CreateEntry("Smoke Patch.esp");
+            using (var w = z.CreateEntry("Smoke Master.esm").Open())
+            {
+                w.Write(Luma.Core.Mods.PluginFile.Make(Luma.Core.Mods.PluginFile.MasterFlag, "Skyrim.esm", "Smoke Base.esm"));
+            }
+            using (var w = z.CreateEntry("Smoke Base.esm").Open())
+            {
+                w.Write(Luma.Core.Mods.PluginFile.Make(Luma.Core.Mods.PluginFile.MasterFlag));
+            }
+            using (var w = z.CreateEntry("Smoke Patch.esp").Open())
+            {
+                w.Write(Luma.Core.Mods.PluginFile.Make(0, "Smoke Master.esm", "Smoke Missing.esm"));
+            }
         }
         host.Mods.Install(game, zip, new Luma.Core.Mods.InstalledMod { Id = "local:smoke-plugins", Site = "local", Name = "Smoke plugins" });
         host.Mods.NotifyChanged(game);

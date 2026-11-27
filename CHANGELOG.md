@@ -3,6 +3,13 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.15.0
+
+- Plugins, deeper: Luma now reads each plugin's header, so ESP files flagged as masters load with the masters and light (ESL-flagged) plugins are known as light. The Plugins list shows each plugin's type and the masters it needs, and warns when a master is missing or turned off (the game would crash at start), when a plugin loads before a master it needs, and when more full plugins are on than the game can load (254).
+- Plugins can be moved on their own, apart from their mods: A on a plugin → Move up/down in controller mode, Move up/down buttons or Ctrl+Up/Down on the desktop. "Sort plugins" puts every plugin after the masters it needs, changing as little as possible; "Follow the mod order again" forgets the order you set. The order is kept per profile and carried in modpacks.
+- Controller mode, same as the desktop: "Add a mod from a file" can browse any folder (home, Downloads, Desktop, SD cards and USB drives on the Deck, every drive on Windows), not just the newest files in Downloads. The load order has "Find a mod" (filter by name) and "Sort by" (name, site, version, conflicts, updates first, off first). Mods → "Open a folder" opens the game, mods or Overwrite folder, and Settings → About opens Luma's own folders and the log file.
+- Desktop: the On column sorts too (off first), and File → Open Overwrite folder.
+
 ## 0.14.0
 
 - Overwrite, like MO2's: files the game or a tool makes while your mods are in (configs, generated patches, BodySlide or Nemesis output, logs next to mod files) no longer stay behind in the game folder. When the mods come out, Luma moves them to the game's Overwrite and puts them back in last every time, so they win over every mod. Saves and the game's main folder are left alone. See and manage them under Mods → Overwrite in controller mode, or the Overwrite banner and Mods → Overwrite… on the desktop: make a mod of them, or delete them.

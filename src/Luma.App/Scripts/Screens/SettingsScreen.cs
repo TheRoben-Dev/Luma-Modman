@@ -301,6 +301,7 @@ public partial class SettingsScreen : TwoPaneScreen
     {
         col.AddChild(UiTheme.Label("Luma keeps mods, downloads and backups in its own folders. Game folders only see mods while a game runs, through links Luma puts in at launch and takes out afterwards, so every change can be undone.",
             UiTheme.SmallSize + 1, UiTheme.Dim, wrap: true));
+        Add(new ActionButton("Open the app log", () => App.Push(new LogPage()), "The app's own log: navigation, downloads, installs and errors."));
         foreach (var (label, path) in new[]
         {
             ("Mods", Host.Paths.ModsDir),
@@ -309,8 +310,11 @@ public partial class SettingsScreen : TwoPaneScreen
             ("App log", AppLog.FilePath ?? "(not open)"),
         })
         {
-            col.AddChild(UiTheme.Label($"{label}:  {Host.Paths.Short(path)}", UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
+            // A to open the folder in the file manager (Desktop Mode); in Game Mode the path is shown if it can't open.
+            var p = path;
+            Add(new ListRow(label, Host.Paths.Short(path), "Open", UiTheme.Dim, null,
+                () => Luma.App.Desktop.DesktopShell.OpenFolder(label == "App log" ? System.IO.Path.GetDirectoryName(p) : p), $"Opens {Host.Paths.Short(path)} in the file manager."));
         }
-        Add(new ActionButton("Open the app log", () => App.Push(new LogPage()), "The app's own log: navigation, downloads, installs and errors."));
+        Add(new ActionButton("Open the app log file", Luma.App.Desktop.DesktopShell.OpenLogFile, "Opens the log file in a text editor, for sending with a bug report."));
     }
 }
