@@ -249,6 +249,22 @@ public partial class SmokeTest : Node
         // A mod archive dropped on the window installs like one picked from a file.
         Step("drop-file", () => Main.Instance.DropFiles([DroppedZip()]), wait: 2.5, tab: "Mods", check: () =>
             Host().Mods.Store(Host().ActiveGame!).State.Find("local:Smoke_Dropped") != null ? null : "the dropped archive wasn't installed");
+        // A Nexus collection: the link is asked for; a collection (here from a fixture, no network) imports into a new profile.
+        Step("collection-ask", () =>
+        {
+            FindFocusable(GetTree().Root, "Paste the link of a collection")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0);
+        Step("collection-bad-link", () =>
+        {
+            TypeText("not a link");
+            Key(Godot.Key.Enter);
+        }, wait: 1.0, tab: "Mods");
+        Step("collection-show", () => Luma.App.Screens.CollectionActions.Show(SmokeCollection()), wait: 1.0, expect: "Import (2 mods)");
+        Step("collection-import", () => Press(Pad.Accept), wait: 2.0, check: () =>
+            Host().Mods.Store(Host().ActiveGame!).State is var st && st.Active.Contains("(collection)") && st.Order.Any(e => e.Id == "nexus:12604")
+                ? null : "the collection's profile wasn't made");
+        Step("collection-result", () => Press(Pad.Back), wait: 1.0, tab: "Mods");
         // A game with anti-cheat shows why it can't be modded instead of mod actions.
         Step("pick-not-moddable", () =>
         {
@@ -712,6 +728,11 @@ public partial class SmokeTest : Node
             Host().Mods.Store(Host().ActiveGame!).State is var st && st.Find("local:Smoke_Dropped") != null && st.Find("local:Smoke_Unpacked") != null ? null : "the dropped archive and folder weren't both installed");
         Step("desktop-add-folder", () => Key(Godot.Key.O, shift: true, ctrl: true), wait: 1.0, check: () => DialogOpen("Add an unpacked mod"));
         Step("desktop-add-folder-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-collection", () => Luma.App.Screens.CollectionActions.Show(SmokeCollection()), wait: 1.0, check: () =>
+            All(GetTree().Root).OfType<Button>().Any(b => b.Text.StartsWith("Import with the 1 optional", StringComparison.Ordinal) && b.IsVisibleInTree()) ? null : "the collection's import choices aren't shown");
+        Step("desktop-collection-import", () => All(GetTree().Root).OfType<Button>().FirstOrDefault(b => b.Text.StartsWith("Import with the 1 optional", StringComparison.Ordinal) && b.IsVisibleInTree())?.EmitSignal(BaseButton.SignalName.Pressed), wait: 2.0, check: () =>
+            Host().Mods.Store(Host().ActiveGame!).State is var st && st.Active.Contains("(collection)") && st.Order.Count(e => e.Id.StartsWith("nexus:", StringComparison.Ordinal)) >= 3 ? null : "the collection's profile with its optional mod wasn't made");
+        Step("desktop-collection-close", () => All(GetTree().Root).OfType<Button>().FirstOrDefault(b => b.Text == "Done" && b.IsVisibleInTree())?.EmitSignal(BaseButton.SignalName.Pressed), wait: 0.8, check: NoDialogs);
         Step("desktop-browse-nexus", () => Key(Godot.Key.Key2, ctrl: true), wait: 2.0, tab: "Browse");
         Step("desktop-not-moddable", () => Shell().PickGame("Marvel Rivals"), wait: 1.5, tab: "Mods", check: NoController);
     }
@@ -729,6 +750,13 @@ public partial class SmokeTest : Node
             }
         }
     }
+
+    private static Luma.Core.Sources.NexusCollection SmokeCollection() => new("Smoke Collection", "smk123", 3, "Curator", "skyrimspecialedition",
+    [
+        new("12604", "111", "SkyUI", "SkyUI_5_2_SE.7z", "5.2", "SkyUI Team", false),
+        new("266", "222", "Unofficial Patch", "ussep.7z", "4.3", "Arthmoor", false),
+        new("5", "333", "Extra", "extra.zip", "1", "Someone", true),
+    ]);
 
     /// <summary>Mods in the game as if a launch had put them in and then been killed.</summary>
     private static void LeaveModsIn()

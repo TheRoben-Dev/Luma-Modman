@@ -116,6 +116,7 @@ public partial class DesktopShell
         }
         yield return Separator;
         yield return new MenuItem("Import modpack…", () => App.Push(new ModPackPage(game, export: false)), "Ctrl+I");
+        yield return new MenuItem("Import Nexus collection…", CollectionActions.Ask, "", game?.Profile.Sites.Nexus != null);
         yield return new MenuItem("Export modpack…", ExportModpack, "Ctrl+E", moddable && Host.Mods.Store(game!).State.Order.Count > 0);
         yield return Separator;
         yield return new MenuItem("Open mods folder", () => OpenFolder(game != null && moddable ? Host.Mods.Store(game).Root : Host.Paths.ModsDir));

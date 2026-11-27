@@ -3,6 +3,12 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.20.0
+
+- Nexus Mods collections: paste a collection's link (Mods → Import a Nexus collection in controller mode, File → Import Nexus collection… on the desktop), or press the mod manager button on a collection's page. Luma shows what it holds and imports it into a new profile, in the exact file versions the collection lists, with or without its optional mods. Your other profiles don't change.
+- Premium accounts get every mod downloaded. Free accounts press "Mod Manager Download" on the website once per file (Nexus's rule for free accounts); Luma lists each with a link straight to its download, and every file takes its place in the profile as it arrives.
+- Not yet carried over from a collection: the curator's installer (FOMOD) picks, which you choose as each mod installs, and their plugin rules; press Sort plugins after importing.
+
 ## 0.19.0
 
 - Drop mods on Luma: drag archives, unpacked mod folders or single mod files from your file manager onto Luma's window and they install for the game you have picked, one after another (installers open as usual). Drop a .lumapack to import it. Works in both layouts.
