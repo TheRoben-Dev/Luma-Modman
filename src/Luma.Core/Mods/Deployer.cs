@@ -9,7 +9,13 @@ namespace Luma.Core.Mods;
 /// </summary>
 public sealed record Conflict(string Target, string Winner, IReadOnlyList<string> Losers, string Key = "", IReadOnlyList<string>? Providers = null, bool Picked = false);
 
-public sealed record DeployPlan(IReadOnlyDictionary<string, (string ModId, string Source)> Files, IReadOnlyList<Conflict> Conflicts);
+/// <summary>
+/// What a deploy will place. <see cref="Roots"/> maps "game" and "mods" to the folders those mod
+/// files go into; <see cref="Overwrite"/> is the game's Overwrite folder, where files the game
+/// makes while mods are in are kept (see <see cref="Deployer.Undeploy"/>).
+/// </summary>
+public sealed record DeployPlan(IReadOnlyDictionary<string, (string ModId, string Source)> Files, IReadOnlyList<Conflict> Conflicts,
+    IReadOnlyDictionary<string, string>? Roots = null, string? Overwrite = null);
 
 /// <summary>What a deploy changed, so it can be undone exactly.</summary>
 public sealed record DeployManifest
@@ -26,10 +32,20 @@ public sealed record DeployManifest
 
     /// <summary>Files Luma generated (plugins.txt, INI settings): deleted at undeploy, before the game's own are put back.</summary>
     public List<string> Written { get; init; } = new();
+
+    /// <summary>The Overwrite folder new files go to at undeploy (null: leave them where they are).</summary>
+    public string? Overwrite { get; init; }
+
+    /// <summary>Folders that received mod files, with what was in them before: anything new in them at undeploy goes to <see cref="Overwrite"/>.</summary>
+    public List<WatchedDir> Watched { get; init; } = new();
 }
 
+/// <summary>A folder mods were placed in: <paramref name="Sub"/> ("game"/"mods") and <paramref name="Rel"/> say where it is under that root; <paramref name="Before"/> lists its entries before the deploy.</summary>
+public sealed record WatchedDir(string Dir, string Sub, string Rel, List<string> Before);
+
 /// <summary>A placed file: a symlink to the mod store, or a copy (or Windows hard link) where symlinks don't work.</summary>
-public sealed record DeployedFile(string Target, string Source, bool Copy);
+/// <remarks><see cref="Size"/> and <see cref="Written"/> are a copy's size and time as placed, to notice when the game changes it.</remarks>
+public sealed record DeployedFile(string Target, string Source, bool Copy, long Size = -1, DateTime Written = default);
 
 /// <summary>
 /// Puts enabled mods into the game as symbolic links to Luma's mod store (copies where a link
@@ -45,9 +61,10 @@ public static class Deployer
         // Keyed without case: on a case-sensitive disk "Data/x.esp" and "data/x.esp" are the same file to the game.
         var spelling = new Dictionary<string, (string Target, string Key)>(StringComparer.OrdinalIgnoreCase);
         var providers = new Dictionary<string, List<(string ModId, string Source)>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var mod in store.State.Enabled())
+        // The Overwrite folder (files the game made) goes in last, so it wins like it does in MO2.
+        var sets = store.State.Enabled().Select(m => (m.Id, Dir: store.ModDir(m.Id))).Append((ModStore.OverwriteId, store.OverwriteDir));
+        foreach (var (modId, dir) in sets)
         {
-            var dir = store.ModDir(mod.Id);
             foreach (var (sub, root) in new[] { ("game", (string?)gameDir), ("mods", modsDir) })
             {
                 var src = Path.Combine(dir, sub);
@@ -68,7 +85,7 @@ public static class Deployer
                         providers[target] = list = new();
                         spelling[target] = (target, FileKey(sub, rel));
                     }
-                    list.Add((mod.Id, f));
+                    list.Add((modId, f));
                 }
             }
         }
@@ -87,7 +104,12 @@ public static class Deployer
                 conflicts.Add(new Conflict(shown, win.ModId, ids.Where(id => id != win.ModId).ToList(), key, ids, picked != null));
             }
         }
-        return new DeployPlan(files, conflicts.OrderBy(c => c.Key, StringComparer.OrdinalIgnoreCase).ToList());
+        var roots = new Dictionary<string, string> { ["game"] = gameDir };
+        if (modsDir != null)
+        {
+            roots["mods"] = modsDir;
+        }
+        return new DeployPlan(files, conflicts.OrderBy(c => c.Key, StringComparer.OrdinalIgnoreCase).ToList(), roots, store.OverwriteDir);
     }
 
     /// <summary>A file's name inside a mod, the same for every mod and device: "mods/meshes/a.nif".</summary>
@@ -109,9 +131,10 @@ public static class Deployer
     public static DeployManifest Deploy(DeployPlan plan, string game, string manifestFile, string backupDir)
     {
         Undeploy(manifestFile);
-        var m = new DeployManifest { Game = game };
+        var m = new DeployManifest { Game = game, Overwrite = plan.Overwrite };
         try
         {
+            Watch(plan, m);
             foreach (var (target, (_, source)) in plan.Files.OrderBy(f => f.Key, StringComparer.Ordinal))
             {
                 MakeDirs(Path.GetDirectoryName(target)!, m);
@@ -128,7 +151,8 @@ public static class Deployer
                 {
                     File.Copy(source, target);
                 }
-                m.Files.Add(new DeployedFile(target, source, copy));
+                var placed = new FileInfo(target);
+                m.Files.Add(copy ? new DeployedFile(target, source, true, placed.Length, placed.LastWriteTimeUtc) : new DeployedFile(target, source, false));
             }
         }
         catch
@@ -150,6 +174,14 @@ public static class Deployer
             return;
         }
         var problems = new List<string>();
+        try
+        {
+            Capture(m);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            problems.Add("Couldn't keep the files the game made: " + e.Message);
+        }
         foreach (var w in m.Written)
         {
             try
@@ -208,6 +240,135 @@ public static class Deployer
             throw new IOException("Some mod files couldn't be removed from the game: " + string.Join("; ", problems.Distinct().Take(3)));
         }
         File.Delete(manifestFile);
+    }
+
+    /// <summary>Folder and file names never taken into Overwrite: saves and caches belong to the game.</summary>
+    private static readonly HashSet<string> NotCaptured = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "saves", "save", "savegames", "savedata", "shadercache", "screenshots",
+    };
+
+    private static readonly HashSet<string> NotCapturedExt = new(StringComparer.OrdinalIgnoreCase) { ".ess", ".sav", ".fos", ".skse", ".f4se" };
+
+    /// <summary>Records what is in each folder that gets mod files (below the game or mods folder itself).</summary>
+    private static void Watch(DeployPlan plan, DeployManifest m)
+    {
+        if (plan.Overwrite == null || plan.Roots == null)
+        {
+            return;
+        }
+        var seen = new HashSet<string>(Platform.PathComparer);
+        foreach (var target in plan.Files.Keys)
+        {
+            var dir = Path.GetDirectoryName(target)!;
+            // Each folder from the root down to the file's: a new folder made in any of them is new too.
+            // The innermost root first: a mods folder inside the game folder (Data) keeps its own paths.
+            foreach (var (sub, root) in plan.Roots.OrderByDescending(r => r.Value.Length))
+            {
+                var rootFull = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+                if (!dir.StartsWith(rootFull + Path.DirectorySeparatorChar, Platform.PathComparison) && !string.Equals(dir, rootFull, Platform.PathComparison))
+                {
+                    continue;
+                }
+                // The game folder itself isn't watched (games keep saves and logs there); the mods folder (Data, plugins) is.
+                var floor = sub == "mods" && !string.Equals(rootFull, Path.TrimEndingDirectorySeparator(Path.GetFullPath(plan.Roots["game"])), Platform.PathComparison)
+                    ? rootFull.Length - 1 : rootFull.Length;
+                for (var d = dir; d.Length > floor; d = Path.GetDirectoryName(d)!)
+                {
+                    if (!seen.Add(d))
+                    {
+                        break;
+                    }
+                    var before = Directory.Exists(d) ? Directory.EnumerateFileSystemEntries(d).Select(e => Path.GetFileName(e)).ToList() : new List<string>();
+                    var rel = Path.GetRelativePath(rootFull, d);
+                    m.Watched.Add(new WatchedDir(d, sub, rel == "." ? "" : rel, before));
+                }
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Moves what the game made while mods were in (new files in the folders mods went into, mod
+    /// files the game replaced or changed) to the Overwrite folder, so the game folder can be put
+    /// back exactly and the files come back with the mods next time.
+    /// </summary>
+    private static void Capture(DeployManifest m)
+    {
+        if (m.Overwrite == null)
+        {
+            return;
+        }
+        var ours = new HashSet<string>(m.Files.Select(f => f.Target).Concat(m.Written), Platform.PathComparer);
+        var made = new HashSet<string>(m.Dirs, Platform.PathComparer);
+        var watched = new HashSet<string>(m.Watched.Select(w => w.Dir), Platform.PathComparer);
+        foreach (var w in m.Watched)
+        {
+            if (!Directory.Exists(w.Dir))
+            {
+                continue;
+            }
+            var before = new HashSet<string>(w.Before, StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in Directory.EnumerateFileSystemEntries(w.Dir).ToList())
+            {
+                var name = Path.GetFileName(entry);
+                if (before.Contains(name) || ours.Contains(entry) || NotCaptured.Contains(name))
+                {
+                    continue;
+                }
+                if (Directory.Exists(entry) && !IsLink(entry))
+                {
+                    if (made.Contains(entry) || watched.Contains(entry))
+                    {
+                        continue; // a folder Luma made: watched on its own
+                    }
+                    foreach (var f in Directory.EnumerateFiles(entry, "*", SearchOption.AllDirectories).ToList())
+                    {
+                        Keep(m.Overwrite, w.Sub, Path.Combine(w.Rel, Path.GetRelativePath(w.Dir, f)), f);
+                    }
+                    DeleteEmptyTree(entry);
+                }
+                else if (File.Exists(entry) && !NotCapturedExt.Contains(Path.GetExtension(name)))
+                {
+                    Keep(m.Overwrite, w.Sub, Path.Combine(w.Rel, name), entry);
+                }
+            }
+        }
+        // Mod files the game rewrote: a link replaced by a real file, or a copy changed in place.
+        foreach (var f in m.Files)
+        {
+            if (!File.Exists(f.Target) || m.Watched.FirstOrDefault(w => SamePath(Path.GetDirectoryName(f.Target), w.Dir)) is not { } w)
+            {
+                continue;
+            }
+            var info = new FileInfo(f.Target);
+            var replaced = !f.Copy && info.LinkTarget == null;
+            var changed = f.Copy && f.Size >= 0 && (info.Length != f.Size || info.LastWriteTimeUtc != f.Written)
+                && !(File.Exists(f.Source) && new FileInfo(f.Source) is var src && src.Length == info.Length && src.LastWriteTimeUtc == info.LastWriteTimeUtc);
+            if (replaced || changed)
+            {
+                Keep(m.Overwrite, w.Sub, Path.Combine(w.Rel, Path.GetFileName(f.Target)), f.Target);
+            }
+        }
+    }
+
+    private static void Keep(string overwrite, string sub, string rel, string file)
+    {
+        var dest = Path.Combine(overwrite, sub, rel);
+        Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+        File.Move(file, dest, overwrite: true);
+    }
+
+    private static void DeleteEmptyTree(string dir)
+    {
+        foreach (var d in Directory.EnumerateDirectories(dir))
+        {
+            DeleteEmptyTree(d);
+        }
+        if (!Directory.EnumerateFileSystemEntries(dir).Any())
+        {
+            Directory.Delete(dir);
+        }
     }
 
     private static bool IsLink(string path) => new FileInfo(path).LinkTarget != null;

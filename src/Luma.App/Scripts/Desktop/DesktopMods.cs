@@ -365,6 +365,12 @@ public partial class DesktopMods : VBoxContainer
             Banner($"{pending} mod{(pending == 1 ? "" : "s")} of this profile {(pending == 1 ? "isn't" : "aren't")} installed yet (from a modpack: downloading, or to get by hand). They take their place in the order when they arrive.",
                 DesktopTheme.Warn, "Forget them", () => ModsScreen.ForgetPending(game));
         }
+        var made = mods.OverwriteFiles(game).Count;
+        if (made > 0)
+        {
+            Banner($"Overwrite: {made} file{(made == 1 ? "" : "s")} the game or a tool made while the mods were in. They're kept out of the game folder and go in last, after every mod.",
+                DesktopTheme.Accent, "Overwrite…", () => App.Push(new OverwritePage(game)));
+        }
         var missing = store.MissingDependencies().GroupBy(m => m.Missing.Id).Select(g => g.First()).ToList();
         if (missing.Count > 0)
         {

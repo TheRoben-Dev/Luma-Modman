@@ -90,6 +90,9 @@ Select), and every tab works on that game. Games still start from Steam or their
   that has to be fetched by hand.
 - **Clean games**: mods live in Luma's own folder and are linked into the game only while it runs,
   so game files stay untouched and everything can be undone.
+- **Overwrite**: files the game or a tool makes while the mods are in (configs, generated patches,
+  tool output) are moved to the game's Overwrite when the mods come out and go back in last next
+  time, like MO2. Make a mod of them, or delete them (Mods → Overwrite).
 
 ## Controls
 

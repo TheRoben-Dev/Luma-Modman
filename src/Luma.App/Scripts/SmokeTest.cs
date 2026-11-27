@@ -96,6 +96,14 @@ public partial class SmokeTest : Node
         Step("conflicts-pick", () => Press(Pad.Accept), wait: 0.8, expect: "Smoke Armor");
         Step("conflicts-choose", () => Press(Pad.Accept), wait: 0.8, expect: "meshes/armor.nif: A picks", check: () => ArmorWinner("Smoke Armor"));
         Step("conflicts-back", () => Press(Pad.Back), wait: 0.8, tab: "Mods");
+        // Overwrite: a file the game makes while mods are in is kept out of the game folder and listed.
+        Step("overwrite-made", GameMakesAFile, wait: 1.2, tab: "Mods");
+        Step("overwrite-open", () =>
+        {
+            FindFocusable(GetTree().Root, "Files the game or a tool made")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0, expect: "Make a mod from these files", check: () => All(GetTree().Root).OfType<Luma.App.Screens.OverwritePage>().Any(p => p.IsVisibleInTree()) ? null : "Overwrite didn't open");
+        Step("overwrite-back", () => Press(Pad.Back), wait: 0.8, tab: "Mods");
         // Touch reorder: hold a mod row still to pick it up, drag it above the one before it, lift.
         Luma.App.Ui.ListRow? ModRow(string name) =>
             All(GetTree().Root).OfType<Luma.App.Ui.ListRow>().FirstOrDefault(r => r.IsVisibleInTree() && r.HasMeta("mod") && r.TooltipText.StartsWith(name + ":", StringComparison.Ordinal));
@@ -526,6 +534,10 @@ public partial class SmokeTest : Node
             }
         }, wait: 0.8, check: () => ArmorWinner("Smoke Armor"));
         Step("desktop-conflicts-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-overwrite-made", GameMakesAFile, wait: 1.2, tab: "Mods");
+        Step("desktop-overwrite", () => FindButton("Overwrite…")?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0, check: () =>
+            DialogOpen("Overwrite") ?? (All(GetTree().Root).OfType<ItemList>().Any(l => l.TooltipText == "Files in Overwrite" && l.ItemCount == 1) ? null : "Overwrite doesn't list the file"));
+        Step("desktop-overwrite-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
         Step("desktop-browse-nexus", () => Key(Godot.Key.Key2, ctrl: true), wait: 2.0, tab: "Browse");
         Step("desktop-not-moddable", () => Shell().PickGame("Marvel Rivals"), wait: 1.5, tab: "Mods", check: NoController);
     }
@@ -607,6 +619,16 @@ public partial class SmokeTest : Node
         }
         host.Mods.Install(game, zip, new Luma.Core.Mods.InstalledMod { Id = "local:smoke-retexture", Site = "local", Name = "Smoke Retexture" });
         host.Mods.NotifyChanged(game);
+    }
+
+    /// <summary>Puts the mods in, has "the game" write a file into Data, and takes them out again: the file goes to Overwrite.</summary>
+    private static void GameMakesAFile()
+    {
+        var host = Main.Instance.Host!;
+        var game = host.ActiveGame!;
+        host.Mods.Deploy(game);
+        File.WriteAllText(Path.Combine(host.Mods.ModsDir(game)!, "smoke-output.txt"), "made by the game");
+        host.Mods.Undeploy(game);
     }
 
     /// <summary>Null when the mod named <paramref name="mod"/> is picked to win meshes/armor.nif.</summary>

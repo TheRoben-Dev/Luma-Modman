@@ -40,6 +40,7 @@ public partial class DesktopShell
             ModPackPage m => m.Export ? ExportPackDialog(m) : ImportPackDialog(m),
             PluginsPage p => PluginsDialog(p),
             ConflictsPage c => ConflictsDialog(c),
+            OverwritePage o => OverwriteDialog(o),
             FomodPage f => FomodDialog(f),
             _ => null,
         };
@@ -462,6 +463,33 @@ public partial class DesktopShell
         Fill();
         d.AddButton("Close", () => App.Close(page), primary: true);
         return ShowDialog(d, page, tree);
+    }
+
+    private Window OverwriteDialog(OverwritePage page)
+    {
+        var game = page.Game;
+        var d = new DesktopDialog($"Overwrite: {game.Title}", new Vector2I(820, 560));
+        d.AddText(OverwritePage.About, DesktopTheme.Dim);
+        var list = new ItemList { SizeFlagsVertical = SizeFlags.ExpandFill, SelectMode = ItemList.SelectModeEnum.Single, TooltipText = "Files in Overwrite" };
+        d.Body.AddChild(list);
+        var count = d.AddText("", DesktopTheme.Dim);
+        Button? make = null, clear = null;
+        void Fill()
+        {
+            list.Clear();
+            var files = Host.Mods.OverwriteFiles(game);
+            foreach (var f in files.Take(2000))
+            {
+                list.AddItem(OverwritePage.Show(f));
+            }
+            count.Text = files.Count == 0 ? "Overwrite is empty." : $"{files.Count} file{(files.Count == 1 ? "" : "s")}";
+            make!.Disabled = clear!.Disabled = files.Count == 0;
+        }
+        make = d.AddButton("Make a mod from these…", () => OverwritePage.MakeMod(game, Fill), tooltip: "Moves the files into a new mod at the end of the load order.");
+        clear = d.AddButton("Delete them…", () => OverwritePage.Clear(game, Fill), tooltip: "Removes the files for good.");
+        d.AddButton("Close", () => App.Close(page), primary: true);
+        Fill();
+        return ShowDialog(d, page, list);
     }
 
     private Window ConflictsDialog(ConflictsPage page)

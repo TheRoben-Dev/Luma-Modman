@@ -160,6 +160,14 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
                 items.Add(Add(scrollCol, new ActionButton("Start with mods from Steam", () => App.Push(new SteamLaunchPage(game)),
                     "One launch option makes Steam link the mods in at every start.")));
             }
+            var made = mods.OverwriteFiles(game).Count;
+            if (made > 0)
+            {
+                var row = new ListRow($"Overwrite  ·  {made} file{(made == 1 ? "" : "s")} the game made", "Kept out of the game folder and put in last every time. Make a mod of them, or delete them.",
+                    "Open", UiTheme.Accent, null, () => App.Push(new OverwritePage(game)), OverwritePage.About);
+                scrollCol.AddChild(row);
+                items.Add(row);
+            }
             var missing = store.MissingDependencies().GroupBy(m => m.Missing.Id).Select(g => g.First()).ToList();
             if (missing.Count > 0)
             {
