@@ -105,6 +105,7 @@ public partial class Main : Control
         }
         var startTheme = host?.Settings.Theme ?? "dark";
         AppLog.Info($"theme {startTheme}, window {DisplayServer.WindowGetSize()}, pads: {string.Join(", ", Input.GetConnectedJoypads().Select(Input.GetJoyName))}");
+        I18n.Use(host?.Settings.Language);
         UiTheme.Use(startTheme, host?.Settings.Accents.GetValueOrDefault(startTheme));
         Anim.Enabled = !(host?.Settings.ReduceMotion ?? false);
         Theme = UiTheme.Build();

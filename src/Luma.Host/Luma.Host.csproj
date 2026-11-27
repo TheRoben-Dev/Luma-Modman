@@ -7,5 +7,6 @@
     <ProjectReference Include="..\Luma.Core\Luma.Core.csproj" />
     <InternalsVisibleTo Include="Luma.Core.Tests" />
     <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="CHANGELOG.md" />
+    <EmbeddedResource Include="..\..\data\translations\*.json" Exclude="..\..\data\translations\template.json" LogicalName="translations/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

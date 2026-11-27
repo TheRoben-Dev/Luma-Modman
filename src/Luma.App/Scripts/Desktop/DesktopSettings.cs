@@ -321,6 +321,8 @@ public partial class DesktopSettings : HSplitContainer
 
     private void Layout()
     {
+        Row("Language", Options(SettingsScreen.Languages(), Host.Settings.Language, SettingsScreen.SetLanguage),
+            "The language of Luma's menus. Mod names and descriptions stay as their sites have them.");
         var current = Host.Settings.Layout;
         Row("Layout", Options(UiLayout.Choices.Select(c => (c.Id, c.Label)), UiLayout.Choices.Any(c => c.Id == current) ? current : UiLayout.Auto, v =>
         {
