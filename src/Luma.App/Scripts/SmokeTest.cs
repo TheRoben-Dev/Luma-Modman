@@ -109,6 +109,23 @@ public partial class SmokeTest : Node
             Press(Pad.Accept);
         }, wait: 1.0, expect: "Make a mod from these files", check: () => All(GetTree().Root).OfType<Luma.App.Screens.OverwritePage>().Any(p => p.IsVisibleInTree()) ? null : "Overwrite didn't open");
         Step("overwrite-back", () => Press(Pad.Back), wait: 0.8, tab: "Mods");
+        // Tools: BodySlide inside a mod is found and added; a tool run with the mods in leaves its output in Overwrite.
+        Step("tools-mod", InstallToolMod, wait: 1.2, tab: "Mods");
+        Step("tools-open", () =>
+        {
+            FindFocusable(GetTree().Root, "Run xEdit, LOOT, BodySlide")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.2, expect: "Adds BodySlide", check: () => All(GetTree().Root).OfType<Luma.App.Screens.ToolsPage>().Any(p => p.IsVisibleInTree()) ? null : "Tools didn't open");
+        Step("tools-add-found", () => Press(Pad.Accept), wait: 1.0, check: () =>
+            Main.Instance.Host!.Mods.Store(Main.Instance.Host.ActiveGame!).State.Tools.Any(t => t.Name == "BodySlide") ? null : "BodySlide wasn't added");
+        Step("tools-run", RunScriptTool, wait: 4.0, check: () =>
+            Main.Instance.Host!.Mods.OverwriteFiles(Main.Instance.Host.ActiveGame!).Contains("mods/tool-output.txt") ? null
+            : "the tool's output isn't in Overwrite: " + string.Join(", ", Main.Instance.Host.Mods.OverwriteFiles(Main.Instance.Host.ActiveGame!)));
+        Step("tools-back", () =>
+        {
+            Main.Instance.Host!.Mods.ClearOverwrite(Main.Instance.Host.ActiveGame!);
+            Press(Pad.Back);
+        }, wait: 0.8, tab: "Mods");
         // Touch reorder: hold a mod row still to pick it up, drag it above the one before it, lift.
         Luma.App.Ui.ListRow? ModRow(string name) =>
             All(GetTree().Root).OfType<Luma.App.Ui.ListRow>().FirstOrDefault(r => r.IsVisibleInTree() && r.HasMeta("mod") && r.TooltipText.StartsWith(name + ":", StringComparison.Ordinal));
@@ -154,7 +171,7 @@ public partial class SmokeTest : Node
             Luma.App.Screens.ModsScreen._filter = "";
             Luma.App.Screens.ModsScreen._sort = "name";
             Main.Instance.Host!.Mods.NotifyChanged(Main.Instance.Host.ActiveGame!);
-        }, wait: 1.0, tab: "Mods", check: () => ShownMods().FirstOrDefault() == "local:Smoke_Armor" && ShownMods().Count == 3 ? null : "sorted by name: " + string.Join(", ", ShownMods()));
+        }, wait: 1.0, tab: "Mods", check: () => ShownMods().FirstOrDefault() == "local:Smoke_Armor" && ShownMods().Count >= 3 ? null : "sorted by name: " + string.Join(", ", ShownMods()));
         Step("mods-sort-reset", () =>
         {
             Luma.App.Screens.ModsScreen._sort = "order";
@@ -578,6 +595,12 @@ public partial class SmokeTest : Node
         Step("desktop-overwrite", () => FindButton("Overwrite…")?.EmitSignal(BaseButton.SignalName.Pressed), wait: 1.0, check: () =>
             DialogOpen("Overwrite") ?? (All(GetTree().Root).OfType<ItemList>().Any(l => l.TooltipText == "Files in Overwrite" && l.ItemCount == 1) ? null : "Overwrite doesn't list the file"));
         Step("desktop-overwrite-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-tools-mod", InstallToolMod, wait: 1.2, tab: "Mods");
+        Step("desktop-tools", () => Key(Godot.Key.T, ctrl: true), wait: 1.2, check: () =>
+            DialogOpen("Tools") ?? (All(GetTree().Root).OfType<ItemList>().Any(l => l.TooltipText == "Found tools" && l.ItemCount >= 1) ? null : "BodySlide isn't listed as found"));
+        Step("desktop-tools-run", RunScriptTool, wait: 4.0, check: () =>
+            Host().Mods.OverwriteFiles(Host().ActiveGame!).Contains("mods/tool-output.txt") ? null : "the tool's output isn't in Overwrite");
+        Step("desktop-tools-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
         Step("desktop-browse-nexus", () => Key(Godot.Key.Key2, ctrl: true), wait: 2.0, tab: "Browse");
         Step("desktop-not-moddable", () => Shell().PickGame("Marvel Rivals"), wait: 1.5, tab: "Mods", check: NoController);
     }
@@ -659,6 +682,37 @@ public partial class SmokeTest : Node
         }
         host.Mods.Install(game, zip, new Luma.Core.Mods.InstalledMod { Id = "local:smoke-retexture", Site = "local", Name = "Smoke Retexture" });
         host.Mods.NotifyChanged(game);
+    }
+
+    /// <summary>A mod that carries BodySlide (CalienteTools/BodySlide/BodySlide x64.exe in Data).</summary>
+    private static void InstallToolMod()
+    {
+        var host = Main.Instance.Host!;
+        var game = host.ActiveGame!;
+        var zip = Path.Combine(host.Paths.Data, "smoke-bodyslide.zip");
+        if (!File.Exists(zip))
+        {
+            using var z = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create);
+            z.CreateEntry("CalienteTools/BodySlide/BodySlide x64.exe");
+            z.CreateEntry("CalienteTools/BodySlide/Config.xml");
+        }
+        host.Mods.Install(game, zip, new Luma.Core.Mods.InstalledMod { Id = "local:smoke-bodyslide", Site = "local", Name = "Smoke BodySlide" });
+        host.Mods.NotifyChanged(game);
+    }
+
+    /// <summary>Adds a shell-script "tool" that writes a file into Data, and runs it with the mods in.</summary>
+    private static void RunScriptTool()
+    {
+        var host = Main.Instance.Host!;
+        var game = host.ActiveGame!;
+        var script = Path.Combine(host.Paths.Data, "smoke-tool.sh");
+        File.WriteAllText(script, $"#!/bin/sh\necho made > \"{host.Mods.ModsDir(game)}/tool-output.txt\"\n");
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(script, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+        host.Mods.Store(game).SetTool(new Luma.Core.Mods.ToolDef("Smoke tool", script));
+        Luma.App.Screens.ToolsPage.Run(game, host.Mods.Store(game).State.Tools.First(t => t.Name == "Smoke tool"));
     }
 
     /// <summary>Puts the mods in, has "the game" write a file into Data, and takes them out again: the file goes to Overwrite.</summary>

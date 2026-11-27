@@ -3,6 +3,13 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.16.0
+
+- Tools, like MO2's executables: run xEdit, LOOT, BodySlide, Outfit Studio, Nemesis, Pandora, FNIS, DynDOLOD, TexGen, Wrye Bash, Synthesis or any other program with your mods in. Luma puts the mods in, starts the tool (on SteamOS and Bazzite inside the game's own Proton prefix, with the Proton Steam uses for the game, so it sees the same Data folder and plugin list), and takes the mods out when you close it. What the tool writes (patches, meshes, behaviour files) lands in Overwrite.
+- Tools that come as mods (BodySlide, Nemesis) or that you unpacked into Downloads or the game folder are found for you; add one with a single press, or pick any program. Known tools get the arguments they need (xEdit is pointed at the Data folder, LOOT at the game).
+- LOOT: when it closes, the plugin order it saved becomes your plugin order for the profile.
+- Where: Mods → Tools in controller mode; the Tools menu (with a Run entry per tool), the Tools… toolbar button or Ctrl+T on the desktop; `luma tool GAME NAME` from a terminal.
+
 ## 0.15.0
 
 - Plugins, deeper: Luma now reads each plugin's header, so ESP files flagged as masters load with the masters and light (ESL-flagged) plugins are known as light. The Plugins list shows each plugin's type and the masters it needs, and warns when a master is missing or turned off (the game would crash at start), when a plugin loads before a master it needs, and when more full plugins are on than the game can load (254).

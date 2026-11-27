@@ -184,6 +184,33 @@ public sealed class ModManager
         Changed?.Invoke(game.Key);
     }
 
+    /// <summary>
+    /// Takes the plugin order a tool (LOOT) wrote to the game's plugins.txt while the mods were in,
+    /// and keeps it as the profile's plugin order. Returns how many plugins it lists.
+    /// </summary>
+    public int AdoptPluginOrder(DetectedGame game)
+    {
+        if (game.Profile.Plugins is not { } settings || GamePaths.ResolvePath(game, settings.File, _paths.Home) is not { } file || !File.Exists(file))
+        {
+            return 0;
+        }
+        var names = File.ReadAllLines(file).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))
+            .Select(l => l.TrimStart('*').Trim()).Where(GameSetup.IsPlugin).ToList();
+        // Older games list only what's on; loadorder.txt (Skyrim 2011) has the full order.
+        var loadOrder = Path.Combine(Path.GetDirectoryName(file)!, "loadorder.txt");
+        if (settings.LoadOrderFile && File.Exists(loadOrder))
+        {
+            names = File.ReadAllLines(loadOrder).Select(l => l.Trim()).Where(GameSetup.IsPlugin).ToList();
+        }
+        if (names.Count > 0)
+        {
+            Store(game).SetPluginOrder(names);
+            AppLog.Info($"kept the plugin order from {Path.GetFileName(file)} for {game.Key} ({names.Count} plugins)");
+            Changed?.Invoke(game.Key);
+        }
+        return names.Count;
+    }
+
     /// <summary>Back to plugins following the mod order.</summary>
     public void ResetPluginOrder(DetectedGame game)
     {
@@ -220,33 +247,18 @@ public sealed class ModManager
         }
     }
 
-    /// <summary>Files in the game's Overwrite folder (made by the game or a tool while mods were in).</summary>
-    public List<string> OverwriteFiles(DetectedGame game) => Store(game).OverwriteFiles();
-
-    public void ClearOverwrite(DetectedGame game)
+    /// <summary>Known tools found in the game's mods, its folder, Downloads and the Desktop, not yet added.</summary>
+    public List<ToolDef> FindTools(DetectedGame game)
     {
-        NotWhileDeployed(game);
-        Store(game).ClearOverwrite();
-        AppLog.Info($"cleared Overwrite for {game.Key}");
-        Changed?.Invoke(game.Key);
-    }
-
-    /// <summary>Makes a mod of the Overwrite folder's files.</summary>
-    public InstalledMod OverwriteToMod(DetectedGame game, string name)
-    {
-        NotWhileDeployed(game);
-        var mod = Store(game).OverwriteToMod(name);
-        AppLog.Info($"made {mod.Id} from Overwrite for {game.Key} ({mod.Files} files)");
-        Changed?.Invoke(game.Key);
-        return mod;
-    }
-
-    private void NotWhileDeployed(DetectedGame game)
-    {
-        if (IsDeployed(game))
+        var store = Store(game);
+        var extra = new[] { "Downloads", "Desktop" }.Select(d => Path.Combine(_paths.Home, d)).ToList();
+        if (Platform.IsWindows)
         {
-            throw new InvalidOperationException("The mods are in the game right now. Take them out first (or close the game), then try again.");
+            extra.Add(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
+            extra.Add(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) is { Length: > 0 } la ? Path.Combine(la, "Programs") : "");
         }
+        return Tools.Find(store, game.GameDir, ModsDir(game), extra.Where(d => d.Length > 0))
+            .Where(t => !store.State.Tools.Any(x => string.Equals(x.Exe, t.Exe, StringComparison.OrdinalIgnoreCase))).ToList();
     }
 
     public void NotifyChanged(DetectedGame game) => Changed?.Invoke(game.Key);

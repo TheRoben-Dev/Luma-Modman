@@ -33,6 +33,15 @@ public sealed record InstalledMod
 
     /// <summary>The options picked in the mod's FOMOD installer; null when it has none (or none were picked yet).</summary>
     public List<FomodChoice>? Fomod { get; init; }
+
+    /// <summary>The player renamed it: updates keep <see cref="Name"/> instead of the site's.</summary>
+    public bool Renamed { get; init; }
+
+    /// <summary>The player's own notes.</summary>
+    public string Notes { get; init; } = "";
+
+    /// <summary>The player's category for it ("Textures", "UI"…), empty for none.</summary>
+    public string Category { get; init; } = "";
 }
 
 public sealed record ModVersion(string Version, string FileId, string Archive, DateTime InstalledAt);
@@ -56,6 +65,17 @@ public sealed record GameMods
         Order.Where(e => e.Enabled).Select(e => Mods.FirstOrDefault(m => m.Id == e.Id)).OfType<InstalledMod>();
 
     public InstalledMod? Find(string id) => Mods.FirstOrDefault(m => m.Id == id);
+
+    /// <summary>Separators in the load order (MO2-style headings): id ("sep:…") → name. They sit in profiles like mods.</summary>
+    public Dictionary<string, string> Separators { get; init; } = new();
+
+    public static bool IsSeparator(string id) => id.StartsWith("sep:", StringComparison.Ordinal);
+
+    /// <summary>Entries of the active profile whose mod isn't installed (a modpack's, still downloading); separators aren't counted.</summary>
+    public int Pending() => Order.Count(e => !IsSeparator(e.Id) && Find(e.Id) == null);
+
+    /// <summary>The categories in use, sorted.</summary>
+    public List<string> Categories() => Mods.Select(m => m.Category).Where(c => c.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
 
     public bool IsEnabled(string id) => Order.Any(e => e.Id == id && e.Enabled);
 
@@ -267,6 +287,11 @@ public sealed class ModStore
             }
             history.RemoveAll(h => h.Archive == archive || !File.Exists(h.Archive));
             var installed = mod with { Archive = archive, Files = plan.Count, InstalledAt = DateTime.UtcNow, History = history.Take(5).ToList(), UpdateVersion = null };
+            if (old != null)
+            {
+                // The player's own name, notes and category survive updates and reinstalls.
+                installed = installed with { Notes = old.Notes, Category = old.Category, Renamed = old.Renamed, Name = old.Renamed ? old.Name : installed.Name };
+            }
             var mods = State.Mods.Where(m => m.Id != mod.Id).Append(installed).ToList();
             var profiles = State.Profiles.ToDictionary(p => p.Key, p => p.Value.Any(e => e.Id == mod.Id) || (onlyProfile != null && p.Key != onlyProfile)
                 ? p.Value : p.Value.Append(new ProfileEntry(mod.Id)).ToList());
@@ -419,7 +444,88 @@ public sealed class ModStore
     }
 
     /// <summary>Takes entries whose mod isn't installed (a modpack's that never arrived) out of the active profile.</summary>
-    public void ForgetMissing() => UpdateOrder(o => o.Where(e => State.Find(e.Id) != null).ToList());
+    public void ForgetMissing() => UpdateOrder(o => o.Where(e => GameMods.IsSeparator(e.Id) || State.Find(e.Id) != null).ToList());
+
+    /// <summary>Changes a mod's name, notes or category (null leaves it as it is).</summary>
+    public void SetModInfo(string id, string? name = null, string? notes = null, string? category = null)
+    {
+        var mod = State.Find(id) ?? throw new KeyNotFoundException("That mod isn't installed any more.");
+        if (name != null && name.Trim().Length == 0)
+        {
+            throw new ArgumentException("A mod needs a name.");
+        }
+        var changed = mod with
+        {
+            Name = name?.Trim() ?? mod.Name,
+            Renamed = mod.Renamed || (name != null && name.Trim() != mod.Name),
+            Notes = notes?.Trim() ?? mod.Notes,
+            Category = category?.Trim() ?? mod.Category,
+        };
+        Save(State with { Mods = State.Mods.Select(m => m.Id == id ? changed : m).ToList() });
+    }
+
+    /// <summary>Adds a separator to the active profile, before <paramref name="beforeId"/> (or at the end). Returns its id.</summary>
+    public string AddSeparator(string name, string? beforeId = null)
+    {
+        name = name.Trim();
+        if (name.Length == 0)
+        {
+            throw new ArgumentException("Give the separator a name.");
+        }
+        var id = "sep:" + Guid.NewGuid().ToString("N")[..10];
+        var seps = new Dictionary<string, string>(State.Separators) { [id] = name };
+        Save(State with { Separators = seps });
+        UpdateOrder(o =>
+        {
+            var at = beforeId == null ? -1 : o.FindIndex(e => e.Id == beforeId);
+            o.Insert(at < 0 ? o.Count : at, new ProfileEntry(id));
+            return o;
+        });
+        return id;
+    }
+
+    public void RenameSeparator(string id, string name)
+    {
+        if (name.Trim().Length == 0 || !State.Separators.ContainsKey(id))
+        {
+            return;
+        }
+        Save(State with { Separators = new Dictionary<string, string>(State.Separators) { [id] = name.Trim() } });
+    }
+
+    /// <summary>Takes a separator out of the active profile (and forgets it when no profile has it).</summary>
+    public void RemoveSeparator(string id)
+    {
+        UpdateOrder(o => o.Where(e => e.Id != id).ToList());
+        if (!State.Profiles.Values.Any(p => p.Any(e => e.Id == id)))
+        {
+            Save(State with { Separators = State.Separators.Where(s => s.Key != id).ToDictionary(s => s.Key, s => s.Value) });
+        }
+    }
+
+    /// <summary>Renames a profile, with its plugin settings, picked winners and plugin order.</summary>
+    public void RenameProfile(string from, string to)
+    {
+        to = to.Trim();
+        if (from == GameMods.DefaultProfile)
+        {
+            throw new InvalidOperationException("The Default profile can't be renamed. Make a copy with New profile instead.");
+        }
+        if (to.Length == 0 || State.Profiles.ContainsKey(to))
+        {
+            throw new InvalidOperationException(to.Length == 0 ? "Give the profile a name." : $"There's already a profile called {to}.");
+        }
+        static Dictionary<string, T> Move<T>(Dictionary<string, T> d, string a, string b) =>
+            d.ToDictionary(p => p.Key == a ? b : p.Key, p => p.Value);
+        Save(State with
+        {
+            Profiles = Move(State.Profiles, from, to),
+            PluginsOff = Move(State.PluginsOff, from, to),
+            Winners = Move(State.Winners, from, to),
+            PluginOrder = Move(State.PluginOrder, from, to),
+            Active = State.Active == from ? to : State.Active,
+        });
+    }
 
     public void DeleteProfile(string name)
     {

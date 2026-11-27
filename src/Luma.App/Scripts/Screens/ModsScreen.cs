@@ -138,6 +138,9 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
                 items.Add(Add(scrollCol, new ActionButton($"Conflicts ({n} file{(n == 1 ? "" : "s")})", () => App.Push(new ConflictsPage(game)),
                     $"Files in more than one mod, and which mod's copy goes in{(picked > 0 ? $" ({picked} picked by you)" : "")}.")));
             }
+            var tools = store.State.Tools.Count;
+            items.Add(Add(scrollCol, new ActionButton(tools > 0 ? $"Tools ({tools})" : "Tools", () => App.Push(new ToolsPage(game)),
+                "Run xEdit, LOOT, BodySlide, Nemesis and other tools with the mods in.")));
             if (game.Profile.Plugins != null)
             {
                 items.Add(Add(scrollCol, new ActionButton("Plugins", () => App.Push(new PluginsPage(game)),

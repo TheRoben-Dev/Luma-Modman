@@ -127,7 +127,7 @@ public partial class PluginsPage : Screen
         }
         if (list.Count > 1)
         {
-            var sort = new ActionButton("Sort plugins", () => Sort(_game, Rebuild), "Moves plugins so each loads after the masters it needs, changing as little as possible.");
+            var sort = new ActionButton("Sort plugins", () => Sort(_game, Rebuild), "Moves plugins so each loads after the masters it needs, changing as little as possible. For LOOT's full rules, add LOOT under Tools.");
             col.AddChild(sort);
             items.Add(sort);
             if (custom)

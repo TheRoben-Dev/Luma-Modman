@@ -32,6 +32,7 @@ public partial class DesktopShell
         AddMenu(bar, "File", FileMenu);
         AddMenu(bar, "Game", GameMenu);
         AddMenu(bar, "Mods", ModsMenu);
+        AddMenu(bar, "Tools", ToolsMenu);
         AddMenu(bar, "View", ViewMenu);
         AddMenu(bar, "Help", HelpMenu);
         return bar;
@@ -171,6 +172,27 @@ public partial class DesktopShell
         yield return new MenuItem($"Delete profile \"{store.State.Active}\"…", DeleteProfile, "", store.State.Active != GameMods.DefaultProfile);
     }
 
+    private IEnumerable<MenuItem> ToolsMenu()
+    {
+        var game = Host.ActiveGame;
+        if (game is not { Profile.Moddable: true })
+        {
+            yield return new MenuItem("Pick a game that can be modded", null, "", false);
+            yield break;
+        }
+        foreach (var t in Host.Mods.Store(game).State.Tools)
+        {
+            var tool = t;
+            yield return new MenuItem($"Run {t.Name}", () => ToolsPage.Run(game, tool));
+        }
+        if (Host.Mods.Store(game).State.Tools.Count > 0)
+        {
+            yield return Separator;
+        }
+        yield return new MenuItem("Manage tools…", () => App.Push(new ToolsPage(game)), "Ctrl+T");
+        yield return new MenuItem("Add a program…", () => ToolsPage.PickProgram(game));
+    }
+
     private IEnumerable<MenuItem> ViewMenu()
     {
         for (var i = 0; i < Main.TabNames.Length; i++)
@@ -255,6 +277,13 @@ public partial class DesktopShell
         row.AddChild(_pluginsButton);
         _conflictsButton = DesktopTheme.Button("Conflicts…", ShowConflicts, "Files that more than one mod has, and which mod's copy goes in (Ctrl+K).", "ToolButton");
         row.AddChild(_conflictsButton);
+        row.AddChild(DesktopTheme.Button("Tools…", () =>
+        {
+            if (Host.ActiveGame is { Profile.Moddable: true } g)
+            {
+                App.Push(new ToolsPage(g));
+            }
+        }, "Run xEdit, LOOT, BodySlide and other tools with the mods in (Ctrl+T).", "ToolButton"));
         row.AddChild(new VSeparator());
         row.AddChild(DesktopTheme.Label("Profile", DesktopTheme.Dim, DesktopTheme.SmallSize));
         _profiles = new OptionButton { CustomMinimumSize = new Vector2(170, 0), TooltipText = "Profiles are separate sets of mods and orders for the same game." };

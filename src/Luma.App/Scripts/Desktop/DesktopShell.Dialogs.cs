@@ -41,6 +41,8 @@ public partial class DesktopShell
             PluginsPage p => PluginsDialog(p),
             ConflictsPage c => ConflictsDialog(c),
             OverwritePage o => OverwriteDialog(o),
+            ToolsPage t => ToolsDialog(t),
+            PickFilePage p => PickFileDialog(p),
             FomodPage f => FomodDialog(f),
             _ => null,
         };
@@ -510,10 +512,125 @@ public partial class DesktopShell
         };
         d.AddButton("Move up", () => MoveSel(-1), tooltip: "Moves the selected plugin up (Ctrl+Up). Masters stay above plugins.");
         d.AddButton("Move down", () => MoveSel(+1), tooltip: "Moves the selected plugin down (Ctrl+Down).");
-        d.AddButton("Sort", () => PluginsPage.Sort(game, Fill), tooltip: "Moves plugins so each loads after the masters it needs, changing as little as possible.");
+        d.AddButton("Sort", () => PluginsPage.Sort(game, Fill), tooltip: "Moves plugins so each loads after the masters it needs, changing as little as possible. For LOOT's full rules, add LOOT under Tools.");
         reset = d.AddButton("Use mod order", () => PluginsPage.ResetOrder(game, Fill), tooltip: "Forgets the order you set: plugins load in the order of their mods.");
         Fill();
         d.AddButton("Close", () => App.Close(page), primary: true);
+        return ShowDialog(d, page, tree);
+    }
+
+    private Window PickFileDialog(PickFilePage page)
+    {
+        var f = new FileDialog
+        {
+            FileMode = FileDialog.FileModeEnum.OpenFile,
+            ModeOverridesTitle = false,
+            Title = page.Title,
+            Access = FileDialog.AccessEnum.Filesystem,
+            Filters = [string.Join(", ", page.Patterns) + " ; Programs"],
+            UseNativeDialog = NativeFileDialogs,
+            Transient = true,
+            Exclusive = true,
+            CurrentDir = Host.Paths.Home,
+        };
+        var picked = false;
+        f.FileSelected += path =>
+        {
+            picked = true;
+            App.Close(page);
+            page.Picked(path);
+        };
+        f.Canceled += () =>
+        {
+            if (!picked)
+            {
+                App.Close(page);
+            }
+        };
+        return ShowDialog(f, page);
+    }
+
+    private Window ToolsDialog(ToolsPage page)
+    {
+        var game = page.Game;
+        var d = new DesktopDialog($"Tools: {game.Title}", new Vector2I(940, 600));
+        d.AddText(ToolsPage.About, DesktopTheme.Dim);
+        var tree = new Tree { HideRoot = true, Columns = 3, ColumnTitlesVisible = true, SizeFlagsVertical = SizeFlags.ExpandFill, SelectMode = Tree.SelectModeEnum.Row, TooltipText = "Tools" };
+        string[] titles = ["Tool", "Program", "Arguments"];
+        for (var i = 0; i < titles.Length; i++)
+        {
+            tree.SetColumnTitle(i, titles[i]);
+            tree.SetColumnTitleAlignment(i, HorizontalAlignment.Left);
+            tree.SetColumnExpand(i, i > 0);
+        }
+        tree.SetColumnCustomMinimumWidth(0, 160);
+        d.Body.AddChild(tree);
+        d.AddText("Found on this device (double-click to add):", DesktopTheme.Dim);
+        var found = new ItemList { CustomMinimumSize = new Vector2(0, 110), TooltipText = "Found tools" };
+        d.Body.AddChild(found);
+        List<ToolDef> foundTools = new();
+        ToolDef? Selected() => tree.GetSelected() is { } it ? Host.Mods.Store(game).State.Tools.FirstOrDefault(t => t.Name == it.GetMetadata(0).AsString()) : null;
+        void Fill()
+        {
+            tree.Clear();
+            var root = tree.CreateItem();
+            foreach (var t in Host.Mods.Store(game).State.Tools)
+            {
+                var it = tree.CreateItem(root);
+                it.SetText(0, t.Name);
+                it.SetText(1, ToolsPage.Where(game, t));
+                it.SetText(2, t.Args);
+                it.SetCustomColor(2, DesktopTheme.Dim);
+                it.SetMetadata(0, t.Name);
+            }
+            found.Clear();
+            foundTools = Host.Mods.FindTools(game);
+            foreach (var t in foundTools)
+            {
+                found.AddItem($"{t.Name}  ·  {ToolsPage.Where(game, t)}");
+            }
+            found.Visible = foundTools.Count > 0;
+        }
+        tree.ItemActivated += () =>
+        {
+            if (Selected() is { } t)
+            {
+                ToolsPage.Run(game, t);
+            }
+        };
+        found.ItemActivated += i =>
+        {
+            if (i >= 0 && i < foundTools.Count)
+            {
+                Host.Mods.Store(game).SetTool(foundTools[(int)i]);
+                Host.Mods.NotifyChanged(game);
+                Fill();
+            }
+        };
+        d.AddButton("Run", () =>
+        {
+            if (Selected() is { } t)
+            {
+                ToolsPage.Run(game, t);
+            }
+        }, tooltip: "Puts the mods in, runs the selected tool, and takes them out when it closes (double-click does the same).");
+        d.AddButton("Add a program…", () => ToolsPage.PickProgram(game, Fill));
+        d.AddButton("Arguments…", () =>
+        {
+            if (Selected() is { } t)
+            {
+                ToolsPage.EditArgs(game, t, Fill);
+            }
+        });
+        d.AddButton("Remove", () =>
+        {
+            if (Selected() is { } t)
+            {
+                ToolsPage.Remove(game, t, Fill);
+            }
+        });
+        d.AddButton("Close", () => App.Close(page), primary: true);
+        Fill();
         return ShowDialog(d, page, tree);
     }
 

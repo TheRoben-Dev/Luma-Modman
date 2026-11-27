@@ -92,6 +92,9 @@ Select), and every tab works on that game. Games still start from Steam or their
   that has to be fetched by hand.
 - **Clean games**: mods live in Luma's own folder and are linked into the game only while it runs,
   so game files stay untouched and everything can be undone.
+- **Tools**: run xEdit, LOOT, BodySlide, Nemesis, Pandora or any program with the mods in (inside
+  the game's Proton prefix on Linux); they come out again when it closes, and what the tool wrote
+  goes to Overwrite. LOOT's sort becomes your plugin order.
 - **Overwrite**: files the game or a tool makes while the mods are in (configs, generated patches,
   tool output) are moved to the game's Overwrite when the mods come out and go back in last next
   time, like MO2. Make a mod of them, or delete them (Mods → Overwrite).

@@ -575,6 +575,12 @@ public partial class DesktopShell : Screen
             case Key.K:
                 ShowConflicts();
                 return true;
+            case Key.T:
+                if (Host.ActiveGame is { Profile.Moddable: true } tg)
+                {
+                    App.Push(new ToolsPage(tg));
+                }
+                return true;
             case Key.I:
                 App.Push(new ModPackPage(Host.ActiveGame, export: false));
                 return true;
