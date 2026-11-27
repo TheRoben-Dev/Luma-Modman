@@ -19,7 +19,7 @@ public partial class DesktopSettings : HSplitContainer
     [
         "Ctrl+1 … Ctrl+4: Mods, Browse, Downloads, Settings",
         "Ctrl+F: search mods (Browse)",
-        "Ctrl+O: add a mod from a file",
+        "Ctrl+O: add a mod from a file (Ctrl+Shift+O: from a folder); or drop archives and folders on the window",
         "Ctrl+I / Ctrl+E: import or export a modpack",
         "Ctrl+P: plugins (Bethesda games)",
         "Ctrl+K: conflicts: files in more than one mod, and which one wins",

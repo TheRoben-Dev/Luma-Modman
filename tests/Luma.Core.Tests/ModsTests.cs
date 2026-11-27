@@ -170,6 +170,20 @@ public sealed class ModsTests : IDisposable
     }
 
     [Fact]
+    public void AnUnpackedFolderInstallsLikeAnArchive()
+    {
+        var folder = Path.Combine(_dir, "SkyUI_5.2");
+        Directory.CreateDirectory(Path.Combine(folder, "interface"));
+        File.WriteAllText(Path.Combine(folder, "SkyUI_SE.esp"), "p");
+        File.WriteAllText(Path.Combine(folder, "interface", "skyui.swf"), "s");
+        var store = new ModStore(Path.Combine(_dir, "store"), "steam:1");
+        var mod = store.Install(folder, new InstalledMod { Id = "local:SkyUI_5.2", Site = "local", Name = "SkyUI_5.2" }, Profile("Data"));
+        Assert.Equal(2, mod.Files);
+        Assert.Equal(["mods/interface/skyui.swf", "mods/SkyUI_SE.esp"], store.ModFiles(mod.Id).Select(f => f.Key));
+        Assert.True(File.Exists(Path.Combine(folder, "SkyUI_SE.esp")));  // the original folder stays
+    }
+
+    [Fact]
     public void NamesNotesCategoriesSeparatorsAndProfileRenames()
     {
         var store = new ModStore(Path.Combine(_dir, "store"), "steam:1");

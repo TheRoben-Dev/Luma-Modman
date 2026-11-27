@@ -105,6 +105,7 @@ public partial class DesktopShell
         var game = Host.ActiveGame;
         var moddable = game?.Profile.Moddable == true;
         yield return new MenuItem("Add mod from file…", AddModFromFile, "Ctrl+O", moddable);
+        yield return new MenuItem("Add mod from folder…", AddModFromFolder, "Ctrl+Shift+O", moddable);
         if (game != null && moddable)
         {
             foreach (var link in game.Profile.Links.Where(l => l.ImportTo != null))

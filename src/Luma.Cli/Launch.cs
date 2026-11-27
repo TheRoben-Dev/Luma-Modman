@@ -35,7 +35,7 @@ internal static class Launch
             }
             if (game is { Profile.Moddable: true } && host.Mods.Store(game).State.Enabled().Any())
             {
-                var m = host.Mods.Deploy(game);
+                var m = host.Mods.Deploy(game, temporary: true);
                 deployed = true;
                 AppLog.Info($"run: {game.Title} with {m.Files.Count} mod files");
             }

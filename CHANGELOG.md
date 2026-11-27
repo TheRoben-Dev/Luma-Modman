@@ -3,6 +3,12 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.19.0
+
+- Drop mods on Luma: drag archives, unpacked mod folders or single mod files from your file manager onto Luma's window and they install for the game you have picked, one after another (installers open as usual). Drop a .lumapack to import it. Works in both layouts.
+- Install a mod you unpacked yourself: "Install this folder as a mod" while browsing a folder in controller mode, Mods → Add mod from folder… (Ctrl+Shift+O) on the desktop. Luma keeps a copy, so you can move or delete the original.
+- Mods left in a game: if Luma or the game's launch was stopped before the mods came out (or you put them in by hand last time), Luma says so when it starts and offers to take them out, so Steam updates, file checks and online play don't meet a modded game by surprise. "Leave them in" keeps them and stops asking until next time.
+
 ## 0.18.0
 
 - Own saves per profile, like MO2's profile-specific saves: turn on "Own saves for this profile" and, while that profile's mods are in, the game's save folder is the profile's own, so a different mod list never loads (and breaks) your other playthroughs. Start it empty or with a copy of your current saves. The game's own saves come back when the mods come out.

@@ -41,6 +41,14 @@ public sealed record DeployManifest
 
     /// <summary>The profile's own saves folder and INI files brought in (see <see cref="ProfileFiles"/>): put back first at undeploy.</summary>
     public List<ProfileSwap> Swaps { get; init; } = new();
+
+    /// <summary>Put in for one game or tool run (taken out when it ends), by the process <see cref="Pid"/>: still here after that process is gone means Luma was stopped while they were in.</summary>
+    public bool Temporary { get; init; }
+
+    public int Pid { get; init; }
+
+    /// <summary>The player saw the "mods are still in the game" notice and chose to leave them in.</summary>
+    public bool Acknowledged { get; init; }
 }
 
 /// <summary>A folder mods were placed in: <paramref name="Sub"/> ("game"/"mods") and <paramref name="Rel"/> say where it is under that root; <paramref name="Before"/> lists its entries before the deploy.</summary>

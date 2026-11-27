@@ -19,6 +19,11 @@ public static class Archive
     {
         Directory.CreateDirectory(dest);
         var full = Path.GetFullPath(dest) + Path.DirectorySeparatorChar;
+        if (Directory.Exists(archive))
+        {
+            ProfileFiles.CopyDir(archive, dest);  // an unpacked mod: its folder is the archive
+            return;
+        }
         if (!IsArchive(archive))
         {
             File.Copy(archive, Path.Combine(dest, Path.GetFileName(archive)), overwrite: true);

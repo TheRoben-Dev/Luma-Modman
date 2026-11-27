@@ -41,7 +41,7 @@ public sealed class ModManager
         }
     }
 
-    private string Manifest(DetectedGame game) => Path.Combine(_paths.Data, "deploy", ModStore.Safe(game.Key) + ".json");
+    public string Manifest(DetectedGame game) => Path.Combine(_paths.Data, "deploy", ModStore.Safe(game.Key) + ".json");
 
     private string BackupDir(DetectedGame game) => Path.Combine(_paths.Data, "backup", ModStore.Safe(game.Key));
 
@@ -88,10 +88,11 @@ public sealed class ModManager
 
     public DeployPlan Plan(DetectedGame game) => Deployer.Plan(Store(game), game.GameDir, ModsDir(game));
 
-    public DeployManifest Deploy(DetectedGame game)
+    /// <param name="temporary">For one game or tool run that takes them out again when it ends.</param>
+    public DeployManifest Deploy(DetectedGame game, bool temporary = false)
     {
         var plan = Plan(game);
-        var m = Deployer.Deploy(plan, game.Key, Manifest(game), BackupDir(game));
+        var m = Deployer.Deploy(plan, game.Key, Manifest(game), BackupDir(game)) with { Temporary = temporary, Pid = Environment.ProcessId };
         try
         {
             var store = Store(game);
@@ -219,6 +220,47 @@ public sealed class ModManager
     {
         Store(game).SetPluginOrder(null);
         Changed?.Invoke(game.Key);
+    }
+
+    /// <summary>
+    /// Games whose mods are still in although whatever put them there is gone (Luma, the game's
+    /// launch or a tool run was stopped, or they were put in by hand in an earlier session) and the
+    /// player hasn't chosen to leave them.
+    /// </summary>
+    public List<(DetectedGame Game, DeployManifest Manifest)> LeftIn(IEnumerable<DetectedGame> games) =>
+        games.Select(g => (Game: g, Manifest: Deployed(g)))
+            .Where(x => x.Manifest is { Acknowledged: false } m && !Alive(m.Pid))
+            .Select(x => (x.Game, x.Manifest!)).ToList();
+
+    /// <summary>Stops <see cref="LeftIn"/> listing the game until its mods are put in again.</summary>
+    public void LeaveIn(DetectedGame game)
+    {
+        if (Deployed(game) is { } m)
+        {
+            Deployer.Write(Manifest(game), m with { Acknowledged = true });
+        }
+    }
+
+    private static bool Alive(int pid)
+    {
+        if (pid <= 0)
+        {
+            return false;
+        }
+        if (pid == Environment.ProcessId)
+        {
+            return true;
+        }
+        try
+        {
+            using var p = System.Diagnostics.Process.GetProcessById(pid);
+            // A reused process id belongs to something else.
+            return !p.HasExited && p.ProcessName.Contains("luma", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception e) when (e is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return false;
+        }
     }
 
     /// <summary>The game has a save folder and INI files Luma knows, so profiles can keep their own.</summary>
