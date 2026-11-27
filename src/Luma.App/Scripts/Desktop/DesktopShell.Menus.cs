@@ -159,6 +159,8 @@ public partial class DesktopShell
         yield return new MenuItem("Move selected mod up", () => _mods.MoveSelected(-1), "Ctrl+Up", _mods.HasSelection);
         yield return new MenuItem("Move selected mod down", () => _mods.MoveSelected(+1), "Ctrl+Down", _mods.HasSelection);
         yield return new MenuItem("Conflicts…", ShowConflicts, "Ctrl+K");
+        var made = Host.Mods.OverwriteFiles(game).Count;
+        yield return new MenuItem(made > 0 ? $"Overwrite ({made} file{(made == 1 ? "" : "s")})…" : "Overwrite…", () => App.Push(new OverwritePage(game)));
         if (game.Profile.Plugins != null)
         {
             yield return new MenuItem("Plugins…", ShowPlugins, "Ctrl+P");

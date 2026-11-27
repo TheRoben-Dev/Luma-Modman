@@ -124,6 +124,52 @@ public sealed class ModsTests : IDisposable
     }
 
     [Fact]
+    public void FilesTheGameMakesGoToOverwriteAndComeBack()
+    {
+        var game = Path.Combine(_dir, "game");
+        Directory.CreateDirectory(Path.Combine(game, "Data"));
+        File.WriteAllText(Path.Combine(game, "Data", "game.esm"), "base");
+        File.WriteAllText(Path.Combine(game, "Data", "cfg.ini"), "game cfg");
+        var store = new ModStore(Path.Combine(_dir, "store"), "steam:1");
+        var p = Profile("Data");
+        store.Install(Zip("m1.zip", "one.esp", "meshes/a.nif", "cfg.ini"), new InstalledMod { Id = "nexus:1", Name = "One" }, p);
+        var data = GamePaths.Resolve(game, "Data");
+        var manifest = Path.Combine(_dir, "deploy.json");
+        Deployer.Deploy(Deployer.Plan(store, game, data), "steam:1", manifest, Path.Combine(_dir, "backup"));
+
+        // While the game runs: a tool writes a patch, a folder of output, a file next to a mod's,
+        // and the game saves over a mod's config (replacing the link); saves and the game folder itself are left alone.
+        File.WriteAllText(Path.Combine(data, "patch.esp"), "made");
+        Directory.CreateDirectory(Path.Combine(data, "output", "deep"));
+        File.WriteAllText(Path.Combine(data, "output", "deep", "b.nif"), "made");
+        File.WriteAllText(Path.Combine(data, "meshes", "gen.nif"), "made");
+        File.Delete(Path.Combine(data, "cfg.ini"));
+        File.WriteAllText(Path.Combine(data, "cfg.ini"), "edited");
+        File.WriteAllText(Path.Combine(game, "log.txt"), "game root");
+        File.WriteAllText(Path.Combine(data, "quick.ess"), "save");
+
+        Deployer.Undeploy(manifest);
+        Assert.Equal(["mods/cfg.ini", "mods/meshes/gen.nif", "mods/output/deep/b.nif", "mods/patch.esp"], store.OverwriteFiles());
+        Assert.Equal("game cfg", File.ReadAllText(Path.Combine(data, "cfg.ini")));
+        Assert.Equal(["cfg.ini", "game.esm", "quick.ess"], Directory.EnumerateFileSystemEntries(data).Select(Path.GetFileName).Order().ToList());
+        Assert.True(File.Exists(Path.Combine(game, "log.txt")));
+
+        // Next time Overwrite goes in last, so the edited config wins over the mod's.
+        var plan = Deployer.Plan(store, game, data);
+        Assert.Contains(plan.Conflicts, c => c.Winner == ModStore.OverwriteId);
+        Deployer.Deploy(plan, "steam:1", manifest, Path.Combine(_dir, "backup"));
+        Assert.Equal("edited", File.ReadAllText(Path.Combine(data, "cfg.ini")));
+        Assert.Equal("made", File.ReadAllText(Path.Combine(data, "output", "deep", "b.nif")));
+        Deployer.Undeploy(manifest);
+        Assert.Equal(4, store.OverwriteFiles().Count);
+
+        var mod = store.OverwriteToMod("Generated");
+        Assert.Empty(store.OverwriteFiles());
+        Assert.Equal("local:Generated", mod.Id);
+        Assert.True(store.State.IsEnabled(mod.Id));
+    }
+
+    [Fact]
     public void ProfilesDependenciesAndRollbackHistory()
     {
         var store = new ModStore(Path.Combine(_dir, "store"), "steam:1");

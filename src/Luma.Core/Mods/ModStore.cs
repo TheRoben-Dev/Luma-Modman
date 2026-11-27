@@ -98,6 +98,58 @@ public sealed class ModStore
 
     public string ModDir(string id) => Path.Combine(Root, Safe(id));
 
+    /// <summary>The id the Overwrite folder has in deploy plans and conflicts.</summary>
+    public const string OverwriteId = "overwrite";
+
+    /// <summary>
+    /// Files the game (or a tool) made while mods were in, kept like a mod ("game/..." and "mods/...")
+    /// and put in last at every deploy, like MO2's Overwrite.
+    /// </summary>
+    public string OverwriteDir => Path.Combine(Root, ".overwrite");
+
+    /// <summary>The Overwrite folder's files, as "game/…" or "mods/…" paths.</summary>
+    public List<string> OverwriteFiles() => Directory.Exists(OverwriteDir)
+        ? Directory.EnumerateFiles(OverwriteDir, "*", SearchOption.AllDirectories)
+            .Select(f => Path.GetRelativePath(OverwriteDir, f).Replace('\\', '/')).OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList()
+        : new List<string>();
+
+    /// <summary>Deletes the Overwrite folder's files.</summary>
+    public void ClearOverwrite()
+    {
+        if (Directory.Exists(OverwriteDir))
+        {
+            Directory.Delete(OverwriteDir, true);
+        }
+    }
+
+    /// <summary>Turns the Overwrite folder's files into a mod of their own (added at the end of every profile, enabled).</summary>
+    public InstalledMod OverwriteToMod(string name)
+    {
+        name = name.Trim();
+        if (name.Length == 0)
+        {
+            throw new ArgumentException("Give the new mod a name.");
+        }
+        var files = OverwriteFiles();
+        if (files.Count == 0)
+        {
+            throw new InvalidOperationException("Overwrite is empty.");
+        }
+        var id = "local:" + Safe(name);
+        if (State.Find(id) != null)
+        {
+            throw new InvalidOperationException($"There's already a mod called {name}.");
+        }
+        Directory.Move(OverwriteDir, ModDir(id));
+        var mod = new InstalledMod { Id = id, Site = "local", Name = name, Files = files.Count };
+        Save(State with
+        {
+            Mods = State.Mods.Append(mod).ToList(),
+            Profiles = State.Profiles.ToDictionary(p => p.Key, p => p.Value.Append(new ProfileEntry(id)).ToList()),
+        });
+        return mod;
+    }
+
     private GameMods Load()
     {
         try

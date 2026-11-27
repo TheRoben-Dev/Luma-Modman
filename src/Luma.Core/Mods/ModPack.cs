@@ -120,7 +120,7 @@ public static class ModPack
                 });
             }
             var manifest = new PackManifest { Name = name, CreatedBy = createdBy, Game = game.Id, GameName = game.Name, Full = full, Mods = mods,
-                Winners = store.State.Winners.TryGetValue(store.State.Active, out var picks) ? new(picks) : new(),
+                Winners = store.State.Winners.TryGetValue(store.State.Active, out var picks) ? picks.Where(p => p.Value != ModStore.OverwriteId).ToDictionary(p => p.Key, p => p.Value) : new(),
                 PluginsOff = store.State.PluginsOff.TryGetValue(store.State.Active, out var off) ? off.ToList() : new() };
             using var w = new StreamWriter(zip.CreateEntry(ManifestName).Open());
             w.Write(JsonSerializer.Serialize(manifest, Json));

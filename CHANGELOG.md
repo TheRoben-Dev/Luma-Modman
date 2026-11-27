@@ -3,6 +3,12 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.14.0
+
+- Overwrite, like MO2's: files the game or a tool makes while your mods are in (configs, generated patches, BodySlide or Nemesis output, logs next to mod files) no longer stay behind in the game folder. When the mods come out, Luma moves them to the game's Overwrite and puts them back in last every time, so they win over every mod. Saves and the game's main folder are left alone. See and manage them under Mods → Overwrite in controller mode, or the Overwrite banner and Mods → Overwrite… on the desktop: make a mod of them, or delete them.
+- Fixed: when the game saved over a mod's file (replacing it instead of writing through it), taking the mods out left that file in the game folder and the game's own copy stuck in Luma's backup folder. The changed file now goes to Overwrite and the game's copy is put back.
+- On Windows, mod files copied in (no symbolic links) that the game changes are kept in Overwrite too, instead of being lost when the mods come out.
+
 ## 0.13.0
 
 - Update all: one button downloads every mod update Check for updates found (Mods in controller mode, the toolbar and Mods menu on the desktop). Mods a site only lets you get from its website (free Nexus accounts, some CurseForge authors) are counted so you can update them one by one.

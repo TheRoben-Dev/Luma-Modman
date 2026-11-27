@@ -48,7 +48,8 @@ public partial class ConflictsPage : Screen
     internal static string Show(Conflict c) =>
         c.Key.StartsWith("mods/", StringComparison.Ordinal) ? c.Key[5..] : c.Key.StartsWith("game/", StringComparison.Ordinal) ? "game folder: " + c.Key[5..] : c.Key;
 
-    internal static string ModName(DetectedGame game, string id) => Main.Instance.Host!.Mods.Store(game).State.Find(id)?.Name ?? id;
+    internal static string ModName(DetectedGame game, string id) =>
+        id == ModStore.OverwriteId ? "Overwrite" : Main.Instance.Host!.Mods.Store(game).State.Find(id)?.Name ?? id;
 
     /// <summary>The mod the load order alone would pick: the last of the providers.</summary>
     internal static string ByOrder(Conflict c) => c.Providers is { Count: > 0 } p ? p[^1] : c.Winner;
