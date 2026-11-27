@@ -97,6 +97,8 @@ Select), and every tab works on that game. Games still start from Steam or their
   goes to Overwrite. LOOT's sort becomes your plugin order.
 - **Organise**: separators to group the load order, categories (sort and filter by them), notes
   on any mod, rename mods (the site's name stays for updates) and profiles.
+- **Profiles with their own saves and INI files** (Bethesda games), and a **file browser** per mod
+  to hide files or folders you don't want in the game.
 - **Overwrite**: files the game or a tool makes while the mods are in (configs, generated patches,
   tool output) are moved to the game's Overwrite when the mods come out and go back in last next
   time, like MO2. Make a mod of them, or delete them (Mods → Overwrite).

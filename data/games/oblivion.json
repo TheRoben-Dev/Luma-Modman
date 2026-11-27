@@ -31,6 +31,10 @@
       "value": "1"
     }
   ],
+  "saves": "{mygames}/Oblivion/Saves",
+  "inis": [
+    "{mygames}/Oblivion/Oblivion.ini"
+  ],
   "quirks": [
     "Archive invalidation (for replaced textures) is turned on in Oblivion.ini while mods are in; start the game once first so the file exists.",
     "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins. The game orders plugins by file date, which Luma sets."

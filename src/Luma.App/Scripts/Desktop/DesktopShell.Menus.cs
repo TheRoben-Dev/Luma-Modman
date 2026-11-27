@@ -171,6 +171,14 @@ public partial class DesktopShell
         yield return Separator;
         yield return new MenuItem("New profile…", NewProfile);
         yield return new MenuItem($"Rename profile \"{store.State.Active}\"…", () => ModInfo.RenameProfile(game), "", store.State.Active != GameMods.DefaultProfile);
+        if (ModManager.CanKeepSaves(game))
+        {
+            yield return new MenuItem("Own saves for this profile", () => ModInfo.SetLocal(game, true, !store.State.HasLocalSaves), "", true, store.State.HasLocalSaves);
+        }
+        if (ModManager.CanKeepInis(game))
+        {
+            yield return new MenuItem("Own game settings (INI files) for this profile", () => ModInfo.SetLocal(game, false, !store.State.HasLocalInis), "", true, store.State.HasLocalInis);
+        }
         yield return new MenuItem("Add a separator…", () => ModInfo.AddSeparator(game));
         yield return new MenuItem($"Delete profile \"{store.State.Active}\"…", DeleteProfile, "", store.State.Active != GameMods.DefaultProfile);
     }

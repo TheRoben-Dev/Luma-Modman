@@ -3,6 +3,13 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.18.0
+
+- Own saves per profile, like MO2's profile-specific saves: turn on "Own saves for this profile" and, while that profile's mods are in, the game's save folder is the profile's own, so a different mod list never loads (and breaks) your other playthroughs. Start it empty or with a copy of your current saves. The game's own saves come back when the mods come out.
+- Own game settings per profile: the profile keeps its own copies of the game's INI files (Skyrim.ini, SkyrimPrefs.ini and the like), so an ENB or performance profile can have different settings. Changes the game makes are kept with the profile.
+- Both are for Skyrim (LE, SE/AE), Enderal SE, Oblivion, Fallout 3, New Vegas, Fallout 4 and Starfield. Where: under the profile picker on the Mods page in controller mode, the Mods menu on the desktop.
+- A mod's files: see every file of a mod, folder by folder, and hide files or whole folders so they stay out of the game (an optional texture set, a readme, a plugin you don't want). Hidden files are left out of conflicts too, and stay hidden through updates. Where: Files on a mod's page in controller mode; Files… in a mod's right-click menu on the desktop, as a tree with tick boxes.
+
 ## 0.17.0
 
 - Separators, like MO2's: add a named separator anywhere in the load order to group mods (Add a separator on the Mods page, "Add separator above" on a mod; Mods → Add a separator… or a row's right-click menu on the desktop). Rename, remove or move them like mods; they don't change what goes in.

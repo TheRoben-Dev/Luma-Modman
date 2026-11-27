@@ -108,10 +108,40 @@ public static class ModInfo
         var from = store.State.Active;
         App.Push(new TextEntryPage($"Rename the {from} profile", from, name =>
         {
-            if (name.Trim().Length > 0 && name.Trim() != from && App.Guard(() => store.RenameProfile(from, name)))
+            if (name.Trim().Length > 0 && name.Trim() != from && App.Guard(() => App.Host!.Mods.RenameProfile(game, from, name)))
             {
                 Changed(game, done);
             }
         }));
+    }
+
+    public const string SavesHelp = "This profile gets its own save folder while its mods are in, so a different mod list never loads (and breaks) your other saves. The game's own saves come back when the mods come out.";
+
+    public const string InisHelp = "This profile gets its own copies of the game's INI files (graphics and game settings), changed only while its mods are in.";
+
+    /// <summary>Turns the active profile's own saves (<paramref name="saves"/>) or INI files on or off, asking how to start.</summary>
+    public static void SetLocal(DetectedGame game, bool saves, bool on, Action? done = null)
+    {
+        var mods = App.Host!.Mods;
+        var profile = mods.Store(game).State.Active;
+        void Set(bool copy)
+        {
+            if (App.Guard(() => mods.SetLocal(game, saves, on, copy)))
+            {
+                App.Success(on
+                    ? $"The {profile} profile has its own {(saves ? "saves" : "game settings")} now."
+                    : $"The {profile} profile uses the game's {(saves ? "saves" : "settings")} again. Its own stay in its folder for later.");
+            }
+            done?.Invoke();
+        }
+        if (on && saves)
+        {
+            App.Push(new ChoicePage($"Start the {profile} profile's own saves with a copy of your current saves, or with none?",
+                ("Copy my current saves", () => Set(true)),
+                ("Start with no saves", () => Set(false)),
+                ("Cancel", () => done?.Invoke())));
+            return;
+        }
+        Set(false);
     }
 }

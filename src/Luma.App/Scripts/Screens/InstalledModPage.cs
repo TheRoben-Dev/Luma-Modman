@@ -114,6 +114,9 @@ public partial class InstalledModPage : Screen
         {
             items.Add(Add(col, new ActionButton("Open website", () => ModActions.OpenUrl(mod.PageUrl), mod.PageUrl)));
         }
+        var hiddenN = mod.Hidden.Count;
+        items.Add(Add(col, new ActionButton(hiddenN > 0 ? $"Files ({hiddenN} hidden)" : "Files", () => App.Push(new ModFilesPage(_game, _id, ModFilesPage.Start(Host.Mods.ModFiles(_game, _id)))),
+            "See the mod's files and hide the ones you don't want in the game.")));
         items.Add(Add(col, new ActionButton("Open mod folder", () => Luma.App.Desktop.DesktopShell.OpenFolder(store.ModDir(_id)), "The mod's files in Luma's mod folder.")));
         items.Add(Add(col, new ActionButton("Uninstall", () => App.Confirm($"Uninstall {mod.Name}? Its download is kept, so it can be installed again.", "Uninstall", () =>
         {

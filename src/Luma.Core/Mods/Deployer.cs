@@ -38,6 +38,9 @@ public sealed record DeployManifest
 
     /// <summary>Folders that received mod files, with what was in them before: anything new in them at undeploy goes to <see cref="Overwrite"/>.</summary>
     public List<WatchedDir> Watched { get; init; } = new();
+
+    /// <summary>The profile's own saves folder and INI files brought in (see <see cref="ProfileFiles"/>): put back first at undeploy.</summary>
+    public List<ProfileSwap> Swaps { get; init; } = new();
 }
 
 /// <summary>A folder mods were placed in: <paramref name="Sub"/> ("game"/"mods") and <paramref name="Rel"/> say where it is under that root; <paramref name="Before"/> lists its entries before the deploy.</summary>
@@ -76,9 +79,14 @@ public static class Deployer
                 {
                     throw new InvalidOperationException("Start the game once from Steam so its Proton folder exists, then try again: its mods go inside it.");
                 }
+                var mod = store.State.Find(modId);
                 foreach (var f in Directory.EnumerateFiles(src, "*", SearchOption.AllDirectories))
                 {
                     var rel = Path.GetRelativePath(src, f);
+                    if (mod != null && mod.Hidden.Count > 0 && mod.IsHidden(FileKey(sub, rel)))
+                    {
+                        continue;  // hidden by the player: stays out of the game
+                    }
                     var target = GamePaths.Resolve(root, rel);
                     if (!providers.TryGetValue(target, out var list))
                     {
@@ -174,6 +182,12 @@ public static class Deployer
             return;
         }
         var problems = new List<string>();
+        ProfileFiles.Restore(m, problems);
+        if (problems.Count > 0)
+        {
+            // The game's own saves aren't back: keep the manifest so the next try finishes the job.
+            throw new IOException(string.Join("; ", problems));
+        }
         try
         {
             Capture(m);

@@ -190,6 +190,38 @@ public partial class SmokeTest : Node
         }, wait: 1.0, tab: "Mods", check: () =>
             All(GetTree().Root).OfType<Luma.App.Ui.ListRow>().Any(r => r.IsVisibleInTree() && r.HasMeta("mod") && ((string)r.GetMeta("mod")).StartsWith("sep:", StringComparison.Ordinal))
                 ? null : "the separator row isn't in the load order");
+        // Own saves per profile: the toggle asks how to start; with the mods in, the save folder is the profile's.
+        Step("profile-saves", () =>
+        {
+            Directory.CreateDirectory(SavesDir());
+            File.WriteAllText(Path.Combine(SavesDir(), "global.ess"), "the game's own save");
+            FindFocusable(GetTree().Root, "This profile gets its own save folder")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0, expect: "Copy my current saves");
+        Step("profile-saves-empty", () =>
+        {
+            Press("ui_down");
+            Press(Pad.Accept);
+        }, wait: 1.0, tab: "Mods", check: () => Host().Mods.Store(Host().ActiveGame!).State.HasLocalSaves ? null : "the profile doesn't have its own saves");
+        Step("profile-saves-in", () => Host().Mods.Deploy(Host().ActiveGame!), wait: 0.8, check: () =>
+            File.Exists(Path.Combine(SavesDir(), "global.ess")) ? "the game's own save is still there with the profile's mods in" : null);
+        Step("profile-saves-out", () => Host().Mods.Undeploy(Host().ActiveGame!), wait: 0.8, tab: "Mods", check: () =>
+            File.Exists(Path.Combine(SavesDir(), "global.ess")) ? null : "the game's own save didn't come back");
+        // A mod's files: open a folder, hide a file; it stays out of the deploy plan.
+        Step("mod-files", () => Main.Instance.Push(new Luma.App.Screens.ModFilesPage(Host().ActiveGame!, "local:Smoke_Armor", "mods/")), wait: 1.0, expect: "Opens the folder");
+        Step("mod-files-folder", () => Press(Pad.Accept), wait: 1.0, expect: "Hide this whole folder");
+        Step("mod-files-hide", () =>
+        {
+            Press("ui_down");
+            Press(Pad.Accept);
+        }, wait: 1.0, check: () => Host().Mods.Store(Host().ActiveGame!).State.Find("local:Smoke_Armor")?.Hidden.Contains("mods/meshes/armor.nif") == true
+            && !Host().Mods.Plan(Host().ActiveGame!).Files.Values.Any(f => f.ModId == "local:Smoke_Armor" && f.Source.EndsWith("armor.nif", StringComparison.Ordinal))
+            ? null : "armor.nif isn't hidden");
+        Step("mod-files-back", () =>
+        {
+            Press(Pad.Back);
+            Press(Pad.Back);
+        }, wait: 0.8, tab: "Mods");
         // A game with anti-cheat shows why it can't be modded instead of mod actions.
         Step("pick-not-moddable", () =>
         {
@@ -437,7 +469,6 @@ public partial class SmokeTest : Node
     private void DesktopSteps()
     {
         static DesktopShell Shell() => Main.Instance.GetChildren().OfType<DesktopShell>().First();
-        static Luma.Host.AppHost Host() => Main.Instance.Host!;
         string? NoController()
         {
             var bad = All(GetTree().Root).FirstOrDefault(n => n is ButtonGlyph or HintBar or Header or FocusHighlight);
@@ -623,9 +654,48 @@ public partial class SmokeTest : Node
         }, wait: 1.0, tab: "Mods", check: () =>
             All(GetTree().Root).OfType<Tree>().FirstOrDefault(t => t.TooltipText == "Load order" && t.IsVisibleInTree())?.GetRoot()?.GetChild(0)?.GetText(2).Contains("Visuals") == true
                 ? null : "the separator isn't the first row");
+        // Own INI files per profile: the game's settings come back, the profile keeps its changes.
+        string PrefsIni() => Path.Combine(Path.GetDirectoryName(SavesDir())!, "SkyrimPrefs.ini");
+        Step("desktop-profile-inis", () =>
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(PrefsIni())!);
+            File.WriteAllText(PrefsIni(), "[Display]\r\niSize H=720\r\n");
+            Luma.App.Screens.ModInfo.SetLocal(Host().ActiveGame!, false, true);
+        }, wait: 0.8, tab: "Mods", check: () => Host().Mods.Store(Host().ActiveGame!).State.HasLocalInis ? null : "the profile doesn't have its own INI files");
+        Step("desktop-profile-inis-in", () =>
+        {
+            Host().Mods.Deploy(Host().ActiveGame!);
+            File.WriteAllText(PrefsIni(), "[Display]\r\niSize H=1080\r\n");
+            Host().Mods.Undeploy(Host().ActiveGame!);
+        }, wait: 0.8, check: () => File.ReadAllText(PrefsIni()).Contains("720")
+            && File.ReadAllText(Path.Combine(Host().Mods.ProfileDir(Host().ActiveGame!), "inis", "SkyrimPrefs.ini")).Contains("1080")
+            ? null : "the INI files weren't swapped and put back");
+        Step("desktop-mod-files", () =>
+        {
+            Host().Mods.SetHidden(Host().ActiveGame!, "local:Smoke_Armor", ["mods/meshes/"], true);
+            Main.Instance.Push(new Luma.App.Screens.ModFilesPage(Host().ActiveGame!, "local:Smoke_Armor"));
+        }, wait: 1.0, check: () => DialogOpen("Files") ?? (All(GetTree().Root).OfType<Tree>().FirstOrDefault(t => t.TooltipText == "The mod's files" && t.IsVisibleInTree()) is { } t
+            && All(t.GetRoot()).Any(it => it.GetText(0) == "meshes/" && !it.IsChecked(0)) ? null : "the hidden folder isn't shown unticked"));
+        Step("desktop-mod-files-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
         Step("desktop-browse-nexus", () => Key(Godot.Key.Key2, ctrl: true), wait: 2.0, tab: "Browse");
         Step("desktop-not-moddable", () => Shell().PickGame("Marvel Rivals"), wait: 1.5, tab: "Mods", check: NoController);
     }
+
+    private static Luma.Host.AppHost Host() => Main.Instance.Host!;
+
+    private static IEnumerable<TreeItem> All(TreeItem item)
+    {
+        foreach (var c in item.GetChildren())
+        {
+            yield return c;
+            foreach (var d in All(c))
+            {
+                yield return d;
+            }
+        }
+    }
+
+    private static string SavesDir() => Luma.Core.Mods.ProfileFiles.SavesDir(Host().ActiveGame!, Host().Paths.Home)!;
 
     /// <summary>A mod archive with a FOMOD installer: a body choice (CBBE adds a step with an extra) and a patch for CBBE.</summary>
     private static string FomodZip()

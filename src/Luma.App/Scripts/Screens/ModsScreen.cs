@@ -1,6 +1,7 @@
 using Luma.App.Ui;
 using Luma.Core.Detection;
 using Luma.Core.Mods;
+using Luma.Host;
 using Godot;
 
 namespace Luma.App.Screens;
@@ -120,6 +121,16 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
                 CallDeferred(MethodName.Rebuild);
             };
             items.Add(Add(scrollCol, profile));
+            if (ModManager.CanKeepSaves(game))
+            {
+                items.Add(Add(scrollCol, Toggle.Create("Own saves for this profile", state.HasLocalSaves,
+                    on => ModInfo.SetLocal(game, true, on, () => CallDeferred(MethodName.Rebuild)), ModInfo.SavesHelp)));
+            }
+            if (ModManager.CanKeepInis(game))
+            {
+                items.Add(Add(scrollCol, Toggle.Create("Own game settings (INI files)", state.HasLocalInis,
+                    on => ModInfo.SetLocal(game, false, on, () => CallDeferred(MethodName.Rebuild)), ModInfo.InisHelp)));
+            }
             if (state.Active != GameMods.DefaultProfile)
             {
                 var name = state.Active;

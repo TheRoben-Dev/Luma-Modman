@@ -41,6 +41,7 @@ public partial class DesktopShell
             PluginsPage p => PluginsDialog(p),
             ConflictsPage c => ConflictsDialog(c),
             OverwritePage o => OverwriteDialog(o),
+            ModFilesPage f => ModFilesDialog(f),
             ToolsPage t => ToolsDialog(t),
             PickFilePage p => PickFileDialog(p),
             FomodPage f => FomodDialog(f),
@@ -659,6 +660,89 @@ public partial class DesktopShell
         d.AddButton("Close", () => App.Close(page), primary: true);
         Fill();
         return ShowDialog(d, page, list);
+    }
+
+    private Window ModFilesDialog(ModFilesPage page)
+    {
+        var game = page.Game;
+        var id = page.Id;
+        var store = Host.Mods.Store(game);
+        var d = new DesktopDialog($"Files: {store.State.Find(id)?.Name ?? id}", new Vector2I(860, 620));
+        d.AddText(ModFilesPage.About + " Untick a file or folder to hide it.", DesktopTheme.Dim);
+        var tree = new Tree { SizeFlagsVertical = SizeFlags.ExpandFill, Columns = 2, HideRoot = true, TooltipText = "The mod's files" };
+        tree.SetColumnExpand(1, false);
+        tree.SetColumnCustomMinimumWidth(1, 110);
+        d.Body.AddChild(tree);
+        var count = d.AddText("", DesktopTheme.Dim);
+        var files = Host.Mods.ModFiles(game, id);
+        var expanded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        void Fill()
+        {
+            var mod = store.State.Find(id);
+            tree.Clear();
+            var root = tree.CreateItem();
+            void Add(TreeItem parent, string prefix, bool parentHidden)
+            {
+                foreach (var e in ModFilesPage.Entries(files, prefix))
+                {
+                    var it = tree.CreateItem(parent);
+                    var hidden = mod?.IsHidden(e.Key) == true;
+                    it.SetCellMode(0, TreeItem.TreeCellMode.Check);
+                    it.SetChecked(0, !hidden);
+                    it.SetEditable(0, !parentHidden);
+                    it.SetText(0, e.Dir ? e.Name + "/" : e.Name);
+                    it.SetText(1, ModFilesPage.Bytes(e.Size));
+                    it.SetTextAlignment(1, HorizontalAlignment.Right);
+                    it.SetMetadata(0, e.Key);
+                    if (hidden)
+                    {
+                        it.SetCustomColor(0, DesktopTheme.Dim);
+                    }
+                    if (e.Dir)
+                    {
+                        it.SetTooltipText(0, $"{e.Files} file{(e.Files == 1 ? "" : "s")}");
+                        Add(it, e.Key, hidden);
+                        it.Collapsed = !expanded.Contains(e.Key) && prefix.Length > 0;
+                    }
+                }
+            }
+            Add(root, "", false);
+            var n = mod == null ? 0 : files.Count(f => mod.IsHidden(f.Key));
+            count.Text = $"{files.Count} file{(files.Count == 1 ? "" : "s")}{(n > 0 ? $", {n} hidden" : "")}" + (Host.Mods.IsDeployed(game) ? ". The mods are in the game now: changes take effect the next time they go in." : ".");
+        }
+        tree.ItemCollapsed += it =>
+        {
+            if (it.GetMetadata(0).AsString() is { Length: > 0 } key)
+            {
+                if (it.Collapsed)
+                {
+                    expanded.Remove(key);
+                }
+                else
+                {
+                    expanded.Add(key);
+                }
+            }
+        };
+        tree.ItemEdited += () =>
+        {
+            if (tree.GetEdited() is { } it && it.GetMetadata(0).AsString() is { Length: > 0 } key)
+            {
+                App.Guard(() => Host.Mods.SetHidden(game, id, [key], !it.IsChecked(0)));
+                Callable.From(Fill).CallDeferred();
+            }
+        };
+        d.AddButton("Show all", () =>
+        {
+            if (store.State.Find(id) is { Hidden.Count: > 0 } m)
+            {
+                App.Guard(() => Host.Mods.SetHidden(game, id, m.Hidden.ToList(), false));
+                Fill();
+            }
+        }, tooltip: "Puts every hidden file back.");
+        d.AddButton("Close", () => App.Close(page), primary: true);
+        Fill();
+        return ShowDialog(d, page, tree);
     }
 
     private Window ConflictsDialog(ConflictsPage page)

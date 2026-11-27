@@ -26,6 +26,11 @@
       "Dragonborn.esm"
     ]
   },
+  "saves": "{mygames}/Skyrim/Saves",
+  "inis": [
+    "{mygames}/Skyrim/Skyrim.ini",
+    "{mygames}/Skyrim/SkyrimPrefs.ini"
+  ],
   "quirks": [
     "The original 2011 release; most new mods target Special Edition.",
     "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins. loadorder.txt is written too."

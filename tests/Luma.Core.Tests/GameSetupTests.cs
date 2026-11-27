@@ -174,4 +174,73 @@ public sealed class GameSetupTests : IDisposable
         Assert.False(File.Exists(custom));
         Assert.False(File.Exists(Path.Combine(data, "X.esp")));
     }
+
+    [LinuxFact]
+    public void ProfilesKeepTheirOwnSavesAndIniFiles()
+    {
+        var prefix = Path.Combine(_dir, "pfx");
+        var games = Path.Combine(prefix, "drive_c", "users", "steamuser", "Documents", "My Games", "Game");
+        var saves = Path.Combine(games, "Saves");
+        var ini = Path.Combine(games, "GamePrefs.ini");
+        var custom = Path.Combine(games, "GameCustom.ini");
+        Directory.CreateDirectory(saves);
+        File.WriteAllText(Path.Combine(saves, "global.ess"), "global");
+        File.WriteAllText(ini, "[Display]\r\niSize=1\r\n");
+        var profile = new GameProfile
+        {
+            Id = "g", Name = "G", Steam = [1], ModsPath = "Data", Sites = new SiteIds { Nexus = "g" },
+            Ini = [new IniSetting("{mygames}/Game/GameCustom.ini", "Archive", "bInvalidateOlderFiles", "1")],
+            Saves = "{mygames}/Game/Saves", Inis = ["{mygames}/Game/GamePrefs.ini", "{mygames}/Game/GameCustom.ini"],
+        };
+        Assert.Empty(profile.Validate(new HashSet<string>()));
+        var gameDir = Path.Combine(_dir, "game");
+        Directory.CreateDirectory(Path.Combine(gameDir, "Data"));
+        var game = new DetectedGame { Profile = profile, Install = new InstalledGame { Source = GameSource.Steam, SourceId = "1", Prefix = prefix }, GameDir = gameDir };
+        var store = new ModStore(Path.Combine(_dir, "store"), game.Key);
+        store.Install(Zip("x.zip", "X.esp", "textures/a.dds", "textures/b.dds", "readme.txt"), new InstalledMod { Id = "nexus:9", Name = "X" }, profile);
+        store.SetHidden("nexus:9", ["mods/textures/", "mods/readme.txt"], true);
+        store.SetHidden("nexus:9", ["mods/textures/a.dds"], true);  // already hidden with its folder
+        Assert.Equal(["mods/readme.txt", "mods/textures/"], store.State.Find("nexus:9")!.Hidden);
+        store.UseProfile("Run 2");
+        var dir = store.ProfileDir("Run 2");
+        ProfileFiles.Seed(game, _dir, dir, saves: true, copySaves: false);
+        ProfileFiles.Seed(game, _dir, dir, saves: false, copySaves: false);
+        store.SetLocal(true, true);
+        store.SetLocal(false, true);
+
+        var manifest = Path.Combine(_dir, "deploy.json");
+        var backups = Path.Combine(_dir, "backup");
+        var data = Path.Combine(gameDir, "Data");
+        var plan = Deployer.Plan(store, gameDir, data);
+        Assert.Equal(["X.esp"], plan.Files.Keys.Select(Path.GetFileName));  // hidden files stay out
+        var m = Deployer.Deploy(plan, game.Key, manifest, backups);
+        ProfileFiles.Place(game, _dir, store.State, dir, m, backups);
+        GameSetup.Apply(game, _dir, plan, data, store.State, m, backups);
+        Deployer.Write(manifest, m);
+
+        Assert.False(File.Exists(Path.Combine(saves, "global.ess")));  // the profile starts with no saves
+        File.WriteAllText(Path.Combine(saves, "run2.ess"), "mine");
+        File.WriteAllText(ini, "[Display]\r\niSize=2\r\n");  // the game changes its settings
+        Assert.Contains("bInvalidateOlderFiles=1", File.ReadAllText(custom));
+
+        Deployer.Undeploy(manifest);
+        Assert.Equal("global", File.ReadAllText(Path.Combine(saves, "global.ess")));
+        Assert.False(File.Exists(Path.Combine(saves, "run2.ess")));
+        Assert.Equal("mine", File.ReadAllText(Path.Combine(dir, "saves", "run2.ess")));
+        Assert.Equal("[Display]\r\niSize=1\r\n", File.ReadAllText(ini));
+        Assert.Contains("iSize=2", File.ReadAllText(Path.Combine(dir, "inis", "GamePrefs.ini")));
+        Assert.False(File.Exists(custom));
+        Assert.False(Directory.Exists(saves + ProfileFiles.AsideSuffix));
+
+        // The next deploy brings the profile's save and settings back.
+        m = Deployer.Deploy(Deployer.Plan(store, gameDir, data), game.Key, manifest, backups);
+        ProfileFiles.Place(game, _dir, store.State, dir, m, backups);
+        Deployer.Write(manifest, m);
+        Assert.Equal("mine", File.ReadAllText(Path.Combine(saves, "run2.ess")));
+        Assert.Contains("iSize=2", File.ReadAllText(ini));
+        Deployer.Undeploy(manifest);
+        store.RenameProfile("Run 2", "Run Two");
+        Assert.True(File.Exists(Path.Combine(store.ProfileDir("Run Two"), "saves", "run2.ess")));
+        Assert.Equal(["Run Two"], store.State.LocalSaves);
+    }
 }

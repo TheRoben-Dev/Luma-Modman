@@ -45,6 +45,11 @@
       "value": ""
     }
   ],
+  "saves": "{mygames}/Starfield/Saves",
+  "inis": [
+    "{mygames}/Starfield/StarfieldPrefs.ini",
+    "{mygames}/Starfield/StarfieldCustom.ini"
+  ],
   "quirks": [
     "Loose-file mods need the archive invalidation settings Luma writes to StarfieldCustom.ini.",
     "Creations from the in-game menu are managed by the game, not Luma.",

@@ -577,6 +577,7 @@ public partial class DesktopMods : VBoxContainer
         list.Add((mod.Category.Length > 0 ? $"Category: {mod.Category}…" : "Set a category…", () => ModInfo.EditCategory(game, mod), "Group it with similar mods; sort by the Category column."));
         list.Add((mod.Notes.Length > 0 ? "Edit notes…" : "Add notes…", () => ModInfo.EditNotes(game, mod), "Your own notes about it."));
         list.Add(("Add a separator above…", () => ModInfo.AddSeparator(game, id), "A heading in the load order, to group the mods below it."));
+        list.Add((mod.Hidden.Count > 0 ? $"Files ({mod.Hidden.Count} hidden)…" : "Files…", () => App.Push(new ModFilesPage(game, id)), "See the mod's files and hide the ones you don't want in the game."));
         list.Add(("Open mod folder", () => DesktopShell.OpenFolder(store.ModDir(id)), "The mod's files in Luma's mod folder."));
         list.Add(("Uninstall…", () => Uninstall(id), "Removes it from Luma's mod folder. Its download is kept."));
         return list;

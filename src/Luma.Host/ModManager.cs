@@ -94,7 +94,10 @@ public sealed class ModManager
         var m = Deployer.Deploy(plan, game.Key, Manifest(game), BackupDir(game));
         try
         {
-            var plugins = GameSetup.Apply(game, _paths.Home, plan, ModsDir(game), Store(game).State, m, BackupDir(game));
+            var store = Store(game);
+            ProfileFiles.Place(game, _paths.Home, store.State, store.ProfileDir(store.State.Active), m, BackupDir(game));
+            Deployer.Write(Manifest(game), m);
+            var plugins = GameSetup.Apply(game, _paths.Home, plan, ModsDir(game), store.State, m, BackupDir(game));
             Deployer.Write(Manifest(game), m);
             if (game.Profile.Plugins != null)
             {
@@ -105,7 +108,7 @@ public sealed class ModManager
         {
             Deployer.Write(Manifest(game), m);
             Deployer.Undeploy(Manifest(game));
-            throw new IOException($"Couldn't write {game.Title}'s plugin list or settings: {e.Message}", e);
+            throw new IOException($"Couldn't put in {game.Title}'s plugin list, settings or profile saves: {e.Message}", e);
         }
         AppLog.Info($"deployed {m.Files.Count} files for {game.Key} ({m.Backups.Count} game files set aside, {plan.Conflicts.Count} conflicts)");
         Changed?.Invoke(game.Key);
@@ -215,6 +218,53 @@ public sealed class ModManager
     public void ResetPluginOrder(DetectedGame game)
     {
         Store(game).SetPluginOrder(null);
+        Changed?.Invoke(game.Key);
+    }
+
+    /// <summary>The game has a save folder and INI files Luma knows, so profiles can keep their own.</summary>
+    public static bool CanKeepSaves(DetectedGame game) => game.Profile.Saves != null;
+
+    public static bool CanKeepInis(DetectedGame game) => game.Profile.Inis.Count > 0;
+
+    /// <summary>
+    /// Gives the active profile its own saves (<paramref name="saves"/>) or INI files, or goes back to
+    /// the game's. Turning saves on with <paramref name="copyCurrent"/> starts the profile with a copy
+    /// of the game's saves; INI files always start as copies of the game's.
+    /// </summary>
+    public void SetLocal(DetectedGame game, bool saves, bool on, bool copyCurrent = false)
+    {
+        NotWhileDeployed(game);
+        var store = Store(game);
+        if (on)
+        {
+            ProfileFiles.Seed(game, _paths.Home, store.ProfileDir(store.State.Active), saves, copyCurrent);
+        }
+        store.SetLocal(saves, on);
+        AppLog.Info($"{game.Key} profile {store.State.Active}: own {(saves ? "saves" : "INI files")} {(on ? "on" : "off")}");
+        Changed?.Invoke(game.Key);
+    }
+
+    /// <summary>Renames a profile; one with its own saves or INI files only while they aren't in the game (they live in its folder).</summary>
+    public void RenameProfile(DetectedGame game, string from, string to)
+    {
+        var store = Store(game);
+        if (store.State.LocalSaves.Contains(from) || store.State.LocalInis.Contains(from))
+        {
+            NotWhileDeployed(game);
+        }
+        store.RenameProfile(from, to);
+        Changed?.Invoke(game.Key);
+    }
+
+    /// <summary>The active profile's folder holding its own saves and INI files.</summary>
+    public string ProfileDir(DetectedGame game) => Store(game).ProfileDir(Store(game).State.Active);
+
+    public List<(string Key, long Size)> ModFiles(DetectedGame game, string id) => Store(game).ModFiles(id);
+
+    /// <summary>Hides files or folders of a mod from the game, or shows them again.</summary>
+    public void SetHidden(DetectedGame game, string id, IEnumerable<string> keys, bool hidden)
+    {
+        Store(game).SetHidden(id, keys, hidden);
         Changed?.Invoke(game.Key);
     }
 
