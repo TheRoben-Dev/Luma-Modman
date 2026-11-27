@@ -17,6 +17,9 @@ public sealed record AppSettings
     /// <summary>Screen layout: "auto" (controller in Game Mode, desktop elsewhere), "controller" or "desktop".</summary>
     public string Layout { get; init; } = "auto";
 
+    /// <summary>UI language code ("sv", "de"…); empty follows the system's language when Luma has it.</summary>
+    public string Language { get; init; } = "";
+
     /// <summary>Turns off UI animations.</summary>
     public bool ReduceMotion { get; init; }
 

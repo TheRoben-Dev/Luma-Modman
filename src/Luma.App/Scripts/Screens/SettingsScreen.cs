@@ -14,7 +14,7 @@ public partial class SettingsScreen : TwoPaneScreen
         ("Mod sites", "Your keys for Nexus Mods, CurseForge and mod.io."),
         ("Appearance", "Theme, accent colour, CRT effect and animations."),
         ("Sound & feel", "Menu sounds and controller rumble."),
-        ("Layout", "Controller or desktop layout, and keyboard shortcuts."),
+        ("Layout", "Language, controller or desktop layout, and keyboard shortcuts."),
         ("Updates", "Version, changelog and updates."),
         ("About", "Where Luma keeps its files, and the app log."),
     ];
@@ -85,6 +85,17 @@ public partial class SettingsScreen : TwoPaneScreen
         }
     }
 
+    /// <summary>"Automatic" and every language Luma has, each by its own name.</summary>
+    internal static IEnumerable<(string Id, string Label)> Languages() =>
+        Luma.Host.Translations.Available.Select(l => (l.Code, l.Name)).Prepend(("", "Automatic (system language)"));
+
+    internal static void SetLanguage(string code)
+    {
+        var app = Main.Instance;
+        app.Host!.SaveSettings(app.Host.Settings with { Language = code });
+        I18n.Use(code);
+    }
+
     private void BuildLayout(VBoxContainer col, Action<Control> Add)
     {
         var current = Host.Settings.Layout;
@@ -96,6 +107,9 @@ public partial class SettingsScreen : TwoPaneScreen
         };
         layout.Changed += App.ApplyLayout;
         Add(layout);
+        var language = new Stepper("Language", Languages(), Host.Settings.Language, "The language of Luma's menus. Mod names and descriptions stay as their sites have them.");
+        language.Changed += SetLanguage;
+        Add(language);
         col.AddChild(Section("Keyboard and mouse"));
         foreach (var line in new[]
         {

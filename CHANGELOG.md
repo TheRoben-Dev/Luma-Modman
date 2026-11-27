@@ -3,6 +3,11 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.21.0
+
+- Luma speaks Swedish and German: Settings → Layout → Language (both layouts). "Automatic" follows your system's language. The menus change at once, no restart. Mod names and descriptions stay as their sites have them.
+- Translators: every built-in text is in data/translations; see docs/translating.md to add a language.
+
 ## 0.20.0
 
 - Nexus Mods collections: paste a collection's link (Mods → Import a Nexus collection in controller mode, File → Import Nexus collection… on the desktop), or press the mod manager button on a collection's page. Luma shows what it holds and imports it into a new profile, in the exact file versions the collection lists, with or without its optional mods. Your other profiles don't change.

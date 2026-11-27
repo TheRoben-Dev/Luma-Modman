@@ -492,7 +492,7 @@ public partial class SmokeTest : Node
         Step("settings-tab", () => Key(Godot.Key.Key4, ctrl: true), tab: "Settings");
         Step("settings-layout", () =>
         {
-            FindFocusable(GetTree().Root, "Controller or desktop layout")?.GrabFocus();
+            FindFocusable(GetTree().Root, "Language, controller or desktop layout")?.GrabFocus();
             Press(Pad.Accept);
         }, expect: "Controller: full screen");
         Step("settings-layout-desktop", () =>
@@ -502,6 +502,11 @@ public partial class SmokeTest : Node
         }, expect: "Cancel");
         Step("settings-layout-cancel", () => Press(Pad.Accept), expect: "Controller: full screen", check: () =>
             Main.Instance.Host!.Settings.Layout == "desktop" ? null : "the layout setting wasn't saved");
+        // Another language: the menus change at once, and back.
+        Step("language-sv", () => Luma.App.Screens.SettingsScreen.SetLanguage("sv"), wait: 1.0, tab: "Settings", check: () =>
+            TranslationServer.Translate("Uninstall") != "Uninstall" ? null : "Swedish didn't load");
+        Step("language-back", () => Luma.App.Screens.SettingsScreen.SetLanguage(""), wait: 0.8, check: () =>
+            TranslationServer.Translate("Uninstall") == "Uninstall" ? null : "English didn't come back");
     }
 
     /// <summary>
@@ -629,6 +634,12 @@ public partial class SmokeTest : Node
             Step("desktop-settings-" + c.Split(' ')[0].ToLowerInvariant(), () => Shell().SettingsView.Open(c), wait: 0.8, tab: "Settings",
                 check: () => Shell().SettingsView.Current == c ? null : $"settings show {Shell().SettingsView.Current}");
         }
+        Step("desktop-language-de", () =>
+        {
+            Luma.App.Screens.SettingsScreen.SetLanguage("de");
+            Shell().SettingsView.Open("Layout");
+        }, wait: 1.0, tab: "Settings", check: () => TranslationServer.Translate("Uninstall") != "Uninstall" ? null : "German didn't load");
+        Step("desktop-language-back", () => Luma.App.Screens.SettingsScreen.SetLanguage(""), wait: 0.8);
         Step("desktop-site-setup", () => Main.Instance.Push(new Luma.App.Screens.SiteSetupPage(Host().Sites.Nexus)), wait: 1.0, check: () => DialogOpen("Set up Nexus Mods"));
         Step("desktop-site-setup-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
         Step("desktop-changelog", () => Main.Instance.ShowChangelog(), wait: 1.0, check: () => DialogOpen("Changelog"));
