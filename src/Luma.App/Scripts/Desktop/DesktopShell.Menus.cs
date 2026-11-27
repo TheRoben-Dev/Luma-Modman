@@ -19,6 +19,7 @@ public partial class DesktopShell
     private Button _addFileButton = null!;
     private OptionButton _profiles = null!;
     private Button _deleteProfile = null!;
+    private Button _renameProfile = null!;
     private Button _newProfile = null!;
     private bool _fillingProfiles;
 
@@ -169,6 +170,8 @@ public partial class DesktopShell
         }
         yield return Separator;
         yield return new MenuItem("New profile…", NewProfile);
+        yield return new MenuItem($"Rename profile \"{store.State.Active}\"…", () => ModInfo.RenameProfile(game), "", store.State.Active != GameMods.DefaultProfile);
+        yield return new MenuItem("Add a separator…", () => ModInfo.AddSeparator(game));
         yield return new MenuItem($"Delete profile \"{store.State.Active}\"…", DeleteProfile, "", store.State.Active != GameMods.DefaultProfile);
     }
 
@@ -299,12 +302,20 @@ public partial class DesktopShell
         };
         row.AddChild(_profiles);
         _newProfile = DesktopTheme.Button("New…", NewProfile, "A copy of the current profile, to change without losing it.", "ToolButton");
+        _renameProfile = DesktopTheme.Button("Rename…", () =>
+        {
+            if (Host.ActiveGame is { } g)
+            {
+                ModInfo.RenameProfile(g);
+            }
+        }, "Gives this profile another name.", "ToolButton");
         _deleteProfile = DesktopTheme.Button("Delete", DeleteProfile, "Deletes this profile. Its mods stay installed.", "ToolButton");
         row.AddChild(_newProfile);
+        row.AddChild(_renameProfile);
         row.AddChild(_deleteProfile);
         row.AddChild(Spacer());
         row.AddChild(DesktopTheme.Label("Filter", DesktopTheme.Dim, DesktopTheme.SmallSize));
-        var filter = new LineEdit { PlaceholderText = "Filter mods by name", CustomMinimumSize = new Vector2(220, 0), ClearButtonEnabled = true, TooltipText = "Shows only the mods whose name contains this." };
+        var filter = new LineEdit { PlaceholderText = "Filter mods by name or category", CustomMinimumSize = new Vector2(220, 0), ClearButtonEnabled = true, TooltipText = "Shows only the mods whose name contains this." };
         filter.TextChanged += t =>
         {
             _mods.Filter = t;
@@ -318,7 +329,7 @@ public partial class DesktopShell
     {
         var game = Host.ActiveGame;
         var moddable = game?.Profile.Moddable == true;
-        foreach (var b in new[] { _deployButton, _steamButton, _updatesButton, _addFileButton, _newProfile, _deleteProfile, _conflictsButton, _updateAllButton })
+        foreach (var b in new[] { _deployButton, _steamButton, _updatesButton, _addFileButton, _newProfile, _renameProfile, _deleteProfile, _conflictsButton, _updateAllButton })
         {
             b.Disabled = !moddable;
         }
@@ -347,6 +358,7 @@ public partial class DesktopShell
                 }
             }
             _deleteProfile.Disabled = state.Active == GameMods.DefaultProfile;
+            _renameProfile.Disabled = state.Active == GameMods.DefaultProfile;
         }
         _fillingProfiles = false;
     }

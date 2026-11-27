@@ -25,11 +25,16 @@ public partial class InstalledModPage : Screen
     {
         var store = Host.Mods.Store(_game);
         var mod = store.State.Find(_id);
-        var center = new CenterContainer();
+        // Centred and scrolling: a mod has more options than fit on a Deck's screen.
+        var center = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         AddChild(center);
         var col = Column(10);
         col.CustomMinimumSize = new Vector2(680, 0);
-        center.AddChild(col);
+        col.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        var scroll = Scroller(col);
+        scroll.CustomMinimumSize = new Vector2(700, 0);
+        scroll.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
+        center.AddChild(scroll);
         if (mod == null)
         {
             col.AddChild(UiTheme.Label("This mod isn't installed any more.", UiTheme.FontSize));
@@ -45,6 +50,7 @@ public partial class InstalledModPage : Screen
         {
             mod.Version.Length > 0 ? "version " + mod.Version : "",
             mod.Author.Length > 0 ? "by " + mod.Author : "",
+            mod.Category,
             ModsScreen.SiteName(mod.Site),
             $"{mod.Files} file{(mod.Files == 1 ? "" : "s")}",
             $"#{index + 1} of {order.Count} in {store.State.Active}",
@@ -54,6 +60,10 @@ public partial class InstalledModPage : Screen
         {
             col.AddChild(UiTheme.Label("Needs " + string.Join(", ", mod.Dependencies.Select(d => d.Name)), UiTheme.SmallSize, UiTheme.Dim, wrap: true));
         }
+        if (mod.Notes.Length > 0)
+        {
+            col.AddChild(UiTheme.Label("✎ " + mod.Notes, UiTheme.SmallSize + 1, UiTheme.Text, wrap: true));
+        }
         var items = new List<Control>
         {
             Add(col, new ActionButton(on ? "Turn off" : "Turn on", () => Do(() => store.SetEnabled(_id, !on)),
@@ -62,11 +72,17 @@ public partial class InstalledModPage : Screen
         if (index > 0)
         {
             items.Add(Add(col, new ActionButton("Move up (loads earlier)", () => Do(() => store.Move(_id, -1)), "Mods lower in the list win when two change the same file.")));
+            items.Add(Add(col, new ActionButton("Move to the top", () => Do(() => store.Move(_id, -index)), "Loads first.")));
         }
         if (index < order.Count - 1)
         {
             items.Add(Add(col, new ActionButton("Move down (loads later, wins conflicts)", () => Do(() => store.Move(_id, +1)), "Mods lower in the list win when two change the same file.")));
+            items.Add(Add(col, new ActionButton("Move to the bottom", () => Do(() => store.Move(_id, order.Count - 1 - index)), "Loads last and wins every conflict.")));
         }
+        items.Add(Add(col, new ActionButton("Rename", () => ModInfo.Rename(_game, mod, Rebuild), "Your own name for it; updates keep it.")));
+        items.Add(Add(col, new ActionButton(mod.Category.Length > 0 ? $"Category: {mod.Category}" : "Set a category", () => ModInfo.EditCategory(_game, mod, Rebuild), "Group it with similar mods; the load order can be sorted by category.")));
+        items.Add(Add(col, new ActionButton(mod.Notes.Length > 0 ? "Edit notes" : "Add notes", () => ModInfo.EditNotes(_game, mod, Rebuild), "Your own notes about it.")));
+        items.Add(Add(col, new ActionButton("Add a separator above it", () => ModInfo.AddSeparator(_game, _id, Rebuild), "A heading in the load order, to group the mods below it.")));
         var site = Host.Sites.All.FirstOrDefault(s => s.Id == mod.Site);
         if (site != null && mod.ModId.Length > 0)
         {
@@ -98,6 +114,7 @@ public partial class InstalledModPage : Screen
         {
             items.Add(Add(col, new ActionButton("Open website", () => ModActions.OpenUrl(mod.PageUrl), mod.PageUrl)));
         }
+        items.Add(Add(col, new ActionButton("Open mod folder", () => Luma.App.Desktop.DesktopShell.OpenFolder(store.ModDir(_id)), "The mod's files in Luma's mod folder.")));
         items.Add(Add(col, new ActionButton("Uninstall", () => App.Confirm($"Uninstall {mod.Name}? Its download is kept, so it can be installed again.", "Uninstall", () =>
         {
             if (App.Guard(() => Host.Mods.Uninstall(_game, _id)))

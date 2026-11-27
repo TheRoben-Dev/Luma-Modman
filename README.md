@@ -95,6 +95,8 @@ Select), and every tab works on that game. Games still start from Steam or their
 - **Tools**: run xEdit, LOOT, BodySlide, Nemesis, Pandora or any program with the mods in (inside
   the game's Proton prefix on Linux); they come out again when it closes, and what the tool wrote
   goes to Overwrite. LOOT's sort becomes your plugin order.
+- **Organise**: separators to group the load order, categories (sort and filter by them), notes
+  on any mod, rename mods (the site's name stays for updates) and profiles.
 - **Overwrite**: files the game or a tool makes while the mods are in (configs, generated patches,
   tool output) are moved to the game's Overwrite when the mods come out and go back in last next
   time, like MO2. Make a mod of them, or delete them (Mods → Overwrite).

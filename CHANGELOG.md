@@ -3,6 +3,14 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.17.0
+
+- Separators, like MO2's: add a named separator anywhere in the load order to group mods (Add a separator on the Mods page, "Add separator above" on a mod; Mods → Add a separator… or a row's right-click menu on the desktop). Rename, remove or move them like mods; they don't change what goes in.
+- Categories: give any mod a category. The desktop has a Category column, the filter matches categories, and controller mode can sort by category.
+- Notes on any mod (shown with ✎ in the desktop list and in the mod's details), and rename a mod to what you call it. Updates still match it by the site's own name, and the name, notes and category are kept across updates.
+- Rename a profile (Mods page in controller mode, the Rename… button next to the profile on the desktop).
+- Controller mode: a mod's page scrolls, and has Move to top/bottom and Open mod folder.
+
 ## 0.16.0
 
 - Tools, like MO2's executables: run xEdit, LOOT, BodySlide, Outfit Studio, Nemesis, Pandora, FNIS, DynDOLOD, TexGen, Wrye Bash, Synthesis or any other program with your mods in. Luma puts the mods in, starts the tool (on SteamOS and Bazzite inside the game's own Proton prefix, with the Proton Steam uses for the game, so it sees the same Data folder and plugin list), and takes the mods out when you close it. What the tool writes (patches, meshes, behaviour files) lands in Overwrite.

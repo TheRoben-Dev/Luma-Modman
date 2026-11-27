@@ -177,6 +177,19 @@ public partial class SmokeTest : Node
             Luma.App.Screens.ModsScreen._sort = "order";
             Main.Instance.Host!.Mods.NotifyChanged(Main.Instance.Host.ActiveGame!);
         }, wait: 0.8, tab: "Mods");
+        // A separator: added from the load order, typed with the keyboard, shown as a heading row.
+        Step("separator-add", () =>
+        {
+            FindFocusable(GetTree().Root, "A heading at the end of the load order")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 0.8);
+        Step("separator-typed", () =>
+        {
+            TypeText("Visuals");
+            Key(Godot.Key.Enter);
+        }, wait: 1.0, tab: "Mods", check: () =>
+            All(GetTree().Root).OfType<Luma.App.Ui.ListRow>().Any(r => r.IsVisibleInTree() && r.HasMeta("mod") && ((string)r.GetMeta("mod")).StartsWith("sep:", StringComparison.Ordinal))
+                ? null : "the separator row isn't in the load order");
         // A game with anti-cheat shows why it can't be modded instead of mod actions.
         Step("pick-not-moddable", () =>
         {
@@ -601,6 +614,15 @@ public partial class SmokeTest : Node
         Step("desktop-tools-run", RunScriptTool, wait: 4.0, check: () =>
             Host().Mods.OverwriteFiles(Host().ActiveGame!).Contains("mods/tool-output.txt") ? null : "the tool's output isn't in Overwrite");
         Step("desktop-tools-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-separator", () =>
+        {
+            var store = Host().Mods.Store(Host().ActiveGame!);
+            store.AddSeparator("Visuals", store.State.Order[0].Id);
+            store.SetModInfo(store.State.Mods[0].Id, category: "Textures", notes: "smoke note");
+            Host().Mods.NotifyChanged(Host().ActiveGame!);
+        }, wait: 1.0, tab: "Mods", check: () =>
+            All(GetTree().Root).OfType<Tree>().FirstOrDefault(t => t.TooltipText == "Load order" && t.IsVisibleInTree())?.GetRoot()?.GetChild(0)?.GetText(2).Contains("Visuals") == true
+                ? null : "the separator isn't the first row");
         Step("desktop-browse-nexus", () => Key(Godot.Key.Key2, ctrl: true), wait: 2.0, tab: "Browse");
         Step("desktop-not-moddable", () => Shell().PickGame("Marvel Rivals"), wait: 1.5, tab: "Mods", check: NoController);
     }
