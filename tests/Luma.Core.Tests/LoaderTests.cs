@@ -107,7 +107,7 @@ public sealed class LoaderTests : IDisposable
         Assert.Equal(["-t", "er", "-c", "config_eldenring.toml"], LoaderRules.LaunchArgs(er, L("modengine2")));
         var cmd = LaunchCommand.ThroughLauncher(["/proton", "waitforexitandrun", "/g/ELDEN RING/Game/start_protected_game.exe"], "/g/ELDEN RING", "Game/modengine2_launcher.exe",
             LoaderRules.LaunchArgs(er, L("modengine2")), native: false);
-        Assert.Equal(["/proton", "waitforexitandrun", Path.Combine("/g/ELDEN RING", "Game/modengine2_launcher.exe"), "-t", "er", "-c", "config_eldenring.toml"], cmd);
+        Assert.Equal(["/proton", "waitforexitandrun", Path.Combine("/g/ELDEN RING", "Game", "modengine2_launcher.exe"), "-t", "er", "-c", "config_eldenring.toml"], cmd);
     }
 
     [Fact]
