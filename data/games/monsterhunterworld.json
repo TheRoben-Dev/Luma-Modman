@@ -9,6 +9,8 @@
   ],
   "runtime": "proton",
   "modsPath": "nativePC",
+  "loader": "stracker",
+  "loaderOptional": true,
   "sites": {
     "nexus": "monsterhunterworld"
   },

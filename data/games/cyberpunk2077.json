@@ -8,13 +8,29 @@
     "bin/x64/Cyberpunk2077.exe"
   ],
   "runtime": "proton",
+  "loaderOptional": true,
+  "loaders": [
+    "cet",
+    "red4ext",
+    "redscript",
+    "archivexl",
+    "tweakxl",
+    "codeware"
+  ],
+  "fileRules": {
+    ".archive": "archive/pc/mod",
+    ".xl": "archive/pc/mod",
+    ".reds": "r6/scripts",
+    ".yaml": "r6/tweaks"
+  },
   "sites": {
     "nexus": "cyberpunk2077",
     "modio": "Cyberpunk 2077",
     "curseforge": "cyberpunk-2077"
   },
   "quirks": [
-    "Archive mods go to archive/pc/mod; script mods need Cyber Engine Tweaks, RED4ext or redscript, installed as dependencies.",
+    "Luma installs Cyber Engine Tweaks, RED4ext, redscript, ArchiveXL, TweakXL and Codeware when a mod needs them: by its files or its listed requirements.",
+    "Mods packed as just .archive or .reds files go to archive/pc/mod and r6/scripts.",
     "Mod-managed REDmod files are deployed into the mods folder."
   ]
 }

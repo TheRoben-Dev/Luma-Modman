@@ -9,6 +9,11 @@
   ],
   "runtime": "proton",
   "modsPath": "Modules",
+  "loader": "blse",
+  "loaderOptional": true,
+  "loaders": [
+    "harmony-bannerlord"
+  ],
   "sites": {
     "nexus": "mountandblade2bannerlord",
     "curseforge": "mount-blade-ii-bannerlord"

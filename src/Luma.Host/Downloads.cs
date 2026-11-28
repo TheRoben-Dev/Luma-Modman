@@ -32,7 +32,7 @@ public sealed class DownloadItem
     /// <summary>Why installing failed, when it did.</summary>
     public string? InstallError { get; set; }
     public string FileId { get; init; } = "";
-    public string Version { get; init; } = "";
+    public string Version { get; set; } = "";
     public string FileName { get; set; } = "";
     public string? PageUrl { get; init; }
 
@@ -224,10 +224,18 @@ public sealed class DownloadQueue
             part = target + ".part";
             using var req = new HttpRequestMessage(HttpMethod.Get, ticket.Url);
             req.Headers.TryAddWithoutValidation("User-Agent", HttpGate.UserAgent);
+            if (ticket.Referer != null)
+            {
+                req.Headers.TryAddWithoutValidation("Referer", ticket.Referer);
+            }
             using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
             if (!resp.IsSuccessStatusCode)
             {
                 throw new HttpRequestException($"{new Uri(ticket.Url).Host} answered {(int)resp.StatusCode} for the download.");
+            }
+            if (item.Site == "loader" && resp.Content.Headers.ContentType?.MediaType == "text/html")
+            {
+                throw new HttpRequestException($"{new Uri(ticket.Url).Host} sent a web page instead of {item.ModName}. Get it from its website and add it with \"Add a mod from a file\".");
             }
             item.Total = resp.Content.Headers.ContentLength ?? ticket.Size;
             await using (var src = await resp.Content.ReadAsStreamAsync(cts.Token))

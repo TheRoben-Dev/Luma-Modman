@@ -10,6 +10,7 @@
   "runtime": "proton",
   "loader": "reframework",
   "loaderOptional": true,
+  "loaderAsset": "^RE8\\.zip$",
   "sites": {
     "nexus": "residentevilvillage",
     "curseforge": "resident-evil-village"

@@ -43,6 +43,7 @@ public partial class DesktopShell
             OverwritePage o => OverwriteDialog(o),
             ModFilesPage f => ModFilesDialog(f),
             ToolsPage t => ToolsDialog(t),
+            LoadersPage l => LoadersDialog(l),
             PickFilePage p => PickFileDialog(p),
             FomodPage f => FomodDialog(f),
             _ => null,
@@ -549,6 +550,99 @@ public partial class DesktopShell
             }
         };
         return ShowDialog(f, page);
+    }
+
+    private Window LoadersDialog(LoadersPage page)
+    {
+        var game = page.Game;
+        var d = new DesktopDialog($"Mod loaders: {game.Title}", new Vector2I(980, 560));
+        d.AddText(LoadersPage.About, DesktopTheme.Dim);
+        var tree = new Tree { HideRoot = true, Columns = 4, ColumnTitlesVisible = true, SizeFlagsVertical = SizeFlags.ExpandFill, SelectMode = Tree.SelectModeEnum.Row, TooltipText = "Loaders" };
+        string[] titles = ["Loader", "State", "Version", "About"];
+        for (var i = 0; i < titles.Length; i++)
+        {
+            tree.SetColumnTitle(i, titles[i]);
+            tree.SetColumnTitleAlignment(i, HorizontalAlignment.Left);
+            tree.SetColumnExpand(i, i == 3);
+        }
+        tree.SetColumnCustomMinimumWidth(0, 220);
+        tree.SetColumnCustomMinimumWidth(1, 130);
+        tree.SetColumnCustomMinimumWidth(2, 110);
+        d.Body.AddChild(tree);
+        var auto = new CheckBox { Text = "Install the loaders a mod needs by themselves", ButtonPressed = Host.Settings.AutoLoaders, TooltipText = "When a mod needs a loader Luma can fetch, it's installed with the mod." };
+        auto.Toggled += on => Host.SaveSettings(Host.Settings with { AutoLoaders = on });
+        d.Body.AddChild(auto);
+        List<LoaderStatus> all = new();
+        Button? needed = null;
+        LoaderStatus? Selected() => tree.GetSelected() is { } it ? all.FirstOrDefault(s => s.Loader.Id == it.GetMetadata(0).AsString()) : null;
+        void Fill()
+        {
+            if (!IsInstanceValid(tree))
+            {
+                return;
+            }
+            var keep = Selected()?.Loader.Id;
+            all = Host.Mods.LoaderStatus(game);
+            tree.Clear();
+            var root = tree.CreateItem();
+            foreach (var s in all)
+            {
+                var (state, color, detail) = LoadersPage.Describe(s);
+                var it = tree.CreateItem(root);
+                it.SetText(0, s.Loader.Name);
+                it.SetText(1, state);
+                it.SetCustomColor(1, color);
+                it.SetText(2, s.Mod?.Version ?? (s.Installed ? "in game folder" : ""));
+                it.SetText(3, detail);
+                it.SetTooltipText(3, detail);
+                it.SetCustomColor(3, DesktopTheme.Dim);
+                it.SetMetadata(0, s.Loader.Id);
+                if (s.Loader.Id == keep)
+                {
+                    it.Select(0);
+                }
+            }
+            var missing = all.Where(s => s.Missing).ToList();
+            needed!.Disabled = missing.Count == 0;
+            needed.Text = missing.Count == 0 ? "Nothing missing" : $"Install what's needed ({missing.Count})";
+        }
+        void Act()
+        {
+            if (Selected() is { } s)
+            {
+                var acts = LoadersPage.Actions(game, s, Fill);
+                App.Push(new ChoicePage($"{s.Loader.Name}: {s.Loader.About}", acts.Select(a => (a.Label, a.Run)).Append(("Cancel", () => { })).ToArray()));
+            }
+        }
+        tree.ItemActivated += Act;
+        void OnChanged(string key)
+        {
+            if (key == game.Key)
+            {
+                Callable.From(Fill).CallDeferred();
+            }
+        }
+        Host.Mods.Changed += OnChanged;
+        tree.TreeExiting += () => Host.Mods.Changed -= OnChanged;
+        needed = d.AddButton("Install what's needed", () => { ModActions.InstallMissingLoaders(game); Fill(); }, tooltip: "Fetches every loader your mods need that isn't installed yet.");
+        d.AddButton("Install / update", () =>
+        {
+            if (Selected() is { } s)
+            {
+                ModActions.InstallLoader(game, s.Loader);
+            }
+        }, tooltip: "Fetches the newest official release of the selected loader.");
+        d.AddButton("Website", () =>
+        {
+            if (Selected() is { } s)
+            {
+                ModActions.OpenUrl(ModActions.LoaderPage(s.Loader));
+            }
+        });
+        d.AddButton("More…", Act, tooltip: "Everything you can do with the selected loader (double-click does the same).");
+        d.AddButton("Close", () => App.Close(page), primary: true);
+        Fill();
+        return ShowDialog(d, page, tree);
     }
 
     private Window ToolsDialog(ToolsPage page)

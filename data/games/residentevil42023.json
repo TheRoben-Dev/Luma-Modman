@@ -10,6 +10,7 @@
   "runtime": "proton",
   "loader": "reframework",
   "loaderOptional": true,
+  "loaderAsset": "^RE4\\.zip$",
   "sites": {
     "nexus": "residentevil42023",
     "curseforge": "resident-evil-4-remake"

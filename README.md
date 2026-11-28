@@ -71,7 +71,8 @@ Select), and every tab works on that game. Games still start from Steam or their
   Steam, the Epic Games Launcher, GOG Galaxy and Heroic.
 - **Mods**: the game's setup (loader, where mods go, Proton or native) and its mods: per-game
   profiles, enable/disable with Y, load order, conflict and missing-dependency warnings, update
-  checks and rollback. Loaders (BepInEx, MelonLoader, UE4SS) install from their official releases.
+  checks and rollback. Mod loaders and script extenders install by themselves from their official
+  releases when a mod needs them (see "Mod loaders" below).
   Bethesda games get their plugin list (plugins.txt, masters first, in mod order, single plugins
   on or off under Plugins) and archive invalidation written while mods are in, and put back after.
   Plugin headers are read: missing masters, masters loading too late and the plugin limit are
@@ -163,6 +164,26 @@ data/steam-art/    Steam library art (drawn by tools/art/make_steam_art.py)
 tools/release/     packaging, install.sh (Linux) and windows/ (Install Luma.cmd, install.ps1, uninstall.ps1);
                    CI publishes a release, both platforms, when the version changes
 ```
+
+## Mod loaders
+
+`data/loaders.json` lists 42 loaders and script extenders. When a mod's files or its listed
+requirements show it needs one (an SKSE plugin, a .reds script, a UE4SS Lua mod, "Requires Cyber
+Engine Tweaks"), Luma fetches the newest official release, installs it like a mod, sets the Wine
+DLL overrides it needs under Proton, and starts the game through its launcher where it has one.
+Check for updates covers loaders too; Mods → Mod loaders shows each one's state in both layouts.
+
+- Fetched by Luma: BepInEx 5 and 6 (IL2CPP), MelonLoader, UE4SS, REFramework (the right build per
+  game), SKSE64, SKSE, F4SE, FOSE (from their own sites), SFSE, xNVSE, xOBSE, MWSE, Cyber Engine
+  Tweaks, RED4ext, redscript, ArchiveXL, TweakXL, Codeware, BG3 and DOS2 Script Extenders, Mod
+  Engine 1 and 2, Script Hook V, Script Hook RDR2, Ultimate ASI Loader, SMAPI, BLSE, Northstar,
+  Lovely, GDWeave, Hell2Modding, MSC Mod Loader.
+- From their own page (Luma links it and installs the download): Unity Mod Manager, OBSE64, Darktide
+  Mod Loader, Lenny's Mod Loader, Harmony for Bannerlord, Elden Mod Loader, Stracker's Loader,
+  tModLoader (a free Steam app).
+- Baldur's Gate 3: modsettings.lsx follows your mod order. The Witcher 3: mods keep their modXxx
+  folder, and Luma warns when two mods change the same script (merge them with Script Merger
+  under Tools).
 
 ## Supported games
 

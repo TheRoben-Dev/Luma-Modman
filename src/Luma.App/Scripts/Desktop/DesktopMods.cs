@@ -391,11 +391,22 @@ public partial class DesktopMods : VBoxContainer
                 mods.NotifyChanged(game);
             });
         }
-        var packNeeded = store.MissingDependencies().Any(m => m.Missing.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase));
-        if (!packNeeded && ModActions.MissingLoader(game) is { } loader)
+        var packNeeded = Host.Mods.MissingDependencies(game).Any(m => m.Missing.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase));
+        var missingLoaders = packNeeded ? [] : Host.Mods.LoaderStatus(game).Where(s => s.Missing).ToList();
+        if (missingLoaders.Count > 0)
         {
-            Banner($"{loader.Name} isn't installed. {loader.About}", game.Profile.LoaderOptional ? DesktopTheme.Dim : DesktopTheme.Warn,
+            Banner(ModActions.MissingLoadersText(game, missingLoaders), DesktopTheme.Warn,
+                missingLoaders.All(s => s.Loader.AutoInstall) ? (missingLoaders.Count == 1 ? $"Install {missingLoaders[0].Loader.Name}" : "Install them") : "Get them…",
+                () => ModActions.InstallMissingLoaders(game));
+        }
+        else if (!packNeeded && ModActions.MissingLoader(game) is { } loader && store.State.Mods.Count == 0)
+        {
+            Banner($"{loader.Name} isn't installed. {loader.About} Luma installs it with the first mod that needs it.", DesktopTheme.Dim,
                 loader.AutoInstall ? $"Install {loader.Name}" : "Get it…", () => ModActions.InstallLoader(game, loader));
+        }
+        if (ModActions.ScriptClashText(game) is { } clash)
+        {
+            Banner(clash, DesktopTheme.Warn, $"Merge with {game.Profile.ScriptMerge!.Tool}…", () => ModActions.MergeScripts(game));
         }
         var pending = store.State.Pending();
         if (pending > 0)
@@ -409,7 +420,7 @@ public partial class DesktopMods : VBoxContainer
             Banner($"Overwrite: {made} file{(made == 1 ? "" : "s")} the game or a tool made while the mods were in. They're kept out of the game folder and go in last, after every mod.",
                 DesktopTheme.Accent, "Overwrite…", () => App.Push(new OverwritePage(game)));
         }
-        var missing = store.MissingDependencies().GroupBy(m => m.Missing.Id).Select(g => g.First()).ToList();
+        var missing = Host.Mods.MissingDependencies(game).GroupBy(m => m.Missing.Id).Select(g => g.First()).ToList();
         if (missing.Count > 0)
         {
             var names = string.Join(", ", missing.Take(4).Select(m => m.Missing.Name)) + (missing.Count > 4 ? "…" : "");

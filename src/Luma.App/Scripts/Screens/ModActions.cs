@@ -17,9 +17,21 @@ public static class ModActions
     public static void Download(IModSource site, DetectedGame game, ModSummary mod, ModFile file, IReadOnlyList<ModDependency>? needs = null)
     {
         // The game's loader comes first (once), unless the mod brings its own (a Thunderstore BepInExPack dependency).
-        if (MissingLoader(game) is { AutoInstall: true, } loader && !game.Profile.LoaderOptional && !(needs ?? file.Dependencies).Any(d => d.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase)))
+        var deps = needs ?? file.Dependencies;
+        if (MissingLoader(game) is { AutoInstall: true, } loader && !game.Profile.LoaderOptional && !deps.Any(d => d.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase)))
         {
             InstallLoader(game, loader);
+        }
+        // Loaders the mod lists as requirements ("Cyber Engine Tweaks", "RED4ext") come along too.
+        if (Host.Settings.AutoLoaders)
+        {
+            foreach (var l in LoaderInstaller.MissingFor(game, Host.Games.Catalog, Host.Mods.Store(game), deps).Where(l => l.AutoInstall))
+            {
+                if (Host.QueueLoader(game, l) is { } item)
+                {
+                    App.Success($"{mod.Name} needs {l.Name}: downloading it too");
+                }
+            }
         }
         if (site is NexusSource nexus && !(nexus.HasKey && Host.Keys.Current.NexusPremium))
         {
@@ -187,6 +199,28 @@ public static class ModActions
         App.Toast("Checking for updates…");
         foreach (var mod in store.State.Mods.Where(m => m.ModId.Length > 0).ToList())
         {
+            if (mod.Site == "loader")
+            {
+                // Loaders: their newest official release.
+                if (Host.Games.Catalog.Loaders.TryGetValue(mod.ModId, out var l) && l.AutoInstall)
+                {
+                    try
+                    {
+                        var (_, version, _) = await LoaderInstaller.LatestAsync(Host.Sites.Http, l, game.Profile);
+                        var newer = version.Length > 0 && mod.Version.Length > 0 && !SameVersion(version, mod.Version) ? version : null;
+                        found += newer != null ? 1 : 0;
+                        if (store.State.Find(mod.Id) is { } cur && cur.UpdateVersion != newer)
+                        {
+                            store.Save(store.State with { Mods = store.State.Mods.Select(m => m.Id == mod.Id ? m with { UpdateVersion = newer } : m).ToList() });
+                        }
+                    }
+                    catch (Exception e) when (Main.IsUserFacing(e))
+                    {
+                        failed++;
+                    }
+                }
+                continue;
+            }
             var site = Host.Sites.All.FirstOrDefault(s => s.Id == mod.Site);
             if (site == null || !site.Ready || !site.Carries(game.Profile))
             {
@@ -216,6 +250,21 @@ public static class ModActions
         App.Toast(found > 0 ? $"{found} update{(found == 1 ? "" : "s")} available." : failed > 0 ? $"Everything checked is up to date ({failed} couldn't be checked)." : "Everything is up to date.");
     }
 
+    /// <summary>"v1.2.0" and "1.2" are the same version.</summary>
+    public static bool SameVersion(string a, string b)
+    {
+        static string N(string v)
+        {
+            var parts = System.Text.RegularExpressions.Regex.Replace(v, "^[^0-9]*", "").Split('.', '_', '-').Select(p => p.TrimStart('0') is { Length: > 0 } t ? t : "0").ToList();
+            while (parts.Count > 1 && parts[^1] == "0")
+            {
+                parts.RemoveAt(parts.Count - 1);
+            }
+            return string.Join('.', parts);
+        }
+        return N(a) == N(b);
+    }
+
     /// <summary>Mods that have a newer version waiting (found by Check for updates).</summary>
     public static List<InstalledMod> Updatable(DetectedGame game) =>
         Host.Mods.Store(game).State.Mods.Where(m => m.UpdateVersion != null && m.ModId.Length > 0).ToList();
@@ -237,6 +286,14 @@ public static class ModActions
         App.Toast($"Updating {mods.Count} mod{(mods.Count == 1 ? "" : "s")}…");
         foreach (var mod in mods)
         {
+            if (mod.Site == "loader")
+            {
+                if (Host.Games.Catalog.Loaders.TryGetValue(mod.ModId, out var l) && Host.QueueLoader(game, l) != null)
+                {
+                    queued++;
+                }
+                continue;
+            }
             var site = Host.Sites.All.FirstOrDefault(s => s.Id == mod.Site);
             if (site == null || !site.Ready || !site.Carries(game.Profile))
             {
@@ -295,7 +352,7 @@ public static class ModActions
         return p.Loader != null && Host.Games.Catalog.Loaders.TryGetValue(p.Loader, out var l) && !LoaderInstaller.Installed(game, l, Host.Mods.Store(game).State) ? l : null;
     }
 
-    /// <summary>Queues the loader's newest official release; it installs like a mod.</summary>
+    /// <summary>Queues the loader's newest official release (it installs like a mod), or explains where to get it.</summary>
     public static void InstallLoader(DetectedGame game, LoaderInfo l)
     {
         if (!l.AutoInstall)
@@ -305,30 +362,84 @@ public static class ModActions
                 ("Open the website", () => OpenUrl(LoaderPage(l))), ("Add a mod from a file", () => App.Push(new AddFilePage(game))), ("Cancel", () => { })));
             return;
         }
-        if (Host.Downloads.Items.Any(i => i.Site == "loader" && i.ModId == l.Id && i.Game == game.Key && i.State is DownloadState.Queued or DownloadState.Downloading))
+        // Loaders it needs come first (RED4ext before ArchiveXL).
+        var store = Host.Mods.Store(game);
+        foreach (var need in LoaderRules.WithRequired([l.Id], Host.Games.Catalog.Loaders).Select(id => Host.Games.Catalog.Loaders[id]))
         {
+            if (need.Id == l.Id || !LoaderInstaller.Installed(game, need, store.State))
+            {
+                if (Host.QueueLoader(game, need) is { } item)
+                {
+                    App.Success($"Downloading {item.ModName}");
+                }
+            }
+        }
+    }
+
+    /// <summary>A banner line when mods change the same scripts (The Witcher 3), or null.</summary>
+    public static string? ScriptClashText(DetectedGame game)
+    {
+        if (game.Profile.ScriptMerge is not { } sm)
+        {
+            return null;
+        }
+        var clashes = Host.Mods.Store(game).ScriptClashes(sm);
+        if (clashes.Count == 0)
+        {
+            return null;
+        }
+        var mods = clashes.Values.SelectMany(v => v).Distinct().ToList();
+        var names = string.Join(", ", mods.Take(3)) + (mods.Count > 3 ? $" and {mods.Count - 3} more" : "");
+        return $"{clashes.Count} script{(clashes.Count == 1 ? " is" : "s are")} changed by more than one mod ({names}). Only one change is used until you merge them with {sm.Tool}.";
+    }
+
+    /// <summary>Runs the game's script merge tool when it's under Tools, else opens its page.</summary>
+    public static void MergeScripts(DetectedGame game)
+    {
+        var sm = game.Profile.ScriptMerge!;
+        var tool = Host.Mods.Store(game).State.Tools.FirstOrDefault(t => t.Name.Contains("Merger", StringComparison.OrdinalIgnoreCase) || t.Exe.Contains("ScriptMerger", StringComparison.OrdinalIgnoreCase));
+        if (tool != null)
+        {
+            ToolsPage.Run(game, tool);
             return;
         }
-        Queue(new DownloadItem
+        App.Push(new ChoicePage($"{sm.Tool} merges script mods so they work together. Download it from its page, unpack it, then add WitcherScriptMerger.exe under Tools: Luma runs it with your mods in.",
+            ("Open its page", () => OpenUrl(sm.Url)), ("Tools", () => App.Push(new ToolsPage(game))), ("Cancel", () => { })));
+    }
+
+    /// <summary>"Better Vehicles needs RED4ext and ArchiveXL." for a banner.</summary>
+    public static string MissingLoadersText(DetectedGame game, IReadOnlyList<LoaderStatus> missing)
+    {
+        var names = missing.Select(s => s.Loader.Name).ToList();
+        var list = names.Count == 1 ? names[0] : string.Join(", ", names.Take(names.Count - 1)) + " and " + names[^1];
+        var who = missing.SelectMany(s => s.NeededBy).Distinct().ToList();
+        var subject = who.Count switch
         {
-            Site = "loader",
-            Game = game.Key,
-            ModId = l.Id,
-            ModName = l.Name,
-            PageUrl = "https://github.com/" + l.Source["github:".Length..],
-        }, async ct => (await LoaderInstaller.LatestAsync(Host.Sites.Http, l, ct)).Ticket);
+            0 => $"Mods for {game.Title}",
+            1 => who[0],
+            _ => $"{who[0]} and {who.Count - 1} more mod{(who.Count == 2 ? "" : "s")}",
+        };
+        var verb = who.Count == 1 ? "needs" : "need";
+        var how = missing.All(s => s.Loader.AutoInstall) ? "Luma can install " + (names.Count == 1 ? "it" : "them") + " now." : "Some come from their own website.";
+        return $"{subject} {verb} {list}. {how}";
+    }
+
+    /// <summary>Installs every loader something needs that isn't there yet; ones from websites are listed for the player.</summary>
+    public static void InstallMissingLoaders(DetectedGame game)
+    {
+        var missing = Host.Mods.LoaderStatus(game).Where(s => s.Missing).Select(s => s.Loader).ToList();
+        var queued = Host.QueueMissingLoaders(game);
+        var manual = missing.Where(l => !l.AutoInstall).ToList();
+        if (manual.Count > 0)
+        {
+            InstallLoader(game, manual[0]);
+        }
+        else if (queued.Count > 0)
+        {
+            App.Success($"Downloading {string.Join(", ", queued.Select(l => l.Name))}");
+        }
     }
 
     /// <summary>A loader's download page: GitHub releases, its Nexus page or its homepage.</summary>
-    public static string? LoaderPage(LoaderInfo l)
-    {
-        var (kind, rest) = l.Source.IndexOf(':') is var i and > 0 && !l.Source.StartsWith("http") ? (l.Source[..i], l.Source[(i + 1)..]) : ("url", l.Source);
-        return kind switch
-        {
-            "github" => $"https://github.com/{rest}/releases/latest",
-            "nexus" when rest.Split('/') is [var domain, var id] => $"https://www.nexusmods.com/{domain}/mods/{id}",
-            "thunderstore" => $"https://thunderstore.io/package/{rest}/",
-            _ => l.Source.StartsWith("http") ? l.Source : null,
-        };
-    }
+    public static string? LoaderPage(LoaderInfo l) => AppHost.LoaderPage(l);
 }

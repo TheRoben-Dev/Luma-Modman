@@ -79,6 +79,43 @@ public sealed record GameProfile
     /// <summary>True when only some mods need the loader (installed when the first such mod is).</summary>
     public bool LoaderOptional { get; init; }
 
+    /// <summary>
+    /// More loaders and frameworks some of the game's mods use (Cyberpunk 2077: RED4ext, redscript,
+    /// ArchiveXL...). Luma installs one when a mod needs it: by the mod's files or its listed requirements.
+    /// </summary>
+    public List<string> Loaders { get; init; } = new();
+
+    /// <summary>Picks the loader's release file for this game, when the loader ships one per game (REFramework: "^RE4\.zip$").</summary>
+    public string? LoaderAsset { get; init; }
+
+    /// <summary>Where the main loader goes for this game, relative to the game folder, when not where the loader says.</summary>
+    public string? LoaderDir { get; init; }
+
+    /// <summary>Arguments for the main loader's launcher in this game (Mod Engine 2: "-t", "er", "-c", "config_eldenring.toml").</summary>
+    public List<string> LoaderArgs { get; init; } = new();
+
+    /// <summary>
+    /// Where loose files of a flat archive go, by extension (Cyberpunk: ".archive" → "archive/pc/mod"),
+    /// for mods packed as just their files.
+    /// </summary>
+    public Dictionary<string, string> FileRules { get; init; } = new();
+
+    /// <summary>
+    /// A folder every mod has inside its own folder (The Witcher 3: "content", as in modX/content/scripts):
+    /// archives keep their mod folder, and one without gets a folder named after the mod.
+    /// </summary>
+    public string? ModFolderMarker { get; init; }
+
+    /// <summary>A Larian-style module list (modsettings.lsx) Luma keeps in step with the enabled .pak mods; null for other games.</summary>
+    public string? ModSettings { get; init; }
+
+    /// <summary>Mods change the game's scripts and clash when two change the same one (The Witcher 3: Script Merger fixes it).</summary>
+    public ScriptMerge? ScriptMerge { get; init; }
+
+    /// <summary>Every loader the game knows: the main one first, then <see cref="Loaders"/>.</summary>
+    [JsonIgnore]
+    public IEnumerable<string> AllLoaders => (Loader is { } l ? new[] { l } : []).Concat(Loaders).Distinct();
+
     public SiteIds Sites { get; init; } = new();
 
     /// <summary>Extra Wine DLL overrides beyond the loader's own ("dinput8=n,b").</summary>
@@ -145,9 +182,13 @@ public sealed record GameProfile
         }
         if (Moddable)
         {
-            if (Loader != null && !loaderIds.Contains(Loader))
+            foreach (var l in AllLoaders.Where(l => !loaderIds.Contains(l)))
             {
-                errors.Add($"unknown loader '{Loader}'");
+                errors.Add($"unknown loader '{l}'");
+            }
+            if (ModSettings is { } ms && !ms.StartsWith('{'))
+            {
+                errors.Add("modSettings must start with a location token");
             }
             if (!Sites.Names().Any())
             {
@@ -221,6 +262,20 @@ public sealed record PluginSettings
 /// <summary>One INI value: [Section] Key=Value in File (a location token path).</summary>
 public sealed record IniSetting(string File, string Section, string Key, string Value);
 
+/// <summary>Scripts that clash between mods and the tool that merges them.</summary>
+public sealed record ScriptMerge
+{
+    /// <summary>The scripts' folder inside each mod ("content/scripts").</summary>
+    public string Folder { get; init; } = "";
+
+    /// <summary>Their extension (".ws").</summary>
+    public string Extension { get; init; } = "";
+
+    /// <summary>The merge tool's name and page.</summary>
+    public string Tool { get; init; } = "";
+    public string Url { get; init; } = "";
+}
+
 /// <summary>A community site for a game, used through the browser (see <see cref="GameProfile.Links"/>).</summary>
 public sealed record GameLink
 {
@@ -241,7 +296,10 @@ public sealed record LoaderInfo
     public string Id { get; init; } = "";
     public string Name { get; init; } = "";
 
-    /// <summary>Where Luma gets it: "github:owner/repo", "nexus:domain/modId", "thunderstore:team/package" or a homepage URL.</summary>
+    /// <summary>
+    /// Where Luma gets it: "github:owner/repo" (newest release), "page:https://..." (the first link on that
+    /// page matching <see cref="Asset"/>), "nexus:domain/modId", "thunderstore:team/package" or a homepage URL.
+    /// </summary>
     public string Source { get; init; } = "";
 
     /// <summary>Wine DLL overrides it needs under Proton ("winhttp=n,b").</summary>
@@ -250,7 +308,10 @@ public sealed record LoaderInfo
     /// <summary>What it is, in one line, for the game page.</summary>
     public string About { get; init; } = "";
 
-    /// <summary>For GitHub sources: a regular expression picking the release file to install (Windows build, for Proton).</summary>
+    /// <summary>
+    /// A regular expression picking the file to install: a GitHub release asset's name, or a link on a "page:" source.
+    /// GitHub sources without one pick the release's Windows archive by name.
+    /// </summary>
     public string? Asset { get; init; }
 
     /// <summary>
@@ -259,9 +320,53 @@ public sealed record LoaderInfo
     /// </summary>
     public string? Launcher { get; init; }
 
+    /// <summary>The launcher for a game's native Linux build, when it's another file (SMAPI: "StardewModdingAPI").</summary>
+    public string? NativeLauncher { get; init; }
+
+    /// <summary>Arguments the launcher needs before the game's own.</summary>
+    public List<string> LaunchArgs { get; init; } = new();
+
+    /// <summary>
+    /// A file that only the loader has ("RED4ext.dll"): it marks where the loader's files start in its
+    /// archive, and an archive added by hand that holds it is installed as the loader.
+    /// Defaults to the launcher's file name.
+    /// </summary>
+    public string? Anchor { get; init; }
+
+    /// <summary>The anchor file is generic ("dinput8.dll"): don't take any archive holding it for this loader.</summary>
+    public bool SharedAnchor { get; init; }
+
+    /// <summary>
+    /// The folder the anchor file goes in, relative to the game folder ("red4ext"). "{exeDir}" is the
+    /// folder of the game's program. Defaults to the launcher's folder, else the game folder.
+    /// </summary>
+    public string? InstallDir { get; init; }
+
+    /// <summary>Files or folders (relative to the game folder, "{exeDir}" allowed) that show the loader is installed.</summary>
+    public List<string> Detect { get; init; } = new();
+
+    /// <summary>Other loaders it needs (ArchiveXL needs RED4ext).</summary>
+    public List<string> Requires { get; init; } = new();
+
+    /// <summary>
+    /// Signs in a mod's files that it needs this loader: "/red4ext/plugins/" (a folder anywhere in the
+    /// path), "*.reds" (an extension) or "/scripts/main.lua" (a path ending).
+    /// </summary>
+    public List<string> Signatures { get; init; } = new();
+
+    /// <summary>Names mod sites use for it in a mod's requirements ("Cyber Engine Tweaks", "CET").</summary>
+    public List<string> Aliases { get; init; } = new();
+
+    /// <summary>How its archive installs: "files" (as laid out) or "smapi" (SMAPI's installer bundle, unpacked for this OS).</summary>
+    public string Kind { get; init; } = "files";
+
     /// <summary>The loader's files go in the launcher's folder ("" for the game folder).</summary>
     public string LauncherDir => Launcher == null ? "" : Path.GetDirectoryName(Launcher.Replace('\\', '/'))?.Replace('\\', '/') ?? "";
 
-    /// <summary>True when Luma can download and install it by itself (a GitHub release with a known file).</summary>
-    public bool AutoInstall => Source.StartsWith("github:", StringComparison.Ordinal) && Asset != null;
+    /// <summary>The anchor in effect: <see cref="Anchor"/>, else the launcher's file name.</summary>
+    [JsonIgnore]
+    public string? AnchorFile => Anchor ?? (Launcher != null ? Path.GetFileName(Launcher.Replace('\\', '/')) : null);
+
+    /// <summary>True when Luma can download and install it by itself (a GitHub release, or a page with a known link).</summary>
+    public bool AutoInstall => Source.StartsWith("github:", StringComparison.Ordinal) || (Source.StartsWith("page:", StringComparison.Ordinal) && Asset != null);
 }

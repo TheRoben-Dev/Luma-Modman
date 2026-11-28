@@ -10,6 +10,7 @@
   "runtime": "proton",
   "loader": "reframework",
   "loaderOptional": true,
+  "loaderAsset": "^DD2\\.zip$",
   "sites": {
     "nexus": "dragonsdogma2"
   }

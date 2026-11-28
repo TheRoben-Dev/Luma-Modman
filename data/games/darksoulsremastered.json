@@ -9,7 +9,7 @@
   ],
   "runtime": "proton",
   "modsPath": "mods",
-  "loader": "modengine2",
+  "loader": "modengine",
   "sites": {
     "nexus": "darksoulsremastered"
   },

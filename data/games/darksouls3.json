@@ -10,6 +10,12 @@
   "runtime": "proton",
   "modsPath": "Game/mods",
   "loader": "modengine2",
+  "loaderArgs": [
+    "-t",
+    "ds3",
+    "-c",
+    "config_darksouls3.toml"
+  ],
   "sites": {
     "nexus": "darksouls3"
   },

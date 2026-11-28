@@ -10,6 +10,7 @@
   "runtime": "proton",
   "loader": "reframework",
   "loaderOptional": true,
+  "loaderAsset": "^DMC5\\.zip$",
   "sites": {
     "nexus": "devilmaycry5"
   }
