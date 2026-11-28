@@ -91,7 +91,8 @@ public sealed record ModDetails
 }
 
 /// <summary>What to download: a URL the site handed out, and the file name to keep it under.</summary>
-public sealed record DownloadTicket(string Url, string FileName, long Size = 0);
+/// <param name="Referer">Sent with the download, for sites that only hand out files to visitors of their page.</param>
+public sealed record DownloadTicket(string Url, string FileName, long Size = 0, string? Referer = null);
 
 /// <summary>The site won't let Luma download this file (author opted out, Premium needed...): send the player to the site.</summary>
 public sealed class DownloadNotAllowedException(string message, string? pageUrl) : InvalidOperationException(message)

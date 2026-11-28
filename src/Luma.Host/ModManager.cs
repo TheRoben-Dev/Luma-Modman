@@ -2,6 +2,7 @@ using Luma.Core;
 using Luma.Core.Detection;
 using Luma.Core.Games;
 using Luma.Core.Mods;
+using Luma.Core.Sources;
 
 namespace Luma.Host;
 
@@ -25,6 +26,22 @@ public sealed class ModManager
     /// <summary>The game's loader, if its profile names one.</summary>
     public LoaderInfo? Loader(DetectedGame game) =>
         game.Profile.Loader is { } id && _catalog?.Loaders.TryGetValue(id, out var l) == true ? l : null;
+
+    /// <summary>All the game's loaders (main one first), with the loaders they need.</summary>
+    public List<LoaderInfo> Loaders(DetectedGame game) =>
+        _catalog == null ? [] : LoaderRules.WithRequired(game.Profile.AllLoaders, _catalog.Loaders).Select(id => _catalog.Loaders[id])
+            .OrderBy(l => l.Id == game.Profile.Loader ? 0 : 1).ToList();
+
+    /// <summary>Needed mods that aren't installed, leaving out loaders (Luma installs those itself, from their official release).</summary>
+    public List<(InstalledMod Mod, ModDependency Missing)> MissingDependencies(DetectedGame game)
+    {
+        var loaders = Loaders(game);
+        return Store(game).MissingDependencies().Where(x => !loaders.Any(l => LoaderRules.IsDependency(l, x.Missing.Name))).ToList();
+    }
+
+    /// <summary>The game's loaders and what needs them.</summary>
+    public List<LoaderStatus> LoaderStatus(DetectedGame game) =>
+        _catalog == null ? [] : LoaderInstaller.Status(game, _catalog, Store(game));
 
     /// <summary>Raised after a game's mods or deploy state change (any thread).</summary>
     public event Action<string>? Changed;
@@ -58,15 +75,18 @@ public sealed class ModManager
         {
             throw new InvalidOperationException($"{game.Title} can't be modded safely: {game.Profile.NotModdable}");
         }
-        var loader = Loader(game);
+        var loaders = Loaders(game);
         var store = Store(game);
         // An update or reinstall uses the FOMOD options picked last time.
         if (mod.Fomod == null && store.State.Find(mod.Id)?.Fomod is { } earlier)
         {
             mod = mod with { Fomod = earlier };
         }
-        var installed = store.Install(archive, mod, game.Profile, gamePrefix ?? (mod.Site == "loader" ? LoaderInstaller.InstallPath(game.Profile, loader) : null), loader, onlyProfile,
-            f => FileState(game, f));
+        var installed = store.Install(archive, mod, game.Profile, gamePrefix, loaders, onlyProfile, f => FileState(game, f));
+        if (installed.Site == "loader" && loaders.FirstOrDefault(l => l.Id == installed.ModId) is { } asLoader)
+        {
+            LoaderInstaller.AfterInstall(game.Profile, asLoader, store.ModDir(installed.Id));
+        }
         AppLog.Info($"installed {mod.Id} {mod.Version} for {game.Key} ({installed.Files} files)");
         Changed?.Invoke(game.Key);
         return installed;

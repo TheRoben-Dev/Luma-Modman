@@ -1286,6 +1286,8 @@ public partial class Main : Control
                 Callable.From(() => Toast($"{item.ModName} has install options. Choose them in Downloads.")).CallDeferred();
             }
         };
+        Host.LoaderQueued += (loader, mod) => Callable.From(() =>
+            Success(mod != null ? $"{mod} needs {loader.Name}: installing it too" : $"Installing {loader.Name}")).CallDeferred();
         Host.StartAutoInstall();
         UpdateDownloadsBadge();
     }

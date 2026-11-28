@@ -33,7 +33,7 @@
     "{mygames}/Skyrim Special Edition/SkyrimCustom.ini"
   ],
   "quirks": [
-    "Script-extender mods need SKSE64. Add it from a file like any mod; Luma then starts the game through skse64_loader.exe.",
+    "Script-extender mods need SKSE64. Luma installs it from its website when the first such mod arrives, and starts the game through skse64_loader.exe.",
     "Anniversary Edition content is part of the same game.",
     "Luma keeps plugins.txt in step with your mods while they're in the game: plugins (.esp/.esm/.esl) of enabled mods are turned on, masters first, in your mod order. Turn single plugins off under Plugins."
   ]

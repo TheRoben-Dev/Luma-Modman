@@ -281,6 +281,15 @@ public static class GameSetup
                 SetDates(modsDir, settings, plugins, plan);
             }
         }
+        if (game.Profile.ModSettings is { } ms && modsDir != null && GamePaths.ResolvePath(game, ms, home) is { } lsx)
+        {
+            var mods = LarianModules(plan, modsDir, state);
+            if (mods.Count > 0)
+            {
+                var existing = File.Exists(lsx) ? File.ReadAllText(lsx) : null;
+                Write(lsx, Larian.ModSettings(existing, mods, mods.Select(x => x.Uuid.ToLowerInvariant()).ToHashSet()), m, backupDir);
+            }
+        }
         foreach (var group in game.Profile.Ini.GroupBy(i => i.File, StringComparer.OrdinalIgnoreCase))
         {
             if (GamePaths.ResolvePath(game, group.Key, home) is not { } ini)
@@ -300,6 +309,25 @@ public static class GameSetup
             Write(ini, text, m, backupDir);
         }
         return plugins;
+    }
+
+    /// <summary>The modules of the .pak files the plan puts at the top of the mods folder, in the profile's load order.</summary>
+    public static List<LarianModule> LarianModules(DeployPlan plan, string modsDir, GameMods state)
+    {
+        var rank = state.Order.Select((e, i) => (e.Id, i)).ToDictionary(x => x.Id, x => x.i);
+        var dir = Path.GetFullPath(modsDir).TrimEnd(Path.DirectorySeparatorChar);
+        var list = new List<LarianModule>();
+        foreach (var f in plan.Files
+                     .Where(f => f.Key.EndsWith(".pak", StringComparison.OrdinalIgnoreCase) && string.Equals(Path.GetDirectoryName(Path.GetFullPath(f.Key)), dir, Platform.PathComparison))
+                     .OrderBy(f => rank.GetValueOrDefault(f.Value.ModId, int.MaxValue)).ThenBy(f => f.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            var info = Path.Combine(Path.GetDirectoryName(f.Value.Source)!, "info.json");
+            if (Larian.Module(f.Value.Source, info) is { } mod && !list.Any(x => x.Uuid.Equals(mod.Uuid, StringComparison.OrdinalIgnoreCase)))
+            {
+                list.Add(mod);
+            }
+        }
+        return list;
     }
 
     /// <summary>Puts a generated file in place: the existing one is moved aside (restored at undeploy).</summary>

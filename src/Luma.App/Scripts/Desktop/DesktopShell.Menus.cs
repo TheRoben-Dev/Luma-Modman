@@ -151,14 +151,16 @@ public partial class DesktopShell
             yield break;
         }
         var store = Host.Mods.Store(game);
-        yield return new MenuItem("Check for updates", () => ModActions.CheckUpdates(game), "Ctrl+U", store.State.Mods.Any(m => m.Site is "thunderstore" or "nexus" or "modio" or "curseforge"));
+        yield return new MenuItem("Check for updates", () => ModActions.CheckUpdates(game), "Ctrl+U", store.State.Mods.Any(m => m.Site is "thunderstore" or "nexus" or "modio" or "curseforge" or "loader"));
         yield return new MenuItem("Update all", () => ModActions.UpdateAll(game), "", ModActions.Updatable(game).Count > 0);
-        var missing = store.MissingDependencies().GroupBy(m => m.Missing.Id).Select(g => g.First().Missing).ToList();
+        var missing = Host.Mods.MissingDependencies(game).GroupBy(m => m.Missing.Id).Select(g => g.First().Missing).ToList();
         yield return new MenuItem(missing.Count > 0 ? $"Get {missing.Count} missing needed mod{(missing.Count == 1 ? "" : "s")}" : "No needed mods missing",
             () => ModsScreen.GetMissing(game, missing), "", missing.Count > 0);
-        if (ModActions.MissingLoader(game) is { } loader)
+        var loaders = Host.Mods.LoaderStatus(game);
+        if (loaders.Count > 0)
         {
-            yield return new MenuItem($"Install {loader.Name}", () => ModActions.InstallLoader(game, loader));
+            var miss = loaders.Count(s => s.Missing);
+            yield return new MenuItem(miss > 0 ? $"Mod loaders ({miss} needed)…" : "Mod loaders…", () => App.Push(new LoadersPage(game)), "Ctrl+L");
         }
         yield return Separator;
         yield return new MenuItem("Move selected mod up", () => _mods.MoveSelected(-1), "Ctrl+Up", _mods.HasSelection);

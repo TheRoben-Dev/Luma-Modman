@@ -89,11 +89,27 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
             items.Add(row);
         }
         // A Thunderstore mod that needs BepInExPack gets the loader through "needed mods" instead.
-        var packNeeded = store.MissingDependencies().Any(m => m.Missing.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase));
-        if (!packNeeded && ModActions.MissingLoader(game) is { } loader)
+        var packNeeded = Host.Mods.MissingDependencies(game).Any(m => m.Missing.Name.StartsWith("BepInExPack", StringComparison.OrdinalIgnoreCase));
+        if (ModActions.ScriptClashText(game) is { } clash)
         {
-            var row = new ListRow($"Install {loader.Name}", loader.About, loader.AutoInstall ? "Get it" : "Website", game.Profile.LoaderOptional ? UiTheme.Dim : UiTheme.Warn, null,
-                () => ModActions.InstallLoader(game, loader), $"{loader.Name}: {(game.Profile.LoaderOptional ? "some mods need it." : "mods for this game need it.")}");
+            var row = new ListRow($"Merge scripts with {game.Profile.ScriptMerge!.Tool}", clash, "Merge", UiTheme.Warn, null, () => ModActions.MergeScripts(game), clash);
+            scrollCol.AddChild(row);
+            items.Add(row);
+        }
+        var loaderStatus = Host.Mods.LoaderStatus(game);
+        var missingLoaders = packNeeded ? [] : loaderStatus.Where(s => s.Missing).ToList();
+        if (missingLoaders.Count > 0)
+        {
+            var loadersTitle = missingLoaders.Count == 1 ? $"Install {missingLoaders[0].Loader.Name}" : $"Install {missingLoaders.Count} mod loaders";
+            var row = new ListRow(loadersTitle, ModActions.MissingLoadersText(game, missingLoaders), missingLoaders.All(s => s.Loader.AutoInstall) ? "Get it" : "Website", UiTheme.Warn, null,
+                () => ModActions.InstallMissingLoaders(game), "Mods here need these to work.");
+            scrollCol.AddChild(row);
+            items.Add(row);
+        }
+        else if (!packNeeded && ModActions.MissingLoader(game) is { } loader && state.Mods.Count == 0)
+        {
+            var row = new ListRow($"Install {loader.Name}", loader.About + " Luma installs it with the first mod that needs it.", loader.AutoInstall ? "Get it" : "Website", UiTheme.Dim, null,
+                () => ModActions.InstallLoader(game, loader), $"{loader.Name}: some mods need it.");
             scrollCol.AddChild(row);
             items.Add(row);
         }
@@ -155,6 +171,12 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
                     $"Files in more than one mod, and which mod's copy goes in{(picked > 0 ? $" ({picked} picked by you)" : "")}.")));
             }
             var tools = store.State.Tools.Count;
+            if (loaderStatus.Count > 0)
+            {
+                var miss = loaderStatus.Count(s => s.Missing);
+                items.Add(Add(scrollCol, new ActionButton(miss > 0 ? $"Mod loaders ({miss} needed)" : "Mod loaders", () => App.Push(new LoadersPage(game)),
+                    "Script extenders and loaders mods hook into the game with: installed, versions, updates.")));
+            }
             items.Add(Add(scrollCol, new ActionButton(tools > 0 ? $"Tools ({tools})" : "Tools", () => App.Push(new ToolsPage(game)),
                 "Run xEdit, LOOT, BodySlide, Nemesis and other tools with the mods in.")));
             if (game.Profile.Plugins != null)
@@ -187,7 +209,7 @@ public partial class ModsScreen : Screen, TouchScroll.IReorder
                 scrollCol.AddChild(row);
                 items.Add(row);
             }
-            var missing = store.MissingDependencies().GroupBy(m => m.Missing.Id).Select(g => g.First()).ToList();
+            var missing = Host.Mods.MissingDependencies(game).GroupBy(m => m.Missing.Id).Select(g => g.First()).ToList();
             if (missing.Count > 0)
             {
                 var names = string.Join(", ", missing.Take(3).Select(m => m.Missing.Name)) + (missing.Count > 3 ? "…" : "");

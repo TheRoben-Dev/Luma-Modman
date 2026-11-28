@@ -11,6 +11,9 @@
   "modsPath": "lml",
   "loader": "scripthookrdr2",
   "loaderOptional": true,
+  "loaders": [
+    "lml"
+  ],
   "sites": {
     "nexus": "reddeadredemption2"
   },

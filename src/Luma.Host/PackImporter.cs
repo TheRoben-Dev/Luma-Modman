@@ -150,6 +150,12 @@ public static class PackImporter
                 return new PackModResult(mod, PackModOutcome.Failed, e.Message);
             }
         }
+        if (mod.Site == "loader" && host.Games.Catalog.Loaders.TryGetValue(mod.ModId, out var loader) && loader.AutoInstall && queueDownloads)
+        {
+            // Loaders come from their official release, newest version.
+            host.QueueLoader(game, loader);
+            return new PackModResult(mod, PackModOutcome.Downloading);
+        }
         var site = host.Sites.All.FirstOrDefault(s => s.Id == mod.Site);
         if (site == null || mod.ModId.Length == 0)
         {

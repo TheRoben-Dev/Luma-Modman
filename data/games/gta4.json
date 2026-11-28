@@ -10,6 +10,7 @@
   "runtime": "proton",
   "loader": "asi-loader",
   "loaderOptional": true,
+  "loaderAsset": "^Ultimate-ASI-Loader\\.zip$",
   "sites": {
     "nexus": "gta4"
   },

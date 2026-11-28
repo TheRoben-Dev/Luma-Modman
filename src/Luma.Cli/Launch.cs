@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Luma.Core.Detection;
+using Luma.Core.Mods;
 using Luma.Host;
 
 /// <summary>
@@ -46,16 +47,24 @@ internal static class Launch
             Console.Error.WriteLine($"luma: starting without mods: {e.Message}");
         }
 
-        // Script extenders: start the game through their loader (skse64_loader.exe) when it's in the game.
-        if (game is { Profile.Moddable: true } && host.Mods.Loader(game) is { Launcher: { } launcher } ext)
+        // Script extenders and launchers (skse64_loader.exe, Mod Engine 2, SMAPI): start the game through them when they're in the game.
+        if (game is { Profile.Moddable: true })
         {
-            if (File.Exists(Path.Combine(game.GameDir, launcher)))
+            var store = host.Mods.Store(game);
+            foreach (var ext in host.Mods.Loaders(game))
             {
-                var through = LaunchCommand.ThroughLauncher(command, game.GameDir, launcher);
+                if (LoaderRules.Launcher(game.Profile, ext) is not { } launcher || !File.Exists(Path.Combine(game.GameDir, launcher))
+                    || (ext.Id != game.Profile.Loader && !LoaderInstaller.Installed(game, ext, store.State)))
+                {
+                    continue;
+                }
+                var native = game.Profile.Runtime == "native" && !OperatingSystem.IsWindows();
+                var through = LaunchCommand.ThroughLauncher(command, game.GameDir, launcher, LoaderRules.LaunchArgs(game.Profile, ext), native);
                 if (through != command)
                 {
                     AppLog.Info($"run: starting {game.Title} through {ext.Name}");
                     command = through;
+                    break;
                 }
             }
         }
@@ -68,7 +77,8 @@ internal static class Launch
         if (deployed && game != null && !OperatingSystem.IsWindows())
         {
             var overrides = game.Profile.DllOverrides.ToList();
-            if (game.Profile.Loader != null && host.Games.Catalog.Loaders.TryGetValue(game.Profile.Loader, out var loader))
+            var state = host.Mods.Store(game).State;
+            foreach (var loader in host.Mods.Loaders(game).Where(l => l.Id == game.Profile.Loader || LoaderInstaller.Installed(game, l, state)))
             {
                 overrides.AddRange(loader.DllOverrides);
             }

@@ -3,236 +3,755 @@
     "id": "bepinex",
     "name": "BepInEx 5",
     "source": "github:BepInEx/BepInEx",
+    "asset": "^BepInEx_win_x64_5[\\d.]+\\.zip$",
+    "about": "Plugin framework for Unity games (Mono).",
     "dllOverrides": [
       "winhttp=n,b"
     ],
-    "about": "Plugin framework for Unity games (Mono).",
-    "asset": "^BepInEx_win_x64_5[\\d.]+\\.zip$"
+    "anchor": "doorstop_config.ini",
+    "sharedAnchor": true,
+    "detect": [
+      "BepInEx/core"
+    ],
+    "signatures": [
+      "/bepinex/plugins/",
+      "/bepinex/patchers/"
+    ],
+    "aliases": [
+      "BepInEx 5"
+    ]
   },
   {
     "id": "bepinex-il2cpp",
     "name": "BepInEx 6 (IL2CPP)",
-    "source": "https://builds.bepinex.dev/projects/bepinex_be",
+    "source": "page:https://builds.bepinex.dev/projects/bepinex_be",
+    "asset": "BepInEx-Unity\\.IL2CPP-win-x64-[^/]+\\.zip$",
+    "about": "Plugin framework for Unity games built with IL2CPP.",
     "dllOverrides": [
       "winhttp=n,b"
     ],
-    "about": "Plugin framework for Unity games built with IL2CPP."
+    "anchor": "doorstop_config.ini",
+    "sharedAnchor": true,
+    "detect": [
+      "BepInEx/core"
+    ],
+    "signatures": [
+      "/bepinex/plugins/"
+    ],
+    "aliases": [
+      "BepInEx 6",
+      "BepInEx IL2CPP"
+    ]
   },
   {
     "id": "melonloader",
     "name": "MelonLoader",
     "source": "github:LavaGang/MelonLoader",
+    "asset": "^MelonLoader\\.x64\\.zip$",
+    "about": "Mod loader for Unity games (Mono and IL2CPP).",
     "dllOverrides": [
       "version=n,b"
     ],
-    "about": "Mod loader for Unity games (Mono and IL2CPP).",
-    "asset": "^MelonLoader\\.x64\\.zip$"
+    "anchor": "version.dll",
+    "sharedAnchor": true,
+    "detect": [
+      "MelonLoader"
+    ],
+    "aliases": [
+      "MelonLoader"
+    ]
   },
   {
     "id": "umm",
     "name": "Unity Mod Manager",
     "source": "nexus:site/21",
+    "about": "In-game mod manager for several Unity games.",
     "dllOverrides": [
       "winhttp=n,b"
     ],
-    "about": "In-game mod manager for several Unity games."
+    "detect": [
+      "UnityModManager"
+    ],
+    "aliases": [
+      "Unity Mod Manager",
+      "UMM"
+    ]
   },
   {
     "id": "skse64",
     "name": "Skyrim Script Extender 64",
-    "source": "https://skse.silverlock.org",
+    "source": "page:https://skse.silverlock.org",
+    "asset": "/skse64_[\\d_]+\\.7z$",
     "about": "Extends Skyrim Special Edition's scripting; most big mods need it.",
-    "launcher": "skse64_loader.exe"
+    "launcher": "skse64_loader.exe",
+    "signatures": [
+      "/skse/plugins/"
+    ],
+    "aliases": [
+      "SKSE64",
+      "SKSE",
+      "Skyrim Script Extender (SKSE64)",
+      "Skyrim Script Extender"
+    ]
   },
   {
     "id": "skse",
     "name": "Skyrim Script Extender",
-    "source": "https://skse.silverlock.org",
+    "source": "page:https://skse.silverlock.org",
+    "asset": "/skse_[\\d_]+\\.7z$",
     "about": "Extends Skyrim (2011)'s scripting.",
-    "launcher": "skse_loader.exe"
+    "launcher": "skse_loader.exe",
+    "signatures": [
+      "/skse/plugins/"
+    ],
+    "aliases": [
+      "SKSE",
+      "Skyrim Script Extender"
+    ]
   },
   {
     "id": "f4se",
     "name": "Fallout 4 Script Extender",
-    "source": "https://f4se.silverlock.org",
+    "source": "page:https://f4se.silverlock.org",
+    "asset": "/f4se_[\\d_]+\\.7z$",
     "about": "Extends Fallout 4's scripting.",
-    "launcher": "f4se_loader.exe"
+    "launcher": "f4se_loader.exe",
+    "signatures": [
+      "/f4se/plugins/"
+    ],
+    "aliases": [
+      "F4SE",
+      "Fallout 4 Script Extender (F4SE)"
+    ]
   },
   {
     "id": "sfse",
     "name": "Starfield Script Extender",
     "source": "github:ianpatt/sfse",
+    "asset": "^sfse_[\\d_]+\\.7z$",
     "about": "Extends Starfield's scripting.",
-    "launcher": "sfse_loader.exe"
+    "launcher": "sfse_loader.exe",
+    "signatures": [
+      "/sfse/plugins/"
+    ],
+    "aliases": [
+      "SFSE",
+      "Starfield Script Extender (SFSE)"
+    ]
   },
   {
     "id": "xnvse",
     "name": "xNVSE",
     "source": "github:xNVSE/NVSE",
     "about": "New Vegas Script Extender, community edition.",
-    "launcher": "nvse_loader.exe"
+    "launcher": "nvse_loader.exe",
+    "signatures": [
+      "/nvse/plugins/"
+    ],
+    "aliases": [
+      "NVSE",
+      "xNVSE",
+      "New Vegas Script Extender",
+      "New Vegas Script Extender (xNVSE)"
+    ]
   },
   {
     "id": "fose",
     "name": "Fallout Script Extender",
-    "source": "https://fose.silverlock.org",
+    "source": "page:https://fose.silverlock.org",
+    "asset": "/fose_[^/]+\\.7z$",
     "about": "Extends Fallout 3's scripting.",
-    "launcher": "fose_loader.exe"
+    "launcher": "fose_loader.exe",
+    "signatures": [
+      "/fose/plugins/"
+    ],
+    "aliases": [
+      "FOSE",
+      "Fallout Script Extender"
+    ]
   },
   {
     "id": "xobse",
     "name": "xOBSE",
     "source": "github:llde/xOBSE",
     "about": "Oblivion Script Extender, community edition.",
-    "launcher": "obse_loader.exe"
+    "launcher": "obse_loader.exe",
+    "signatures": [
+      "/obse/plugins/"
+    ],
+    "aliases": [
+      "OBSE",
+      "xOBSE",
+      "Oblivion Script Extender"
+    ]
   },
   {
     "id": "obse64",
     "name": "OBSE64",
     "source": "nexus:oblivionremastered/282",
     "about": "Script extender for Oblivion Remastered.",
-    "launcher": "OblivionRemastered/Binaries/Win64/obse64_loader.exe"
+    "launcher": "OblivionRemastered/Binaries/Win64/obse64_loader.exe",
+    "signatures": [
+      "/obse/plugins/"
+    ],
+    "aliases": [
+      "OBSE64",
+      "Oblivion Remastered Script Extender"
+    ]
   },
   {
     "id": "mwse",
     "name": "Morrowind Script Extender",
     "source": "github:MWSE/MWSE",
-    "about": "Lua scripting for Morrowind."
+    "about": "Lua scripting for Morrowind.",
+    "anchor": "MWSE.dll",
+    "detect": [
+      "MWSE.dll"
+    ],
+    "signatures": [
+      "/mwse/mods/",
+      "/mwse/lua/"
+    ],
+    "aliases": [
+      "MWSE",
+      "MWSE 2.1",
+      "Morrowind Script Extender"
+    ]
   },
   {
     "id": "cet",
     "name": "Cyber Engine Tweaks",
     "source": "github:maximegmd/CyberEngineTweaks",
+    "asset": "^cet_[\\d.]+\\.zip$",
+    "about": "Scripting and console for Cyberpunk 2077.",
     "dllOverrides": [
       "version=n,b"
     ],
-    "about": "Scripting and console for Cyberpunk 2077."
+    "anchor": "cyber_engine_tweaks.asi",
+    "installDir": "bin/x64/plugins",
+    "detect": [
+      "bin/x64/plugins/cyber_engine_tweaks.asi"
+    ],
+    "signatures": [
+      "/cyber_engine_tweaks/mods/"
+    ],
+    "aliases": [
+      "Cyber Engine Tweaks",
+      "CET"
+    ]
   },
   {
     "id": "red4ext",
     "name": "RED4ext",
     "source": "github:WopsS/RED4ext",
+    "asset": "^red4ext_[\\d.]+\\.zip$",
+    "about": "Native plugin loader for Cyberpunk 2077.",
     "dllOverrides": [
       "winmm=n,b"
     ],
-    "about": "Native plugin loader for Cyberpunk 2077."
+    "anchor": "RED4ext.dll",
+    "installDir": "red4ext",
+    "detect": [
+      "red4ext/RED4ext.dll"
+    ],
+    "signatures": [
+      "/red4ext/plugins/"
+    ],
+    "aliases": [
+      "RED4ext"
+    ]
   },
   {
     "id": "bg3se",
     "name": "BG3 Script Extender",
     "source": "github:Norbyte/bg3se",
+    "about": "Script extender for Baldur's Gate 3: Lua mods and many big mods need it.",
     "dllOverrides": [
       "DWrite=n,b"
     ],
-    "about": "Script extender for Baldur's Gate 3."
+    "anchor": "DWrite.dll",
+    "sharedAnchor": true,
+    "installDir": "bin",
+    "detect": [
+      "bin/DWrite.dll"
+    ],
+    "signatures": [
+      "/scriptextender/"
+    ],
+    "aliases": [
+      "BG3 Script Extender",
+      "BG3SE",
+      "Script Extender",
+      "Norbyte's Script Extender",
+      "bg3se"
+    ]
   },
   {
     "id": "reframework",
     "name": "REFramework",
-    "source": "github:praydog/REFramework",
+    "source": "github:praydog/REFramework-nightly",
+    "about": "Mod framework for RE Engine games (Capcom).",
     "dllOverrides": [
       "dinput8=n,b"
     ],
-    "about": "Mod framework for RE Engine games (Capcom)."
+    "anchor": "dinput8.dll",
+    "sharedAnchor": true,
+    "detect": [
+      "dinput8.dll"
+    ],
+    "signatures": [
+      "/reframework/autorun/",
+      "/reframework/plugins/"
+    ],
+    "aliases": [
+      "REFramework",
+      "RE Framework"
+    ]
   },
   {
     "id": "smapi",
     "name": "SMAPI",
     "source": "github:Pathoschild/SMAPI",
-    "about": "Stardew Valley's mod loader."
+    "asset": "^SMAPI-[\\d.]+-installer\\.zip$",
+    "kind": "smapi",
+    "about": "Stardew Valley's mod loader.",
+    "launcher": "StardewModdingAPI.exe",
+    "nativeLauncher": "StardewModdingAPI",
+    "anchor": "install.dat",
+    "detect": [
+      "StardewModdingAPI.dll"
+    ],
+    "aliases": [
+      "SMAPI",
+      "SMAPI - Stardew Modding API",
+      "Stardew Modding API"
+    ]
   },
   {
     "id": "ue4ss",
     "name": "UE4SS",
     "source": "github:UE4SS-RE/RE-UE4SS",
+    "asset": "^UE4SS_v[\\d.]+\\.zip$",
+    "about": "Lua and C++ mod loader for Unreal Engine 4/5 games.",
     "dllOverrides": [
       "dwmapi=n,b"
     ],
-    "about": "Lua and C++ mod loader for Unreal Engine 4/5 games.",
-    "asset": "^UE4SS_v[\\d.]+\\.zip$"
+    "anchor": "dwmapi.dll",
+    "sharedAnchor": true,
+    "installDir": "{exeDir}",
+    "detect": [
+      "{exeDir}/ue4ss",
+      "{exeDir}/UE4SS.dll"
+    ],
+    "signatures": [
+      "/ue4ss/mods/",
+      "/scripts/main.lua",
+      "/dlls/main.dll"
+    ],
+    "aliases": [
+      "UE4SS",
+      "RE-UE4SS",
+      "Unreal Engine 4/5 Scripting System"
+    ]
   },
   {
     "id": "modengine2",
     "name": "Mod Engine 2",
     "source": "github:soulsmods/ModEngine2",
-    "about": "Loads mods for FromSoftware games without touching game files."
+    "asset": "^ModEngine-[\\d.]+-win64\\.zip$",
+    "about": "Loads mods for FromSoftware games without touching game files.",
+    "launcher": "{exeDir}/modengine2_launcher.exe",
+    "anchor": "modengine2_launcher.exe",
+    "installDir": "{exeDir}",
+    "detect": [
+      "{exeDir}/modengine2_launcher.exe"
+    ],
+    "aliases": [
+      "Mod Engine 2",
+      "ModEngine2",
+      "ModEngine 2",
+      "ME2"
+    ]
   },
   {
     "id": "msc-loader",
     "name": "MSC Mod Loader",
     "source": "github:piotrulos/MSCModLoader",
-    "about": "Mod loader for My Summer Car and My Winter Car."
+    "about": "Mod loader for My Summer Car and My Winter Car.",
+    "detect": [
+      "mysummercar_Data/Managed/MSCLoader.dll"
+    ],
+    "aliases": [
+      "MSCLoader",
+      "MSC Mod Loader"
+    ]
   },
   {
     "id": "scripthookv",
     "name": "Script Hook V",
-    "source": "http://www.dev-c.com/gtav/scripthookv/",
+    "source": "page:http://www.dev-c.com/gtav/scripthookv/",
+    "asset": "/ScriptHookV_[\\d._]+\\.zip$",
+    "about": "Script loader for GTA V Story Mode.",
     "dllOverrides": [
       "dinput8=n,b"
     ],
-    "about": "Script loader for GTA V Story Mode."
+    "anchor": "ScriptHookV.dll",
+    "detect": [
+      "ScriptHookV.dll"
+    ],
+    "signatures": [
+      "*.asi"
+    ],
+    "aliases": [
+      "Script Hook V",
+      "ScriptHookV"
+    ]
   },
   {
     "id": "scripthookrdr2",
-    "name": "Script Hook RDR2 + Lenny's Mod Loader",
-    "source": "http://www.dev-c.com/rdr2/scripthookrdr2/",
+    "name": "Script Hook RDR2",
+    "source": "page:http://www.dev-c.com/rdr2/scripthookrdr2/",
+    "asset": "/ScriptHookRDR2_[\\d._]+\\.zip$",
+    "about": "Script loader for Red Dead Redemption 2 Story Mode.",
     "dllOverrides": [
       "dinput8=n,b"
     ],
-    "about": "Script and file loader for Red Dead Redemption 2 Story Mode."
+    "anchor": "ScriptHookRDR2.dll",
+    "detect": [
+      "ScriptHookRDR2.dll"
+    ],
+    "signatures": [
+      "*.asi"
+    ],
+    "aliases": [
+      "Script Hook RDR2",
+      "ScriptHookRDR2"
+    ]
   },
   {
     "id": "asi-loader",
     "name": "Ultimate ASI Loader",
     "source": "github:ThirteenAG/Ultimate-ASI-Loader",
+    "asset": "^Ultimate-ASI-Loader_x64\\.zip$",
+    "about": "Loads .asi plugins (fixes, widescreen, scripts).",
     "dllOverrides": [
       "dinput8=n,b"
     ],
-    "about": "Loads .asi plugins (fixes, widescreen, scripts)."
+    "anchor": "dinput8.dll",
+    "sharedAnchor": true,
+    "aliases": [
+      "Ultimate ASI Loader",
+      "ASI Loader"
+    ]
   },
   {
     "id": "northstar",
     "name": "Northstar",
     "source": "github:R2Northstar/Northstar",
-    "about": "Community client and mod loader for Titanfall 2."
+    "about": "Community client and mod loader for Titanfall 2.",
+    "anchor": "NorthstarLauncher.exe",
+    "detect": [
+      "NorthstarLauncher.exe"
+    ],
+    "aliases": [
+      "Northstar"
+    ]
   },
   {
     "id": "lovely",
     "name": "Lovely",
     "source": "github:ethangreen-dev/lovely-injector",
+    "asset": "^lovely-x86_64-pc-windows-msvc\\.zip$",
+    "about": "Lua injector for Balatro (Steamodded runs on it).",
     "dllOverrides": [
       "version=n,b"
     ],
-    "about": "Lua injector for Balatro (Steamodded runs on it)."
+    "anchor": "version.dll",
+    "sharedAnchor": true,
+    "detect": [
+      "version.dll"
+    ],
+    "aliases": [
+      "Lovely",
+      "lovely-injector"
+    ]
   },
   {
     "id": "gdweave",
     "name": "GDWeave",
     "source": "github:NotNite/GDWeave",
+    "about": "Mod loader for WEBFISHING.",
     "dllOverrides": [
       "winmm=n,b"
     ],
-    "about": "Mod loader for WEBFISHING."
+    "anchor": "winmm.dll",
+    "sharedAnchor": true,
+    "detect": [
+      "GDWeave/GDWeave.dll",
+      "GDWeave/core"
+    ],
+    "aliases": [
+      "GDWeave"
+    ]
   },
   {
     "id": "hell2modding",
     "name": "Hell2Modding",
     "source": "github:SGG-Modding/Hell2Modding",
+    "about": "Lua mod loader for Hades II.",
     "dllOverrides": [
       "d3d12=n,b"
     ],
-    "about": "Lua mod loader for Hades II."
+    "anchor": "d3d12.dll",
+    "sharedAnchor": true,
+    "installDir": "Ship",
+    "detect": [
+      "Ship/d3d12.dll"
+    ],
+    "aliases": [
+      "Hell2Modding"
+    ]
   },
   {
     "id": "dml",
     "name": "Darktide Mod Loader",
     "source": "nexus:warhammer40kdarktide/19",
-    "about": "Mod loader for Warhammer 40,000: Darktide."
+    "about": "Mod loader for Warhammer 40,000: Darktide.",
+    "aliases": [
+      "Darktide Mod Loader",
+      "DML"
+    ]
   },
   {
     "id": "tmodloader",
     "name": "tModLoader",
     "source": "https://store.steampowered.com/app/1281930",
     "about": "Terraria's official mod platform, a free separate Steam app."
+  },
+  {
+    "id": "redscript",
+    "name": "redscript",
+    "source": "github:jac3km4/redscript",
+    "asset": "^redscript-v?[\\d.]+\\.zip$",
+    "about": "Script compiler for Cyberpunk 2077: lets .reds script mods run.",
+    "anchor": "scc.exe",
+    "installDir": "engine/tools",
+    "detect": [
+      "engine/tools/scc.exe",
+      "engine/tools/scc_lib.dll"
+    ],
+    "signatures": [
+      "*.reds"
+    ],
+    "aliases": [
+      "redscript"
+    ]
+  },
+  {
+    "id": "archivexl",
+    "name": "ArchiveXL",
+    "source": "github:psiberx/cp2077-archive-xl",
+    "asset": "^ArchiveXL[-_ ]?v?[\\d.]+\\.zip$",
+    "about": "Loads new items, appearances and resources for Cyberpunk 2077 (needs RED4ext).",
+    "anchor": "ArchiveXL.dll",
+    "installDir": "red4ext/plugins/ArchiveXL",
+    "detect": [
+      "red4ext/plugins/ArchiveXL/ArchiveXL.dll"
+    ],
+    "requires": [
+      "red4ext"
+    ],
+    "signatures": [
+      "*.xl"
+    ],
+    "aliases": [
+      "ArchiveXL"
+    ]
+  },
+  {
+    "id": "tweakxl",
+    "name": "TweakXL",
+    "source": "github:psiberx/cp2077-tweak-xl",
+    "asset": "^TweakXL[-_ ]?v?[\\d.]+\\.zip$",
+    "about": "Changes Cyberpunk 2077's game data (TweakDB) from mods (needs RED4ext).",
+    "anchor": "TweakXL.dll",
+    "installDir": "red4ext/plugins/TweakXL",
+    "detect": [
+      "red4ext/plugins/TweakXL/TweakXL.dll"
+    ],
+    "requires": [
+      "red4ext"
+    ],
+    "signatures": [
+      "/r6/tweaks/"
+    ],
+    "aliases": [
+      "TweakXL"
+    ]
+  },
+  {
+    "id": "codeware",
+    "name": "Codeware",
+    "source": "github:psiberx/cp2077-codeware",
+    "asset": "^Codeware[-_ ]?v?[\\d.]+\\.zip$",
+    "about": "Scripting library many Cyberpunk 2077 mods build on (needs RED4ext).",
+    "anchor": "Codeware.dll",
+    "installDir": "red4ext/plugins/Codeware",
+    "detect": [
+      "red4ext/plugins/Codeware/Codeware.dll"
+    ],
+    "requires": [
+      "red4ext"
+    ],
+    "aliases": [
+      "Codeware"
+    ]
+  },
+  {
+    "id": "dos2se",
+    "name": "DOS2 Script Extender",
+    "source": "github:Norbyte/ositools",
+    "about": "Script extender for Divinity: Original Sin 2 Definitive Edition.",
+    "dllOverrides": [
+      "DXGI=n,b"
+    ],
+    "anchor": "DXGI.dll",
+    "sharedAnchor": true,
+    "installDir": "DefEd/bin",
+    "detect": [
+      "DefEd/bin/DXGI.dll",
+      "DefEd/bin/OsiExtenderEoCApp.dll"
+    ],
+    "aliases": [
+      "Script Extender",
+      "Norbyte's Script Extender",
+      "DOS2 Script Extender",
+      "OsiTools",
+      "ositools"
+    ]
+  },
+  {
+    "id": "modengine",
+    "name": "Mod Engine",
+    "source": "github:katalash/ModEngine",
+    "about": "Loads mods for Sekiro and Dark Souls without touching game files.",
+    "dllOverrides": [
+      "dinput8=n,b"
+    ],
+    "anchor": "modengine.ini",
+    "sharedAnchor": true,
+    "detect": [
+      "modengine.ini"
+    ],
+    "aliases": [
+      "Mod Engine",
+      "ModEngine",
+      "Sekiro Mod Engine",
+      "DSR Mod Engine"
+    ]
+  },
+  {
+    "id": "lml",
+    "name": "Lenny's Mod Loader",
+    "source": "nexus:reddeadredemption2/1472",
+    "about": "Loads replacement and streaming file mods (the lml folder) for Red Dead Redemption 2.",
+    "anchor": "vfs.asi",
+    "detect": [
+      "vfs.asi",
+      "lml.asi"
+    ],
+    "requires": [
+      "scripthookrdr2"
+    ],
+    "signatures": [
+      "/lml/"
+    ],
+    "aliases": [
+      "Lenny's Mod Loader",
+      "LML",
+      "Lenny's Mod Loader RDR"
+    ]
+  },
+  {
+    "id": "blse",
+    "name": "BLSE",
+    "source": "github:BUTR/Bannerlord.BLSE",
+    "about": "Bannerlord Software Extender: loads mods safely and fixes crashes; most big Bannerlord mods want it.",
+    "launcher": "bin/Win64_Shipping_Client/Bannerlord.BLSE.Standalone.exe",
+    "anchor": "Bannerlord.BLSE.Standalone.exe",
+    "detect": [
+      "bin/Win64_Shipping_Client/Bannerlord.BLSE.Standalone.exe"
+    ],
+    "aliases": [
+      "BLSE",
+      "Bannerlord Software Extender",
+      "Bannerlord.BLSE"
+    ]
+  },
+  {
+    "id": "harmony-bannerlord",
+    "name": "Harmony (Bannerlord)",
+    "source": "nexus:mountandblade2bannerlord/2006",
+    "about": "Shared patching library nearly every Bannerlord mod needs.",
+    "detect": [
+      "Modules/Bannerlord.Harmony/SubModule.xml"
+    ],
+    "aliases": [
+      "Harmony",
+      "Bannerlord.Harmony"
+    ]
+  },
+  {
+    "id": "eldenmodloader",
+    "name": "Elden Mod Loader",
+    "source": "nexus:eldenring/117",
+    "about": "Loads .dll mods for Elden Ring from the mods folder.",
+    "dllOverrides": [
+      "dinput8=n,b"
+    ],
+    "anchor": "dinput8.dll",
+    "sharedAnchor": true,
+    "installDir": "Game",
+    "detect": [
+      "Game/dinput8.dll"
+    ],
+    "aliases": [
+      "Elden Mod Loader"
+    ]
+  },
+  {
+    "id": "stracker",
+    "name": "Stracker's Loader",
+    "source": "nexus:monsterhunterworld/1982",
+    "about": "Plugin loader for Monster Hunter: World.",
+    "dllOverrides": [
+      "dinput8=n,b"
+    ],
+    "anchor": "loader.dll",
+    "sharedAnchor": true,
+    "detect": [
+      "loader.dll"
+    ],
+    "signatures": [
+      "/nativepc/plugins/"
+    ],
+    "aliases": [
+      "Stracker's Loader",
+      "Strackers Loader"
+    ]
+  },
+  {
+    "id": "script-merger",
+    "name": "Script Merger",
+    "source": "nexus:witcher3/484",
+    "about": "Merges script mods for The Witcher 3 that change the same script, so they work together.",
+    "detect": [
+      "WitcherScriptMerger/WitcherScriptMerger.exe",
+      "Script Merger/WitcherScriptMerger.exe"
+    ],
+    "aliases": [
+      "Script Merger",
+      "Witcher 3 Mod Manager"
+    ]
   }
 ]

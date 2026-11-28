@@ -126,6 +126,16 @@ public partial class SmokeTest : Node
             Main.Instance.Host!.Mods.ClearOverwrite(Main.Instance.Host.ActiveGame!);
             Press(Pad.Back);
         }, wait: 0.8, tab: "Mods");
+        // Mod loaders: a mod with SKSE plugins shows SKSE64 as needed; the Mod loaders page lists it.
+        Step("loader-needed", InstallSksePluginMod, wait: 1.2, tab: "Mods");
+        Step("loader-row", () => FindFocusable(GetTree().Root, "Mods here need these")?.GrabFocus(), wait: 0.6, expect: "Mods here need these to work.");
+        Step("loaders-open", () =>
+        {
+            FindFocusable(GetTree().Root, "Script extenders and loaders")?.GrabFocus();
+            Press(Pad.Accept);
+        }, wait: 1.0, expect: "Install what's needed", check: () =>
+            All(GetTree().Root).OfType<Luma.App.Screens.LoadersPage>().Any(p => p.IsVisibleInTree()) ? null : "Mod loaders didn't open");
+        Step("loaders-back", () => Press(Pad.Back), wait: 0.8, tab: "Mods");
         // Touch reorder: hold a mod row still to pick it up, drag it above the one before it, lift.
         Luma.App.Ui.ListRow? ModRow(string name) =>
             All(GetTree().Root).OfType<Luma.App.Ui.ListRow>().FirstOrDefault(r => r.IsVisibleInTree() && r.HasMeta("mod") && r.TooltipText.StartsWith(name + ":", StringComparison.Ordinal));
@@ -699,6 +709,11 @@ public partial class SmokeTest : Node
         Step("desktop-tools-run", RunScriptTool, wait: 4.0, check: () =>
             Host().Mods.OverwriteFiles(Host().ActiveGame!).Contains("mods/tool-output.txt") ? null : "the tool's output isn't in Overwrite");
         Step("desktop-tools-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
+        Step("desktop-loader-needed", InstallSksePluginMod, wait: 1.2, tab: "Mods", check: () =>
+            FindButton("Install Skyrim Script Extender 64") != null ? null : "no loader banner");
+        Step("desktop-loaders", () => Key(Godot.Key.L, ctrl: true), wait: 1.2, check: () =>
+            DialogOpen("Mod loaders") ?? (All(GetTree().Root).OfType<Tree>().Any(t => t.TooltipText == "Loaders" && t.GetRoot()?.GetChildCount() >= 1) ? null : "the loaders aren't listed"));
+        Step("desktop-loaders-close", () => Key(Godot.Key.Escape), wait: 0.8, check: NoDialogs);
         Step("desktop-separator", () =>
         {
             var store = Host().Mods.Store(Host().ActiveGame!);
@@ -894,6 +909,22 @@ public partial class SmokeTest : Node
             z.CreateEntry("CalienteTools/BodySlide/Config.xml");
         }
         host.Mods.Install(game, zip, new Luma.Core.Mods.InstalledMod { Id = "local:smoke-bodyslide", Site = "local", Name = "Smoke BodySlide" });
+        host.Mods.NotifyChanged(game);
+    }
+
+    /// <summary>A mod with an SKSE plugin (Luma's own loader install is off, so nothing is fetched).</summary>
+    private static void InstallSksePluginMod()
+    {
+        var host = Main.Instance.Host!;
+        var game = host.ActiveGame!;
+        host.SaveSettings(host.Settings with { AutoLoaders = false });
+        var zip = Path.Combine(host.Paths.Data, "smoke-skse-plugin.zip");
+        if (!File.Exists(zip))
+        {
+            using var z = System.IO.Compression.ZipFile.Open(zip, System.IO.Compression.ZipArchiveMode.Create);
+            z.CreateEntry("SKSE/Plugins/po3_Tweaks.dll");
+        }
+        host.Mods.Install(game, zip, new Luma.Core.Mods.InstalledMod { Id = "local:smoke-tweaks", Site = "local", Name = "Smoke Tweaks" });
         host.Mods.NotifyChanged(game);
     }
 

@@ -15,8 +15,10 @@
     "nexus": "baldursgate3",
     "modio": "Baldur's Gate 3"
   },
+  "modSettings": "{localappdata}/Larian Studios/Baldur's Gate 3/PlayerProfiles/Public/modsettings.lsx",
   "quirks": [
-    "Mods load from the profile folder inside the Proton prefix; Luma doesn't write modsettings.lsx yet, so turn new mods on in the game's own mod manager.",
+    "Luma keeps modsettings.lsx in step with your mods while they're in the game: enabled .pak mods are turned on in your mod order, after the game's own and the in-game mod manager's.",
+    "Script Extender mods need BG3SE; Luma installs it when a mod lists it as a requirement.",
     "Mods from the in-game mod.io browser are managed by the game."
   ]
 }

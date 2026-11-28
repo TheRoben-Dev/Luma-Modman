@@ -10,6 +10,7 @@
   "runtime": "proton",
   "loader": "reframework",
   "loaderOptional": true,
+  "loaderAsset": "^MHWILDS\\.zip$",
   "sites": {
     "nexus": "monsterhunterwilds"
   },

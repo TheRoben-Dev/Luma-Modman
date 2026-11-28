@@ -10,6 +10,7 @@
   "runtime": "proton",
   "loader": "reframework",
   "loaderOptional": true,
+  "loaderAsset": "^SF6\\.zip$",
   "sites": {
     "nexus": "streetfighter6"
   },

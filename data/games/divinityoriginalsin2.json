@@ -9,6 +9,8 @@
   ],
   "runtime": "proton",
   "modsPath": "{documents}/Larian Studios/Divinity Original Sin 2 Definitive Edition/Mods",
+  "loader": "dos2se",
+  "loaderOptional": true,
   "sites": {
     "nexus": "divinityoriginalsin2definitiveedition"
   },

@@ -575,6 +575,12 @@ public partial class DesktopShell : Screen
             case Key.K:
                 ShowConflicts();
                 return true;
+            case Key.L:
+                if (Host.ActiveGame is { Profile.Moddable: true } lg)
+                {
+                    App.Push(new LoadersPage(lg));
+                }
+                return true;
             case Key.T:
                 if (Host.ActiveGame is { Profile.Moddable: true } tg)
                 {

@@ -28,6 +28,7 @@ public static class Tools
         new("Nemesis", ["Nemesis Unlimited Behavior Engine.exe"], "", "Generates animation behaviours. Its output goes to Overwrite."),
         new("Pandora", ["Pandora Behaviour Engine+.exe", "Pandora Behaviour Engine.exe"], "", "Generates animation behaviours. Its output goes to Overwrite."),
         new("FNIS", ["GenerateFNISforUsers.exe"]),
+        new("Script Merger", ["WitcherScriptMerger.exe"], "", "Merges Witcher 3 script mods that change the same script. Its merged mod goes to Overwrite."),
         new("DynDOLOD", ["DynDOLODx64.exe", "DynDOLOD.exe"]),
         new("TexGen", ["TexGenx64.exe", "TexGen.exe"]),
         new("Wrye Bash", ["Wrye Bash.exe"]),

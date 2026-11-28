@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Luma.Core;
+using Luma.Core.Games;
 using Luma.Host.Updates;
 
 namespace Luma.Host;
@@ -37,6 +38,9 @@ public sealed record AppSettings
 
     /// <summary>A light rumble on the pad for menu moves, presses and errors.</summary>
     public bool Haptics { get; init; } = true;
+
+    /// <summary>Install the mod loaders and script extenders a mod needs by itself, when Luma can fetch them.</summary>
+    public bool AutoLoaders { get; init; } = true;
 
     /// <summary>Check GitHub Releases for a new Luma version at startup.</summary>
     public bool CheckForUpdates { get; init; } = true;
@@ -147,6 +151,65 @@ public sealed class AppHost
         };
     }
 
+    /// <summary>Raised when Luma queues a loader by itself: the loader, and the mod that needs it (null when the game does).</summary>
+    public event Action<LoaderInfo, string?>? LoaderQueued;
+
+    /// <summary>
+    /// Queues the newest official release of a loader (it installs like a mod). Returns null when
+    /// it's already on its way or can't be fetched by Luma (installed from its website).
+    /// </summary>
+    public DownloadItem? QueueLoader(Luma.Core.Detection.DetectedGame game, LoaderInfo l)
+    {
+        if (!l.AutoInstall || Downloads.Items.Any(i => i.Site == "loader" && i.ModId == l.Id && i.Game == game.Key && i.State is DownloadState.Queued or DownloadState.Downloading))
+        {
+            return null;
+        }
+        var item = new DownloadItem
+        {
+            Site = "loader",
+            Game = game.Key,
+            ModId = l.Id,
+            ModName = l.Name,
+            PageUrl = LoaderPage(l),
+        };
+        return Downloads.Add(item, async ct =>
+        {
+            var (ticket, version, _) = await LoaderInstaller.LatestAsync(Sites.Http, l, game.Profile, ct);
+            item.Version = version;
+            return ticket;
+        });
+    }
+
+    /// <summary>Queues every loader the game's mods need that isn't installed yet and Luma can fetch; returns them.</summary>
+    public List<LoaderInfo> QueueMissingLoaders(Luma.Core.Detection.DetectedGame game, string? forMod = null)
+    {
+        var queued = new List<LoaderInfo>();
+        foreach (var s in Mods.LoaderStatus(game).Where(s => s.Missing && s.Loader.AutoInstall))
+        {
+            if (QueueLoader(game, s.Loader) != null)
+            {
+                queued.Add(s.Loader);
+                AppLog.Info($"{s.Loader.Name} queued for {game.Key}{(forMod != null ? $" ({forMod} needs it)" : "")}");
+                LoaderQueued?.Invoke(s.Loader, s.NeededBy.FirstOrDefault() ?? forMod);
+            }
+        }
+        return queued;
+    }
+
+    /// <summary>A loader's download page: GitHub releases, its Nexus page or its homepage.</summary>
+    public static string? LoaderPage(LoaderInfo l)
+    {
+        var (kind, rest) = l.Source.IndexOf(':') is var i and > 0 && !l.Source.StartsWith("http") ? (l.Source[..i], l.Source[(i + 1)..]) : ("url", l.Source);
+        return kind switch
+        {
+            "github" => $"https://github.com/{rest}/releases/latest",
+            "page" => rest,
+            "nexus" when rest.Split('/') is [var domain, var id] => $"https://www.nexusmods.com/{domain}/mods/{id}",
+            "thunderstore" => $"https://thunderstore.io/package/{rest}/",
+            _ => l.Source.StartsWith("http") ? l.Source : null,
+        };
+    }
+
     private readonly object _installLock = new();
 
     /// <summary>Installs a finished download for the game it was fetched for.</summary>
@@ -183,6 +246,10 @@ public sealed class AppHost
                 item.Installed = true;
                 item.InstallError = null;
                 item.NeedsOptions = false;
+                if (item.Site != "loader" && Settings.AutoLoaders)
+                {
+                    QueueMissingLoaders(game, item.ModName);
+                }
             }
             catch (Luma.Core.Mods.FomodNeededException)
             {

@@ -46,6 +46,9 @@ public sealed record InstalledMod
     /// <summary>Files left out when the mod goes in, by key ("mods/textures/a.dds"); a key ending in "/" hides a whole folder.</summary>
     public List<string> Hidden { get; init; } = new();
 
+    /// <summary>Loaders this mod's files show it needs (ids from data/loaders.json); null when not checked yet (installed before 0.22).</summary>
+    public List<string>? Needs { get; init; }
+
     public bool IsHidden(string key) => Hidden.Any(h => string.Equals(h, key, StringComparison.OrdinalIgnoreCase)
         || (h.EndsWith('/') && key.StartsWith(h, StringComparison.OrdinalIgnoreCase)));
 }
@@ -300,6 +303,12 @@ public sealed class ModStore
     /// <param name="fileState">A plugin file's state for FOMOD conditions: "Active", "Inactive" or "Missing".</param>
     /// <exception cref="FomodNeededException">The archive has a FOMOD installer and <paramref name="mod"/> carries no choices.</exception>
     public InstalledMod Install(string archive, InstalledMod mod, GameProfile profile, string? gamePrefix = null, LoaderInfo? loader = null, string? onlyProfile = null,
+        Func<string, string>? fileState = null) =>
+        Install(archive, mod, profile, gamePrefix, loader == null ? [] : [loader], onlyProfile, fileState);
+
+    /// <param name="loaders">The game's loaders, main one first: one is installed by its own rules when <paramref name="mod"/>
+    /// is it ("loader:&lt;id&gt;") or the archive holds its anchor file.</param>
+    public InstalledMod Install(string archive, InstalledMod mod, GameProfile profile, string? gamePrefix, IReadOnlyList<LoaderInfo> loaders, string? onlyProfile = null,
         Func<string, string>? fileState = null)
     {
         Directory.CreateDirectory(Root);
@@ -309,11 +318,24 @@ public sealed class ModStore
         {
             Archive.Extract(archive, tmp);
             var root = tmp;
-            if (loader?.Launcher is { } launcher && mod.Site != "loader" && FindFile(tmp, Path.GetFileName(launcher)) is { } found)
+            var asLoader = mod.Site == "loader" ? loaders.FirstOrDefault(l => l.Id == mod.ModId) : null;
+            if (mod.Site != "loader" && loaders.FirstOrDefault(l => LoaderRules.IsLoaderArchive(tmp, l)) is { } handAdded)
             {
-                root = Path.GetDirectoryName(found)!;
-                gamePrefix = loader.LauncherDir;
-                mod = mod with { Id = "loader:" + loader.Id, Site = "loader", ModId = loader.Id, Name = loader.Name };
+                // A loader added by hand (SKSE64 from its website): installed as that loader.
+                asLoader = handAdded;
+                mod = mod with { Id = "loader:" + handAdded.Id, Site = "loader", ModId = handAdded.Id, Name = handAdded.Name, Version = mod.Version.Length > 0 ? mod.Version : LoaderRules.VersionFrom(archive) };
+            }
+            if (asLoader != null)
+            {
+                if (asLoader.Kind == "smapi")
+                {
+                    root = SmapiBundle(tmp, profile);
+                    gamePrefix = LoaderRules.InstallDir(profile, asLoader);
+                }
+                else if (gamePrefix == null)
+                {
+                    (root, gamePrefix) = LoaderRules.Locate(tmp, profile, asLoader);
+                }
             }
             if (mod.Site != "loader" && Fomod.FindRoot(root) is { } fomodRoot)
             {
@@ -330,7 +352,9 @@ public sealed class ModStore
                 }
             }
             var stage = staged = ModDir(mod.Id) + ".new";
-            var plan = ModLayout.Plan(root, profile, mod.ModId.Length > 0 ? mod.ModId : mod.Name, gamePrefix);
+            var plan = asLoader != null
+                ? ModLayout.Fixed(root, gamePrefix ?? "")
+                : ModLayout.Plan(root, profile, mod.ModId.Length > 0 ? mod.ModId : mod.Name, gamePrefix, loaders.Select(l => l.Id).ToList());
             if (mod.Site == "loader")
             {
                 // Script extenders ship their source code and readmes alongside; the game doesn't need them.
@@ -366,7 +390,8 @@ public sealed class ModStore
                 history.Insert(0, new ModVersion(old.Version, old.FileId, old.Archive, old.InstalledAt));
             }
             history.RemoveAll(h => h.Archive == archive || !File.Exists(h.Archive));
-            var installed = mod with { Archive = archive, Files = plan.Count, InstalledAt = DateTime.UtcNow, History = history.Take(5).ToList(), UpdateVersion = null };
+            var needs = asLoader != null ? [] : LoaderRules.Needs(loaders, plan.Select(e => e.Target).ToList());
+            var installed = mod with { Archive = archive, Files = plan.Count, InstalledAt = DateTime.UtcNow, History = history.Take(5).ToList(), UpdateVersion = null, Needs = needs };
             if (old != null)
             {
                 // The player's own name, notes and category survive updates and reinstalls.
@@ -389,6 +414,90 @@ public sealed class ModStore
                 Directory.Delete(staged, true);
             }
         }
+    }
+
+    /// <summary>
+    /// SMAPI ships as an installer: its files for each OS are a zip at internal/&lt;os&gt;/install.dat.
+    /// Unpacks the one for how the game runs (Windows build under Proton or on Windows, else Linux).
+    /// </summary>
+    private static string SmapiBundle(string dir, GameProfile profile)
+    {
+        var os = Platform.IsWindows || profile.Runtime == "proton" ? "windows" : "linux";
+        var dat = Directory.EnumerateFiles(dir, "install.dat", SearchOption.AllDirectories)
+            .FirstOrDefault(f => f.Replace('\\', '/').Contains($"/internal/{os}/", StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidDataException($"This SMAPI download has no files for {(os == "windows" ? "Windows" : "Linux")}.");
+        var outDir = Path.Combine(dir, ".smapi-" + os);
+        System.IO.Compression.ZipFile.ExtractToDirectory(dat, outDir, overwriteFiles: true);
+        return outDir;
+    }
+
+    /// <summary>The loaders the game's enabled mods need, by their files: fills in <see cref="InstalledMod.Needs"/> for mods installed before Luma checked.</summary>
+    public HashSet<string> NeededLoaders(IReadOnlyList<LoaderInfo> loaders)
+    {
+        var changed = false;
+        var mods = State.Mods.Select(m =>
+        {
+            if (m.Needs != null || m.Site == "loader")
+            {
+                return m;
+            }
+            changed = true;
+            var dir = ModDir(m.Id);
+            var files = Directory.Exists(dir)
+                ? Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(dir, f).Replace('\\', '/')).Select(f => f.Contains('/') ? f[(f.IndexOf('/') + 1)..] : f).ToList()
+                : [];
+            return m with { Needs = LoaderRules.Needs(loaders, files) };
+        }).ToList();
+        if (changed)
+        {
+            Save(State with { Mods = mods });
+        }
+        var on = State.Order.Where(e => e.Enabled).Select(e => e.Id).ToHashSet();
+        return State.Mods.Where(m => on.Contains(m.Id) && m.Needs != null).SelectMany(m => m.Needs!).ToHashSet();
+    }
+
+    /// <summary>
+    /// Scripts more than one enabled mod changes (The Witcher 3's .ws files): script path → the mods.
+    /// A script already in Script Merger's merged mod (mod0000_MergedFiles) counts as solved.
+    /// </summary>
+    public Dictionary<string, List<string>> ScriptClashes(ScriptMerge sm)
+    {
+        var folder = "/" + sm.Folder.Trim('/').ToLowerInvariant() + "/";
+        var byScript = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var merged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var on = State.Order.Where(e => e.Enabled).Select(e => e.Id).ToHashSet();
+        foreach (var mod in State.Mods.Where(m => on.Contains(m.Id)))
+        {
+            var dir = ModDir(mod.Id);
+            if (!Directory.Exists(dir))
+            {
+                continue;
+            }
+            foreach (var f in Directory.EnumerateFiles(dir, "*" + sm.Extension, SearchOption.AllDirectories))
+            {
+                var rel = "/" + Path.GetRelativePath(dir, f).Replace('\\', '/');
+                var at = rel.ToLowerInvariant().IndexOf(folder, StringComparison.Ordinal);
+                if (at < 0)
+                {
+                    continue;
+                }
+                var key = rel[(at + folder.Length)..];
+                if (rel.Contains("/mod0000_MergedFiles/", StringComparison.OrdinalIgnoreCase))
+                {
+                    merged.Add(key);
+                    continue;
+                }
+                if (!byScript.TryGetValue(key, out var list))
+                {
+                    byScript[key] = list = new();
+                }
+                if (!list.Contains(mod.Name))
+                {
+                    list.Add(mod.Name);
+                }
+            }
+        }
+        return byScript.Where(kv => kv.Value.Count > 1 && !merged.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
     }
 
     private static string? FindFile(string dir, string name) =>

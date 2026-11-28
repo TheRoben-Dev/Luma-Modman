@@ -3,6 +3,19 @@
 Player-facing changes per release. The section for a version opens its GitHub release notes and
 the in-app "What's new" page.
 
+## 0.22.0
+
+- Mod loaders install themselves. When a mod needs a loader or script extender, Luma sees it in the mod's files (an SKSE plugin, a .reds script, a UE4SS Lua mod, an ArchiveXL .xl file) or in the requirements its site lists, downloads the newest official release and installs it with the mod, loaders it needs first (RED4ext before ArchiveXL). A message says what came along. Turn it off under Mod loaders if you'd rather pick yourself.
+- 42 loaders, up from 30, and 33 of them now install by themselves (3 before): SKSE64, SKSE, F4SE and FOSE from their own sites; SFSE, xNVSE, xOBSE, MWSE; the whole Cyberpunk 2077 stack (Cyber Engine Tweaks, RED4ext, redscript, ArchiveXL, TweakXL, Codeware); REFramework with the right build for each RE Engine game; BG3 Script Extender; the new Divinity: Original Sin 2 Script Extender; Mod Engine 2 (Elden Ring, Dark Souls III) and Mod Engine (Sekiro, Dark Souls Remastered); Script Hook V and RDR2; Ultimate ASI Loader; SMAPI (unpacked from its installer, Linux or Windows build); BLSE for Bannerlord; BepInEx 6 for IL2CPP games; Northstar, Lovely, GDWeave, Hell2Modding.
+- Mod loaders page: every loader of the game with its state, version and which mods need it; install, update, open its website or remove. Controller mode: Mods → Mod loaders. Desktop: Mods → Mod loaders… (Ctrl+L). Missing ones also show as a banner on the Mods page.
+- Check for updates and Update all include loaders.
+- Elden Ring and Dark Souls III start through Mod Engine 2 with its config pointed at your mods folder; Stardew Valley starts through SMAPI on Linux and Windows.
+- Baldur's Gate 3: Luma writes modsettings.lsx while mods are in, so .pak mods are on, in your mod order, after the game's own modules and anything the in-game mod manager added. It's put back when the mods come out.
+- The Witcher 3: mods keep their modXxx folder (archives with just content/ get one), and Luma warns when two mods change the same script, with a button for Script Merger (now a known tool).
+- UE4SS Lua and C++ mods go to ue4ss/Mods next to the game's program, with enabled.txt, instead of the pak folder. Cyberpunk mods packed as just .archive, .xl or .reds files go to the right folders.
+- Fixed: mods packed as just SKSE/Plugins (and F4SE, meshes, bin/...) were unpacked into the wrong folder.
+- Modpacks: loaders in a pack are fetched from their official release on import.
+
 ## 0.21.0
 
 - Luma speaks Swedish and German: Settings → Layout → Language (both layouts). "Automatic" follows your system's language. The menus change at once, no restart. Mod names and descriptions stay as their sites have them.

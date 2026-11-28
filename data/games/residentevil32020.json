@@ -10,6 +10,7 @@
   "runtime": "proton",
   "loader": "reframework",
   "loaderOptional": true,
+  "loaderAsset": "^RE3\\.zip$",
   "sites": {
     "nexus": "residentevil32020"
   },
